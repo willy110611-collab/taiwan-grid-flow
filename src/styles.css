@@ -1,0 +1,251 @@
+:root {
+  --bg: #03050a;
+  --ink: #e8eefc;
+  --ink-dim: rgba(200, 212, 240, 0.6);
+  --ink-faint: rgba(200, 212, 240, 0.3);
+  --green: rgb(110, 240, 190);
+  --thermal: rgb(255, 150, 92);
+  --gold: rgb(255, 198, 92);
+  --glass: rgba(8, 12, 22, 0.55);
+  --glass-strong: rgba(7, 10, 19, 0.82);
+  --line: rgba(160, 180, 220, 0.14);
+  --sky: #0a1430;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --gutter: 24px;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+button { font: inherit; color: inherit; }
+a { color: var(--green); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.app { position: fixed; inset: 0; }
+.map { position: absolute; inset: 0; }
+.maplibregl-canvas { outline: none; }
+
+/* 天色：畫面上緣（透視的地平線方向）一層隨日夜變化的微光 */
+.sky {
+  position: absolute; inset: 0 0 auto 0; height: 42%; pointer-events: none;
+  background: linear-gradient(to bottom, var(--sky), transparent);
+  mix-blend-mode: screen; transition: opacity 30s linear, background 30s linear;
+}
+/* 四周暗角：把視線收進台灣本島 */
+.vignette {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.hud { position: absolute; inset: 0; pointer-events: none; font-weight: 300; z-index: 3; }
+.hud > * { position: absolute; }
+.hud button, .hud a, .panel { pointer-events: auto; }
+
+/* ── 左上：品牌 ── */
+.brand { top: calc(22px + var(--safe-t)); left: var(--gutter); }
+.brand-zh { font-size: 17px; letter-spacing: 0.32em; font-weight: 300; }
+.brand-en { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.42em; color: var(--ink-faint); margin-top: 4px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 12px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; color: var(--ink-dim);
+}
+.badge i, .dot { width: 5px; height: 5px; border-radius: 50%; background: #8a93a8; display: inline-block; }
+.badge.live i, .dot.live { background: #6ef0be; box-shadow: 0 0 10px #6ef0be; animation: breathe 3.2s ease-in-out infinite; }
+.badge.sim i, .dot.sim { background: #ffc65c; box-shadow: 0 0 10px #ffc65c; animation: breathe 3.2s ease-in-out infinite; }
+
+/* ── 上中：能源篩選（仿軌島 全／台／高／捷） ── */
+.filters {
+  top: calc(22px + var(--safe-t)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2px; padding: 3px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--line);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.filters button {
+  display: flex; align-items: center; gap: 7px; border: 0; background: transparent; cursor: pointer;
+  padding: 6px 14px; border-radius: 999px; font-size: 12px; letter-spacing: 0.18em; color: var(--ink-dim); white-space: nowrap;
+  transition: background 0.4s, color 0.4s;
+}
+.filters button i { width: 5px; height: 5px; border-radius: 50%; background: var(--dot); opacity: 0.55; transition: opacity 0.4s, box-shadow 0.4s; }
+.filters button:hover { color: var(--ink); }
+.filters button.on { background: rgba(200, 215, 255, 0.1); color: var(--ink); }
+.filters button.on i { opacity: 1; box-shadow: 0 0 8px var(--dot); }
+
+/* ── 右上：能源佔比 ── */
+.mix { top: calc(22px + var(--safe-t)); right: var(--gutter); text-align: right; min-width: 132px; }
+.mix-row { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; line-height: 1.05; }
+.mix-label { font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faint); }
+.mix-value { font-family: var(--mono); font-weight: 300; font-size: 30px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.mix-value small { font-size: 12px; margin-left: 2px; opacity: 0.6; }
+.mix-value.green { color: var(--green); text-shadow: 0 0 18px rgba(110, 240, 190, 0.35); }
+.mix-value.thermal { color: var(--thermal); text-shadow: 0 0 18px rgba(255, 150, 92, 0.3); }
+.mix-bar { display: flex; height: 2px; margin: 12px 0 8px auto; width: 132px; gap: 2px; opacity: 0.85; }
+.mix-bar span { display: block; border-radius: 2px; transition: flex-grow 2s ease; }
+.mix-total { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.mix-total small { color: var(--ink-faint); font-family: var(--sans); letter-spacing: 0.1em; }
+
+/* ── 左下：時間與頻率 ── */
+.clock {
+  bottom: calc(22px + var(--safe-b)); left: var(--gutter);
+  padding: 12px 18px 12px 14px; border-left: 1px solid var(--line);
+  background: linear-gradient(90deg, var(--glass), transparent);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.clock-time { font-family: var(--mono); font-size: 26px; font-weight: 300; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.clock-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-dim); margin-top: 4px; letter-spacing: 0.08em; display: flex; gap: 8px; }
+.clock-meta .freq { color: var(--ink); animation: breathe 7.5s ease-in-out infinite; }
+.clock-meta .dot { color: var(--ink-faint); width: auto; height: auto; background: none; }
+.clock-sun { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--ink-faint); margin-top: 7px; letter-spacing: 0.12em; }
+.clock-sun .data-time { color: var(--ink-faint); }
+.sun-ico svg { width: 12px; height: 12px; stroke: var(--gold); fill: none; stroke-width: 1.4; display: block; }
+
+/* ── 放空巡航：場景名稱（電影字幕式淡入） ── */
+.cruise-caption {
+  top: calc(78px + var(--safe-t)); left: 50%; transform: translate(-50%, -6px);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  opacity: 0; transition: opacity 2.4s ease, transform 2.4s ease; text-align: center;
+}
+.cruise-caption.show { opacity: 1; transform: translate(-50%, 0); }
+.cruise-caption span { font-family: var(--mono); font-size: 9px; letter-spacing: 0.5em; color: var(--ink-faint); }
+.cruise-caption b { font-weight: 300; font-size: 15px; letter-spacing: 0.5em; color: var(--ink); text-shadow: 0 0 20px rgba(140, 170, 255, 0.4); }
+
+/* ── 下中：工具列 ── */
+.toolbar {
+  bottom: calc(22px + var(--safe-b)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2px; padding: 4px; border-radius: 16px;
+  background: var(--glass); border: 1px solid var(--line);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.toolbar button {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 58px;
+  border: 0; background: transparent; cursor: pointer; padding: 7px 10px 6px; border-radius: 12px;
+  font-size: 10px; letter-spacing: 0.2em; color: var(--ink-dim); transition: background 0.3s, color 0.3s;
+}
+.toolbar svg, .icon-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.3; stroke-linecap: round; }
+.toolbar button:hover { color: var(--ink); }
+.toolbar button.on { color: var(--ink); background: rgba(200, 215, 255, 0.1); }
+.toolbar button.on svg { stroke: var(--green); filter: drop-shadow(0 0 4px rgba(110, 240, 190, 0.7)); }
+
+/* ── 右下：圖例與來源 ── */
+.legend {
+  bottom: calc(46px + var(--safe-b)); right: var(--gutter);
+  list-style: none; margin: 0; padding: 0; display: grid; gap: 7px;
+  font-size: 10px; letter-spacing: 0.2em; color: var(--ink-dim);
+}
+.legend li { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-direction: row-reverse; }
+.legend i { width: 5px; height: 5px; border-radius: 50%; }
+.sourceline {
+  bottom: calc(22px + var(--safe-b)); right: var(--gutter);
+  font-size: 9.5px; letter-spacing: 0.12em; color: var(--ink-faint);
+}
+
+/* ── 面板（桌面：浮動卡片） ── */
+.panel {
+  position: absolute; right: var(--gutter); bottom: calc(96px + var(--safe-b));
+  width: 360px; max-height: calc(100% - 200px); display: flex; flex-direction: column;
+  background: var(--glass-strong); border: 1px solid var(--line); border-radius: 18px;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.panel-grip { display: none; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 6px; }
+.panel-head h2 { margin: 0; font-size: 13px; font-weight: 400; letter-spacing: 0.4em; }
+.icon-btn { border: 0; background: transparent; color: var(--ink-dim); cursor: pointer; padding: 4px; border-radius: 8px; }
+.icon-btn:hover { color: var(--ink); background: rgba(255, 255, 255, 0.06); }
+.panel-body { padding: 4px 18px 18px; overflow-y: auto; font-size: 12.5px; line-height: 1.7; color: var(--ink-dim); }
+
+.tabs { display: flex; gap: 4px; margin: 6px 0 12px; border-bottom: 1px solid var(--line); }
+.tabs button { border: 0; background: none; cursor: pointer; padding: 8px 10px; font-size: 12px; letter-spacing: 0.2em; color: var(--ink-faint); border-bottom: 1px solid transparent; margin-bottom: -1px; }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--green); }
+
+.doc dl { margin: 10px 0; display: grid; grid-template-columns: 96px 1fr; gap: 8px 12px; }
+.doc dt { color: var(--ink); font-size: 11.5px; letter-spacing: 0.08em; }
+.doc dd { margin: 0; }
+.doc p { margin: 8px 0; }
+.status-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--ink); font-size: 12px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.about-title { font-size: 16px; color: var(--ink); letter-spacing: 0.3em; }
+.about-title span { font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faint); margin-left: 8px; }
+.fine { font-size: 11px; color: var(--ink-faint); }
+.muted { color: var(--ink-faint); }
+
+.evidence { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 10px; }
+.evidence li { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: start; }
+.tag { font-style: normal; font-size: 10px; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; text-align: center; }
+.tag.live { color: var(--green); }
+.tag.allocated { color: var(--gold); }
+.tag.modeled, .tag.est { color: rgb(160, 150, 255); }
+.tag.simulated { color: var(--ink-faint); }
+
+.hl-list { list-style: none; padding: 0; margin: 4px 0 12px; }
+.hl-list li { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.hl-k { font-size: 10.5px; letter-spacing: 0.2em; color: var(--ink-faint); display: flex; align-items: center; gap: 8px; }
+.hl-v { color: var(--ink); font-size: 13.5px; grid-row: 2; }
+.hl-v.gold { color: var(--gold); font-family: var(--mono); }
+.hl-v.green { color: var(--green); font-family: var(--mono); }
+.hl-n { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-family: var(--mono); font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hl-n small { font-size: 10px; color: var(--ink-faint); }
+.hl-chart { margin-top: 6px; }
+.spark { width: 100%; height: 40px; margin-top: 6px; display: block; }
+
+@keyframes breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes sheet { from { transform: translateY(100%); } to { transform: none; } }
+
+/* MapLibre 版權標示：縮到最低調 */
+.maplibregl-ctrl-attrib { background: transparent !important; }
+.maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib a { color: rgba(200, 212, 240, 0.25) !important; font-size: 9px; }
+.maplibregl-ctrl-attrib-button { filter: invert(1) opacity(0.25); }
+.maplibregl-ctrl-bottom-right { display: none; } /* 來源統一列在右下角與「資訊」面板 */
+.hud:has(.panel) .legend { opacity: 0; }
+.legend { transition: opacity 0.4s; }
+
+/* ── 桌布模式：只留最必要的資訊，字體稍大、透明度更低 ── */
+.is-wallpaper .brand { opacity: 0.75; }
+.is-wallpaper .clock { background: none; border-left-color: rgba(160, 180, 220, 0.08); }
+.is-wallpaper .sourceline { opacity: 0.8; }
+.is-wallpaper .cruise-caption { top: auto; bottom: calc(40px + var(--safe-b)); }
+
+/* ── 平板以下：縮小 ── */
+@media (max-width: 1000px) {
+  .legend { display: none; }
+  .desktop-only { display: none !important; }
+}
+
+/* ── 手機（iPhone 16 Pro 402×874） ── */
+@media (max-width: 700px) {
+  :root { --gutter: 16px; }
+  .brand-zh { font-size: 15px; letter-spacing: 0.26em; }
+  .badge { margin-top: 9px; }
+  .mix { min-width: 110px; }
+  .mix-value { font-size: 23px; }
+  .mix-bar { width: 110px; margin: 9px 0 6px auto; }
+  .filters { top: calc(118px + var(--safe-t)); }
+  .filters button { padding: 6px 12px; font-size: 11.5px; letter-spacing: 0.12em; }
+  .cruise-caption { top: calc(168px + var(--safe-t)); }
+
+  .clock {
+    bottom: calc(86px + var(--safe-b)); padding: 8px 12px; border-left: 0;
+    background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  .clock-time { font-size: 20px; }
+  .clock-meta, .clock-sun { font-size: 9.5px; }
+  .sourceline { display: none; }
+  .is-wallpaper .sourceline { display: block; }
+
+  .toolbar { left: var(--gutter); right: var(--gutter); transform: none; justify-content: space-around; bottom: calc(14px + var(--safe-b)); }
+  .toolbar button { flex: 1; padding: 8px 4px 6px; }
+
+  /* 面板改為底部抽屜 */
+  .panel {
+    left: 0; right: 0; bottom: 0; width: auto; max-height: 68%;
+    border-radius: 22px 22px 0 0; padding-bottom: var(--safe-b);
+    animation: sheet 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 5;
+  }
+  .panel-grip { display: block; width: 38px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.22); margin: 9px auto 0; cursor: pointer; }
+  .panel-head { padding-top: 8px; }
+  .doc dl { grid-template-columns: 82px 1fr; }
+}
