@@ -60,6 +60,9 @@ export const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
 /** 線條圖示（不用 emoji，保持高冷科技感） */
 export const Icon = {
+  globe: (
+    <svg viewBox="0 0 24 24"><path d="M12 3.5c-2.6 3-3.6 6-3.6 8.5s1 5.5 3.6 8.5M12 3.5c2.6 3 3.6 6 3.6 8.5s-1 5.5-3.6 8.5" /><circle cx="12" cy="12" r="8.5" /><path d="M3.8 9h16.4M3.8 15h16.4" /></svg>
+  ),
   home: (
     <svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5" /><path d="M6.5 10v9h11v-9" /><path d="M10.5 19v-4.5h3V19" /></svg>
   ),

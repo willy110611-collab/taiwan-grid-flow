@@ -52,7 +52,8 @@ const TENSION = [
  *  onDaylight 日夜狀態改變時回報（給 HUD 調整天空色）
  */
 export class GridFlowEngine {
-  constructor(container, { density = 1, mode = 'app', fps = 60, initialView = null, onStats, onShot, onDaylight, onUserMove, onPlantVisit } = {}) {
+  constructor(container, { density = 1, mode = 'app', fps = 60, initialView = null, onStats, onShot, onDaylight, onUserMove, onPlantVisit, onAway } = {}) {
+    this.onAway = onAway;
     this.onPlantVisit = onPlantVisit;
     this.breathPhase = 0;
     this.tension = 0;
@@ -114,7 +115,7 @@ export class GridFlowEngine {
     // 桌布模式預設鎖定：點擊、滾輪、拖曳都無效，避免在桌面上誤觸縮放（按鎖頭才解鎖）
     if (wallpaper) this.setLocked(true);
     this.userMoved = false;
-    this.map.on('moveend', (e) => { if (e.originalEvent) { this.userMoved = true; onUserMove?.(); } });
+    this.map.on('moveend', (e) => { if (e.originalEvent) { this.userMoved = true; this.onAway?.(true); onUserMove?.(); } });
     if (!wallpaper) this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
     // 地形圖磚載不到（離線）時只會少了山影，其餘照常；這裡吞掉錯誤避免洗版
@@ -224,6 +225,16 @@ export class GridFlowEngine {
 
   toggleCruise() {
     return this.cruise.toggle();
+  }
+
+  /** 回到一開始的全島俯視圖（停止巡航、清除手動移動） */
+  resetView() {
+    this.cruise.stop();
+    this.sheetSaved = null;
+    this.userMoved = false;
+    this.map.setMaxBounds(MAX_BOUNDS);
+    this.map.fitBounds(TAIWAN_BOUNDS, { padding: fitPadding(), pitch: 28, bearing: -8, duration: 1800, essential: true });
+    this.onAway?.(false);
   }
 
   /** HUD 高度改變後（資料載入、出現小卡）重新把全島放進可見區域；使用者動過地圖或在巡航就不動 */

@@ -94,6 +94,7 @@ export default function App() {
     initialView: SAVED_VIEW,
     onUserMove: () => armAutoLock(),
     onPlantVisit: (id) => recordRef.current('plant', id),
+    onAway: (away) => setUiState((s) => (s.away === away ? s : { ...s, away })),
     onShot: (shot) => {
       if (shot) recordRef.current('shot', shot);
       setUiState((s) => ({ ...s, shot, cruise: shot ? true : WALLPAPER ? s.cruise : false }));
@@ -151,7 +152,14 @@ export default function App() {
     }
     if (patch.toggleCruise) {
       const on = e?.toggleCruise();
-      setUiState((s) => ({ ...s, cruise: !!on, panel: on && MOBILE ? null : s.panel }));
+      // 關閉放空 → 飛回一開始的全島俯視圖
+      if (!on) e?.resetView();
+      setUiState((s) => ({ ...s, cruise: !!on, away: !!on, panel: on && MOBILE ? null : s.panel }));
+      return;
+    }
+    if (patch.resetView) {
+      e?.resetView();
+      setUiState((s) => ({ ...s, cruise: false, away: false }));
       return;
     }
     if (patch.toggleReplay) {

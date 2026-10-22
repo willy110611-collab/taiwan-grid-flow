@@ -90,6 +90,12 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         </div>
       )}
 
+      {!wallpaper && (ui.cruise || ui.away) && (
+        <button className="reset-view" onClick={() => setUi({ resetView: true })} title="回到全島俯視圖">
+          {Icon.globe}<span>全島</span>
+        </button>
+      )}
+
       <div className={`cruise-caption ${ui.shot ? 'show' : ''}`}>
         <span>放空巡航</span>
         <b>{ui.shot || ''}</b>
