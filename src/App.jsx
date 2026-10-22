@@ -7,7 +7,7 @@ import { useDayHistory } from './data/history.js';
 import { useBadges } from './data/badges.js';
 import { useAnomalies } from './data/useAnomalies.js';
 import { useAir, nearestStation } from './data/useAir.js';
-import { useHome, useNotify } from './data/useHome.js';
+import { useHome, useNotify, townName } from './data/useHome.js';
 import { usageAdvice } from './data/advice.js';
 import { homeSummary } from './components/Life.jsx';
 
@@ -48,6 +48,8 @@ export default function App() {
   const [replay, setReplay] = useState({ on: false, idx: 0, playing: false, speed: 300 });
   const [ui, setUiState] = useState({ filter: 'all', panel: null, cruise: WALLPAPER && !SAVED_VIEW, shot: null, locked: true, fixedView: !!SAVED_VIEW });
   const lockTimer = useRef(null);
+  const pickCancel = useRef(null);
+  const setHomeRef = useRef(null);
 
   // 回放中顯示歷史快照，否則顯示即時快照
   const shown = replay.on && rows.length ? rows[Math.min(rows.length - 1, Math.floor(replay.idx))] : snapshot;
@@ -55,17 +57,18 @@ export default function App() {
   const highlights = useHighlights(snapshot, rows, stats, anomaly.list);
   const air = useAir();
   const { home, setHome } = useHome();
+  setHomeRef.current = setHome;
   const advice = useMemo(
     () => usageAdvice(shown, rows, snapshot?.curves?.yesterday, { touUser: home.touUser }),
     [shown, rows, snapshot?.curves?.yesterday, home.touUser]
   );
   const homeSum = useMemo(() => homeSummary({ home, snapshot: shown, air, rows, advice }), [home, shown, air, rows, advice]);
-  useEffect(() => { engine.current?.setHome(home); }, [home.pos[0], home.pos[1], home.name, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { engine.current?.setHome(home.pos ? home : null); }, [home.pos?.[0], home.pos?.[1], home.name, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { engine.current?.setAir(air.stations, air.cems); }, [air, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 提醒（開著 App 時的網頁通知）
   const notifyEvents = useMemo(() => {
-    const st = nearestStation(air.stations, home.pos);
+    const st = home.pos ? nearestStation(air.stations, home.pos) : null;
     const nowHM = new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16);
     return [
       { kind: 'supply', on: snapshot?.source === 'live' && (snapshot?.supply?.level ?? 0) >= 1, text: `供電${snapshot?.supply?.label}：備轉容量率 ${snapshot?.supply?.rate}%，建議延後非必要用電` },
@@ -129,6 +132,23 @@ export default function App() {
       setUiState((s) => ({ ...s, locked: true, fixedView: false, cruise: true }));
       return;
     }
+    if (patch.pickHome) {
+      e?.cruise.stop();
+      pickCancel.current?.();
+      pickCancel.current = e?.pickPoint((pos) => {
+        pickCancel.current = null;
+        setHomeRef.current({ name: townName(pos), pos });
+        setUiState((s) => ({ ...s, picking: false, panel: 'home' }));
+      });
+      setUiState((s) => ({ ...s, picking: true, panel: null, cruise: false }));
+      return;
+    }
+    if (patch.cancelPick) {
+      pickCancel.current?.();
+      pickCancel.current = null;
+      setUiState((s) => ({ ...s, picking: false, panel: 'home' }));
+      return;
+    }
     if (patch.toggleCruise) {
       const on = e?.toggleCruise();
       setUiState((s) => ({ ...s, cruise: !!on, panel: on && MOBILE ? null : s.panel }));
@@ -150,6 +170,21 @@ export default function App() {
     }
     setUiState((s) => ({ ...s, ...patch }));
   }, [lock]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 手機：底部抽屜打開時，把地圖移到抽屜上方看得到的區域；關閉時回到原本的視角
+  useEffect(() => {
+    const e = engine.current;
+    if (!e || WALLPAPER || !MOBILE) return;
+    if (!ui.panel) { e.restoreSheetView(); return; }
+    const id = requestAnimationFrame(() => {
+      const sheet = document.querySelector('.panel');
+      const top = (document.querySelector('.mix .supply') || document.querySelector('.mix'))?.getBoundingClientRect().bottom ?? 120;
+      if (!sheet) return;
+      e.cruise.stop();
+      e.fitAboveSheet({ sheetPx: sheet.getBoundingClientRect().height, topPx: top + 8, focus: ui.panel === 'home' && home.pos ? home.pos : null });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [ui.panel, home.pos?.[0], home.pos?.[1]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <main className={`app ${WALLPAPER ? 'wallpaper' : ''}`} style={daylight ? { '--sky': daylight.sky } : undefined}>

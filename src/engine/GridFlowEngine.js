@@ -105,9 +105,9 @@ export class GridFlowEngine {
       // 有存過的桌布固定視角就直接用，否則顯示全島
       ...(initialView || { bounds: TAIWAN_BOUNDS, fitBoundsOptions: { padding: fitPadding() }, pitch: 28, bearing: -8 }),
       maxPitch: 65,
-      minZoom: 5.5,
+      minZoom: 4.8,
       maxZoom: 12,
-      maxBounds: [[117.5, 20.2], [124.5, 27.0]],
+      maxBounds: MAX_BOUNDS,
       attributionControl: false,
       fadeDuration: 0
     });
@@ -223,6 +223,41 @@ export class GridFlowEngine {
 
   toggleCruise() {
     return this.cruise.toggle();
+  }
+
+  /** 手機底部抽屜打開：讓台灣（或我的家附近）落在抽屜上方的可見區域 */
+  fitAboveSheet({ sheetPx, topPx, focus }) {
+    const m = this.map;
+    this.sheetSaved ||= { center: m.getCenter(), zoom: m.getZoom(), pitch: m.getPitch(), bearing: m.getBearing() };
+    // 可見區域很矮時需要拉得比平常遠，暫時解除地圖邊界限制（關閉抽屜時恢復）
+    m.setMaxBounds(null);
+    const padding = { top: topPx, bottom: sheetPx, left: 12, right: 12 };
+    if (focus) {
+      const visible = m.getContainer().clientHeight - sheetPx - topPx;
+      m.easeTo({ center: focus, zoom: 7.8 + Math.log2(Math.max(160, visible) / 420), pitch: 25, bearing: 0, padding, duration: 1100 });
+    } else {
+      m.fitBounds(TAIWAN_BOUNDS, { padding, pitch: 0, bearing: 0, duration: 1100 });
+    }
+  }
+
+  /** 抽屜關閉：回到原本的視角 */
+  restoreSheetView() {
+    if (!this.sheetSaved) return;
+    const v = this.sheetSaved;
+    this.sheetSaved = null;
+    this.map.easeTo({ ...v, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 1100 });
+    this.map.once('moveend', () => { if (!this.sheetSaved) this.map.setMaxBounds(MAX_BOUNDS); });
+  }
+
+  /** 在地圖上點一下選位置（我的家）；回傳取消函式 */
+  pickPoint(cb) {
+    const canvas = this.map.getCanvas();
+    const prev = canvas.style.cursor;
+    canvas.style.cursor = 'crosshair';
+    const onClick = (e) => { done(); cb([e.lngLat.lng, e.lngLat.lat]); };
+    const done = () => { this.map.off('click', onClick); canvas.style.cursor = prev; };
+    this.map.on('click', onClick);
+    return done;
   }
 
   /** 我的家（地圖上的小光環） */
@@ -727,6 +762,8 @@ function makeSparkles(center, n) {
   }
   return out;
 }
+
+const MAX_BOUNDS = [[117.5, 20.2], [124.5, 27.0]];
 
 function fitPadding() {
   const w = window.innerWidth;

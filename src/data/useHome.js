@@ -1,6 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_HOME } from '../config/geo.js';
 import { regionAt } from '../map/baseStyle.js';
+import { TOWNS } from '../config/towns.js';
+
+/** 座標 → 最近的鄉鎮市區名稱（例如「台中市西屯區」） */
+export function townName(pos) {
+  let best = null, bd = Infinity;
+  const k = Math.cos((pos[1] * Math.PI) / 180);
+  for (const t of TOWNS) {
+    const d = ((t[2] - pos[0]) * k) ** 2 + (t[3] - pos[1]) ** 2;
+    if (d < bd) { bd = d; best = t; }
+  }
+  return best ? `${best[0]}${best[1]}` : '地圖選點';
+}
+
+/** 搜尋鄉鎮市區（台/臺 視為相同） */
+export function searchTowns(q, limit = 8) {
+  const n = (s) => s.replace(/臺/g, '台');
+  const key = n(q.trim());
+  if (!key) return [];
+  return TOWNS.filter((t) => n(t[0] + t[1]).includes(key)).slice(0, limit)
+    .map((t) => ({ name: `${t[0]}${t[1]}`, pos: [t[2], t[3]] }));
+}
 
 /**
  * 我的家：位置、是否申請時間電價、通知開關（存在這台裝置）
@@ -17,7 +38,7 @@ export function useHome() {
       return n;
     });
   }, []);
-  const area = regionAt(home.pos);
+  const area = home.pos ? regionAt(home.pos) : null;
   return { home: { ...home, region: area?.region || null, county: area?.county || null }, setHome };
 }
 
@@ -26,7 +47,7 @@ export function locate(setHome) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('此瀏覽器不支援定位'));
     navigator.geolocation.getCurrentPosition(
-      (p) => { setHome({ name: '目前位置', pos: [p.coords.longitude, p.coords.latitude] }); resolve(); },
+      (p) => { const pos = [p.coords.longitude, p.coords.latitude]; setHome({ name: townName(pos), pos }); resolve(); },
       (e) => reject(new Error(e.code === 1 ? '定位權限被拒絕' : '無法取得位置')),
       { enableHighAccuracy: false, timeout: 10000 }
     );

@@ -83,6 +83,13 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {!wallpaper && <BadgeToast toast={badges?.toast} onDone={badges?.clearToast} />}
       {!wallpaper && replay?.on && <ReplayBar rows={rows} replay={replay} setReplay={setReplay} onFinish={onReplayFinish} />}
 
+      {ui.picking && (
+        <div className="pick-banner">
+          <b>點地圖選擇「我的家」</b>
+          <button onClick={() => setUi({ cancelPick: true })}>取消</button>
+        </div>
+      )}
+
       <div className={`cruise-caption ${ui.shot ? 'show' : ''}`}>
         <span>放空巡航</span>
         <b>{ui.shot || ''}</b>
@@ -155,7 +162,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'highlights' && <HighlightsPanel hl={highlights} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'info' && <InfoPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'demand' && <DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'home' && <HomePanel home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'home' && <HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'air' && <AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'badges' && <BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} />}
     </div>

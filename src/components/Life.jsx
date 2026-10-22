@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { APP } from '../config/app.js';
 import { Panel } from './Panels.jsx';
 import { Sparkline, fmtMw, rgb } from './widgets.jsx';
-import { PLANTS, REGIONS, DEFAULT_HOME } from '../config/geo.js';
+import { PLANTS, REGIONS } from '../config/geo.js';
 import { THERMAL } from '../config/energy.js';
 import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js';
 import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
-import { locate, requestNotify } from '../data/useHome.js';
+import { locate, requestNotify, searchTowns } from '../data/useHome.js';
 import { SUPPLY_LEVELS } from '../data/parseAux.js';
 
 const DIRS = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
@@ -15,6 +16,8 @@ const ADVICE_COLOR = { good: [110, 240, 160], ok: [255, 214, 92], bad: [255, 130
 /** 我的家的即時摘要（給卡片與面板共用） */
 export function homeSummary({ home, snapshot, air, rows, advice }) {
   if (!snapshot) return null;
+  const ciSeries0 = rows.map((r) => carbonIntensity(r.totals)).filter((x) => x != null);
+  if (!home.pos) return { station: null, wind: null, thermal: [], region: null, ci: advice?.ci, ciSeries: ciSeries0, unset: true };
   const station = nearestStation(air.stations, home.pos);
   const wind = nearestWind(air.stations, home.pos);
   // 附近的火力電廠（60 km 內），判斷是否位在下風側（僅示意）
@@ -42,7 +45,7 @@ export function HomeCard({ sum, advice, onOpen }) {
   const c = rgb(ADVICE_COLOR[advice.level]);
   const st = sum.station;
   return (
-    <button className="home-card" onClick={onOpen}>
+    <button className={`home-card ${sum.unset ? 'unset' : ''}`} onClick={onOpen}>
       <span className="hc-advice"><i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />{advice.head}</span>
       <span className="hc-row">
         <b>{advice.ci?.toFixed(2) ?? '—'}</b><small>kg CO₂/度</small>
@@ -53,13 +56,15 @@ export function HomeCard({ sum, advice, onOpen }) {
           </>
         )}
       </span>
+      {sum.unset && <span className="hc-set">＋ 設定我的家</span>}
     </button>
   );
 }
 
 /* ───────── 我的家 面板 ───────── */
-export function HomePanel({ home, setHome, sum, advice, snapshot, air, onClose }) {
+export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, onClose }) {
   const [msg, setMsg] = useState('');
+  const line = useLineConfig();
   if (!sum) return <Panel title="我的家" onClose={onClose}><p className="muted">資料讀取中…</p></Panel>;
   const st = sum.station;
   const cl = carbonLevel(sum.ci);
@@ -69,14 +74,12 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onClose }
     <Panel title="我的家" onClose={onClose}>
       <div className="home-loc">
         <div>
-          <b>{home.name}</b>
-          <span className="muted">　{home.county || ''}{sum.region ? ` · ${sum.region.name}供電區` : ''}</span>
-        </div>
-        <div className="home-loc-btns">
-          <button onClick={() => locate(setHome).then(() => setMsg('')).catch((e) => setMsg(e.message))}>使用目前位置</button>
-          {home.name !== DEFAULT_HOME.name && <button onClick={() => setHome({ ...DEFAULT_HOME })}>回到{DEFAULT_HOME.name}</button>}
+          <b>{home.name || '尚未設定地點'}</b>
+          <span className="muted">　{sum.region ? `${sum.region.name}供電區` : ''}</span>
         </div>
       </div>
+      {sum.unset && <p className="fine">設定地點後會顯示附近空品、下風側電廠與所屬供電區；只存在這台裝置，不會上傳。</p>}
+      <LocationPicker home={home} setHome={setHome} stations={air.stations} onPick={onPick} setMsg={setMsg} />
       {msg && <p className="fine warm">{msg}</p>}
 
       {/* 1. 用電時機 */}
@@ -107,6 +110,8 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onClose }
         <div className="hl-k">空氣品質　<span className="muted">環境部（每小時）</span></div>
         {air.error ? (
           <p className="fine warm">空品資料尚未接上：{air.error}</p>
+        ) : sum.unset ? (
+          <p className="fine">設定「我的家」地點後顯示。</p>
         ) : st ? (
           <>
             <div className="aqi-row">
@@ -169,15 +174,91 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onClose }
           />
           <span>開著光脈搏時跳出通知（黃燈、空品不良、機組異常、低碳時段開始）</span>
         </label>
-        <p className="fine">App 完全關閉時也想收到：在 Cloudflare 中繼站設定 LINE 提醒（說明在資料夾的 README）。</p>
+        {line?.lineFriendUrl ? (
+          <div className="line-box">
+            <a className="line-btn" href={line.lineFriendUrl} target="_blank" rel="noreferrer">加 LINE 好友收提醒</a>
+            <p className="fine">App 關著也收得到。加好友後傳你家附近的測站名稱登記{st ? <>，例如「<b>{st.site}</b>」</> : ''}；傳「現在」可隨時查詢、「停止」取消。</p>
+          </div>
+        ) : (
+          <p className="fine">App 完全關閉時也想收到：在 Cloudflare 中繼站設定 LINE 提醒（說明在資料夾的 README）。</p>
+        )}
       </section>
     </Panel>
   );
 }
 
+/* ───────── 選擇「我的家」：目前位置／地圖點選／搜尋鄉鎮或測站／測站清單 ───────── */
+function LocationPicker({ home, setHome, stations = [], onPick, setMsg }) {
+  const [q, setQ] = useState('');
+  const results = useMemo(() => {
+    const key = q.trim().replace(/臺/g, '台');
+    if (!key) return [];
+    const st = stations.filter((s) => s.site.replace(/臺/g, '台').includes(key))
+      .slice(0, 4).map((s) => ({ name: `${s.site}測站`, sub: s.county, pos: [s.lng, s.lat] }));
+    return [...searchTowns(key, 8 - st.length).map((t) => ({ ...t, sub: '' })), ...st];
+  }, [q, stations]);
+  const byCounty = useMemo(() => {
+    const m = new Map();
+    for (const s of stations) (m.get(s.county) || m.set(s.county, []).get(s.county)).push(s);
+    return [...m];
+  }, [stations]);
+  const choose = (name, pos) => { setHome({ name, pos }); setQ(''); setMsg(''); };
+
+  return (
+    <div className="loc-pick">
+      <div className="home-loc-btns">
+        <button onClick={() => locate(setHome).then(() => setMsg('')).catch((e) => setMsg(e.message))}>使用目前位置</button>
+        <button onClick={onPick}>在地圖上點選</button>
+      </div>
+      <input
+        className="loc-search"
+        type="search"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="搜尋鄉鎮市區或測站，例如 北斗、西屯"
+        enterKeyHint="search"
+      />
+      {results.length > 0 && (
+        <ul className="loc-results">
+          {results.map((r) => (
+            <li key={r.name + r.pos}><button onClick={() => choose(r.name, r.pos)}>{r.name}<small>{r.sub}</small></button></li>
+          ))}
+        </ul>
+      )}
+      {q.trim() && !results.length && <p className="fine">找不到「{q}」</p>}
+      {byCounty.length > 0 && (
+        <select
+          className="loc-select"
+          value=""
+          onChange={(e) => {
+            const s = stations.find((x) => x.site === e.target.value);
+            if (s) choose(`${s.site}測站`, [s.lng, s.lat]);
+          }}
+        >
+          <option value="">或從 {stations.length} 個空品測站選…</option>
+          {byCounty.map(([county, list]) => (
+            <optgroup key={county} label={county}>
+              {list.map((s) => <option key={s.site} value={s.site}>{s.site}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
+/** 中繼站提供的 LINE 加好友連結 */
+function useLineConfig() {
+  const [cfg, setCfg] = useState(null);
+  useEffect(() => {
+    fetch(`${APP.relayUrl}/config.json`).then((r) => r.json()).then(setCfg).catch(() => setCfg(null));
+  }, []);
+  return cfg;
+}
+
 /* ───────── 空品 面板（篩選列選「空品」時自動打開） ───────── */
 export function AirPanel({ air, snapshot, home, onClose }) {
-  const st = nearestStation(air.stations, home.pos);
+  const st = home.pos ? nearestStation(air.stations, home.pos) : null;
   const plants = PLANTS.filter((p) => air.cems?.[p.id]);
   return (
     <Panel title="空品" onClose={onClose}>

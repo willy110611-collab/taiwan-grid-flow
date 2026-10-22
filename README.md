@@ -39,7 +39,7 @@
 
 | 功能 | 在哪裡 | 資料 |
 |---|---|---|
-| 我的家 | 工具列「我的家」、右上小卡 | 預設北斗；可按「使用目前位置」，只存在這台裝置 |
+| 我的家 | 工具列「我的家」、右上小卡 | 沒有預設地點，第一次自己設定；可用目前位置、在地圖上點選、搜尋 368 鄉鎮市區或選空品測站，只存在這台裝置 |
 | 用電時機燈號 | 我的家 → 現在用電時機 | 台電時間電價時段＋碳排高低＋供電燈號；昨日曲線推估今天最低碳的 2 小時 |
 | 每度電碳排（推估） | 右上小卡、我的家 | 各燃料發電量 × 典型排放係數；對照能源署公告係數 |
 | 空品 × 火力 × 風向 | 篩選列「空品」 | 環境部 AQI 測站光點＋火力電廠下風方向扇形（示意） |
@@ -48,7 +48,7 @@
 | 電廠煙道 CEMS | 空品面板、滑到火力電廠 | 環境部固定污染源連續自動監測 1 小時值 |
 | 離島 | 金門、澎湖、馬祖、綠島、蘭嶼 | 各島獨立電網，電廠直接送到島上；台電未即時公布時標示「推估」 |
 
-## Cloudflare 中繼站 v2（空品、CEMS、預報、LINE 提醒需要）
+## Cloudflare 中繼站 v3（空品、CEMS、預報、LINE 提醒需要）
 
 1. **更新程式**：Cloudflare → Workers & Pages → `taiwan-grid-flow-data` → Edit code → 全選刪除，貼上 `tools/cloudflare-worker.js` 全部內容 → Deploy
 2. **環境部金鑰（免費）**：到 https://data.moenv.gov.tw 註冊會員 → 會員專區申請 API 金鑰（Email 收信）
@@ -56,16 +56,22 @@
 3. 打開 https://taiwan-grid-flow-data.willy110611.workers.dev/ 應顯示「環境部金鑰已設定」；
    再開 `/aqi.json`、`/cems.json`、`/forecast.csv` 確認有資料
 
-**LINE 提醒（選用，App 關閉也能收到）**
+**LINE 提醒（App 關閉也能收到，開放給朋友加好友）**
 
-1. https://developers.line.biz → 建立 Provider → 建立 **Messaging API** channel → 用手機 LINE 加這個官方帳號為好友
-2. Channel 頁面：Messaging API 分頁最下方發行 **Channel access token** → 存成 Secret `LINE_TOKEN`
-3. Basic settings 分頁最下方 **Your user ID**（U 開頭）→ 存成 Text `LINE_TO`
-4. （選用）Text `HOME_SITE` = 家附近的空品測站名稱，預設「二林」
-5. Workers & Pages → KV → Create namespace（例如 `tgf-notify`）；回到 Worker → Settings → Bindings → Add → KV namespace，變數名稱 **NOTIFY**
-6. Worker → Settings → Triggers → Cron Triggers → Add → `*/10 * * * *`
+1. LINE 官方帳號管理後台建立帳號 → 設定 → Messaging API → 啟用
+2. LINE Developers（https://developers.line.biz/console/）點進這個 channel：
+   - Basic settings → **Channel secret** → Cloudflare Secret `LINE_SECRET`
+   - Messaging API → **Channel access token** → Issue → Cloudflare Secret `LINE_TOKEN`
+   - Messaging API → **Webhook URL** 填 `https://taiwan-grid-flow-data.willy110611.workers.dev/line` → Verify → 打開 **Use webhook**
+3. LINE 官方帳號管理後台 → 設定 → 回應設定：**Webhook 開啟、自動回應訊息關閉**
+4. 官方帳號 ID（@ 開頭，在管理後台帳號名稱下方）→ Cloudflare Text `LINE_BASIC_ID`（網頁會出現「加 LINE 好友收提醒」按鈕）
+5. （選用）Text `LINE_TO` = 自己的 userId、`HOME_SITE` = 自己的測站（預設西屯）：不用傳訊息就自動登記
+6. （選用）Text `LINE_MONTHLY_CAP` = 每月主動推播上限，預設 200
+7. KV 命名空間綁定 **NOTIFY**；Triggers → Cron `*/10 * * * *`
 
-觸發條件：供電燈號非綠燈或備轉 < 10%、住家測站 AQI ≥ 101；同一件事每天最多通知一次。
+好友用法：加好友 → 傳測站名稱（例如「西屯」）登記 → 傳「現在」隨時查詢（回覆免費）、「只要供電」「全部通知」「停止」「說明」。
+觸發條件：供電燈號非綠燈或備轉 < 10%（全部好友）、登記測站 AQI ≥ 101（該測站的好友）；同一件事每天最多一次。
+**費用**：主動推播每位好友算 1 則，超過官方帳號的免費額度就要付費；Worker 到達 `LINE_MONTHLY_CAP` 就停止推播，不會自動產生費用（請依後台「方案」頁的免費則數調整）。好友傳訊息、Worker 回覆不算則數。
 
 ## 介面（概念參考「軌島」，程式碼為獨立撰寫）
 

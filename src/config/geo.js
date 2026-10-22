@@ -95,7 +95,8 @@ export const PLANT_REGION = {
 };
 
 /** 住家預設位置：彰化北斗 */
-export const DEFAULT_HOME = { name: '北斗', pos: [120.520, 23.872] };
+/** 我的家沒有固定預設值：每位使用者第一次自己設定（存在各自的裝置） */
+export const DEFAULT_HOME = { name: null, pos: null };
 
 /**
  * 西部「無形骨幹」— 對應真實 345kV 超高壓走廊的大致走向（由南到北）。
