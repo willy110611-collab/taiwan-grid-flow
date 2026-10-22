@@ -87,3 +87,30 @@ export function mockLoadPara(totalMw) {
   const rate = 16.5 - 9.5 * x;
   return { rate: Math.round(rate * 10) / 10, cap: Math.round(totalMw * rate / 100 / 10) };
 }
+
+/** 模擬「昨日燃料曲線」：每 10 分鐘一點，太陽能白天鐘形、燃煤夜間較高 */
+export function mockFuelCurveYesterday() {
+  const out = [];
+  for (let i = 1; i <= 144; i++) {
+    const h = (i * 10) / 60;
+    const sun = Math.max(0, Math.sin(((h - 6) / 12) * Math.PI));
+    const load = 26000 + 8000 * Math.max(0, Math.sin(((h - 7) / 16) * Math.PI));
+    const solar = 9000 * sun;
+    const wind = 1500 + 600 * Math.cos((h / 24) * 2 * Math.PI);
+    const rest = Math.max(0, load - solar - wind - 1200);
+    const hm = `${String(Math.floor(h) % 24).padStart(2, '0')}:${String((i * 10) % 60).padStart(2, '0')}`;
+    out.push({ hm: i === 144 ? '24:00' : hm, totals: { solar, wind, hydro: 1200, gas: rest * 0.55, coal: rest * 0.38, cogen: rest * 0.07 } });
+  }
+  return out;
+}
+
+/** 模擬未來供電預報（每 10 天一筆） */
+export function mockForecast() {
+  const out = [];
+  for (let d = 1; d <= 6; d++) {
+    const t = new Date(Date.now() + 8 * 3600e3 + d * 10 * 86400e3);
+    const rate = 9 + ((d * 37) % 9);
+    out.push({ date: t.toISOString().slice(0, 10), rate, resv: rate * 380 });
+  }
+  return out;
+}

@@ -1,4 +1,4 @@
-# 台灣光脈搏 · Taiwan Grid Flow　v0.3
+# 台灣光脈搏 · Taiwan Grid Flow　v0.4
 
 把台電各機組的即時發電量，轉成在夜光地圖上流動的能量。設計者：無聊的人
 
@@ -34,6 +34,38 @@
 
 網址皆為 `https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/<檔名>`（單位萬瓩，程式自動換算 MW）。
 抓不到時「資訊 → 資料來源 → 連線診斷」會列出每個檔案失敗的原因。
+
+## 生活功能（v0.4）
+
+| 功能 | 在哪裡 | 資料 |
+|---|---|---|
+| 我的家 | 工具列「我的家」、右上小卡 | 預設北斗；可按「使用目前位置」，只存在這台裝置 |
+| 用電時機燈號 | 我的家 → 現在用電時機 | 台電時間電價時段＋碳排高低＋供電燈號；昨日曲線推估今天最低碳的 2 小時 |
+| 每度電碳排（推估） | 右上小卡、我的家 | 各燃料發電量 × 典型排放係數；對照能源署公告係數 |
+| 空品 × 火力 × 風向 | 篩選列「空品」 | 環境部 AQI 測站光點＋火力電廠下風方向扇形（示意） |
+| 未來供電預報 | 我的家 | 台電「未來二個月電力供需預測」（每 10 天一筆） |
+| 提醒 | 我的家 → 提醒 | 開著 App 時跳通知；App 關閉也要收到 → 設定 LINE（見下方） |
+| 電廠煙道 CEMS | 空品面板、滑到火力電廠 | 環境部固定污染源連續自動監測 1 小時值 |
+| 離島 | 金門、澎湖、馬祖、綠島、蘭嶼 | 各島獨立電網，電廠直接送到島上；台電未即時公布時標示「推估」 |
+
+## Cloudflare 中繼站 v2（空品、CEMS、預報、LINE 提醒需要）
+
+1. **更新程式**：Cloudflare → Workers & Pages → `taiwan-grid-flow-data` → Edit code → 全選刪除，貼上 `tools/cloudflare-worker.js` 全部內容 → Deploy
+2. **環境部金鑰（免費）**：到 https://data.moenv.gov.tw 註冊會員 → 會員專區申請 API 金鑰（Email 收信）
+   Worker → Settings → Variables and Secrets → Add → 類型 **Secret**、名稱 `MOENV_KEY`、值貼金鑰 → Deploy
+3. 打開 https://taiwan-grid-flow-data.willy110611.workers.dev/ 應顯示「環境部金鑰已設定」；
+   再開 `/aqi.json`、`/cems.json`、`/forecast.csv` 確認有資料
+
+**LINE 提醒（選用，App 關閉也能收到）**
+
+1. https://developers.line.biz → 建立 Provider → 建立 **Messaging API** channel → 用手機 LINE 加這個官方帳號為好友
+2. Channel 頁面：Messaging API 分頁最下方發行 **Channel access token** → 存成 Secret `LINE_TOKEN`
+3. Basic settings 分頁最下方 **Your user ID**（U 開頭）→ 存成 Text `LINE_TO`
+4. （選用）Text `HOME_SITE` = 家附近的空品測站名稱，預設「二林」
+5. Workers & Pages → KV → Create namespace（例如 `tgf-notify`）；回到 Worker → Settings → Bindings → Add → KV namespace，變數名稱 **NOTIFY**
+6. Worker → Settings → Triggers → Cron Triggers → Add → `*/10 * * * *`
+
+觸發條件：供電燈號非綠燈或備轉 < 10%、住家測站 AQI ≥ 101；同一件事每天最多通知一次。
 
 ## 介面（概念參考「軌島」，程式碼為獨立撰寫）
 

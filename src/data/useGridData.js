@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseGenary } from './parseGenary.js';
-import { mockGenary, mockLoadPara } from './mockGenary.js';
-import { parseGenLoadAreas, parseLoadAreasCurve, parseFuelCurve, parseLoadPara, supplyLevel } from './parseAux.js';
+import { mockGenary, mockLoadPara, mockFuelCurveYesterday, mockForecast } from './mockGenary.js';
+import { parseGenLoadAreas, parseLoadAreasCurve, parseFuelCurve, parseLoadPara, parseForecast, supplyLevel } from './parseAux.js';
 import { computeRegions } from './regions.js';
 import { APP } from '../config/app.js';
 
@@ -20,7 +20,9 @@ const FILES = {
   areas:     { name: '各區發電/用電', urls: [`${R}/genloadareaperc.csv`, './data/genloadareaperc.csv', `${TP}/genloadareaperc.csv`], parse: parseGenLoadAreas },
   para:      { name: '供電狀況', urls: [`${R}/loadpara.json`, './data/loadpara.json', `${TP}/loadpara.json`], parse: parseLoadPara },
   fuelCurve: { name: '今日燃料別曲線', urls: [`${R}/loadfueltype.csv`, './data/loadfueltype.csv', `${TP}/loadfueltype.csv`], parse: parseFuelCurve },
-  areaCurve: { name: '今日區域用電曲線', urls: [`${R}/loadareas.csv`, './data/loadareas.csv', `${TP}/loadareas.csv`], parse: parseLoadAreasCurve }
+  areaCurve: { name: '今日區域用電曲線', urls: [`${R}/loadareas.csv`, './data/loadareas.csv', `${TP}/loadareas.csv`], parse: parseLoadAreasCurve },
+  yFuel:     { name: '昨日燃料別曲線', urls: [`${R}/loadfueltype_1.csv`, `${TP}/loadfueltype_1.csv`], parse: parseFuelCurve },
+  forecast:  { name: '未來供電預測', urls: [`${R}/forecast.csv`], parse: parseForecast }
 };
 if (import.meta.env.VITE_GENARY_URL) FILES.genary.urls.unshift(import.meta.env.VITE_GENARY_URL);
 
@@ -65,7 +67,7 @@ async function fetchFile(key) {
 const totalOf = (totals) => Object.entries(totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
 
 /** 由 genary 結果 + 輔助資料組成完整快照 */
-export function buildSnapshot(base, { source, areas = null, para = null, curves = null, diag = [], date = new Date() }) {
+export function buildSnapshot(base, { source, areas = null, para = null, curves = null, forecast = null, diag = [], date = new Date() }) {
   const total = totalOf(base.totals);
   const regions = computeRegions(base.plants, total, areas, date);
   let supply = para ? { ...para, evidence: 'live' } : null;
@@ -73,20 +75,25 @@ export function buildSnapshot(base, { source, areas = null, para = null, curves 
     const m = mockLoadPara(total);
     supply = { ...m, ...supplyLevel(m.rate, m.cap), evidence: 'simulated' };
   }
-  return { ...base, source, total, regions, supply, curves, diag, t: date.getTime() };
+  if (source !== 'live') {
+    curves = curves || { yesterday: mockFuelCurveYesterday() };
+    forecast = forecast || mockForecast().map((d) => ({ ...d, ...supplyLevel(d.rate, d.resv / 10) }));
+  }
+  return { ...base, source, total, regions, supply, curves, forecast, diag, t: date.getTime() };
 }
 
 export async function loadGridSnapshot({ forceSim = false } = {}) {
   if (!forceSim) {
     const results = await Promise.all(Object.keys(FILES).map(fetchFile));
-    const [genary, areas, para, fuelCurve, areaCurve] = results;
+    const [genary, areas, para, fuelCurve, areaCurve, yFuel, forecast] = results;
     const diag = results.map((r) => r.diag);
     if (genary.data) {
       return buildSnapshot(genary.data, {
         source: 'live',
         areas: areas.data,
         para: para.data,
-        curves: { fuel: fuelCurve.data, areas: areaCurve.data },
+        curves: { fuel: fuelCurve.data, areas: areaCurve.data, yesterday: yFuel.data },
+        forecast: forecast.data,
         diag
       });
     }

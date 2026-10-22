@@ -6,6 +6,7 @@ import { useTween, useFrequency, useClock, fmtTime, fmtDate, fmtMw, rgb, Icon } 
 import { HighlightsPanel, InfoPanel } from './Panels.jsx';
 import { SupplyChip, DemandPanel, BadgePanel, BadgeToast, AlertBanner, ReplayBar } from './Extras.jsx';
 import { twHM } from '../data/history.js';
+import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 
 /**
  * HUD — 絕對乾淨的排版
@@ -13,7 +14,7 @@ import { twHM } from '../data/history.js';
  *  左下：時間 · 頻率 · 日出日落 下中：工具列（放空 / 亮點 / 資訊）  右下：圖例 + 來源
  *  桌布模式只保留品牌、佔比、時間、巡航場景名與一行來源。
  */
-export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpaper, badges, anomaly, rows, replay, setReplay, onReplayFinish }) {
+export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpaper, badges, anomaly, rows, replay, setReplay, onReplayFinish, home, setHome, homeSum, advice, air }) {
   const stats = useMemo(() => {
     if (!snapshot) return null;
     const totals = snapshot.totals;
@@ -73,6 +74,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         </div>
         <div className="mix-total">{fmtMw(total)} <small>MW · 全台發電</small></div>
         <SupplyChip supply={snapshot?.supply} />
+        {!wallpaper && <HomeCard sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}
       </section>
 
       <ClockPanel snapshot={snapshot} daylight={daylight} replayT={replay?.on ? snapshot?.t : null} />
@@ -90,6 +92,9 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         <div className="toolbar">
           <button className={ui.cruise ? 'on' : ''} onClick={() => setUi({ toggleCruise: true })}>
             {Icon.cruise}<span>放空</span>
+          </button>
+          <button className={ui.panel === 'home' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })}>
+            {Icon.home}<span>我的家</span>
           </button>
           <button className={ui.panel === 'highlights' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'highlights' ? null : 'highlights' })}>
             {Icon.spark}<span>亮點</span>
@@ -150,6 +155,8 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'highlights' && <HighlightsPanel hl={highlights} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'info' && <InfoPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'demand' && <DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'home' && <HomePanel home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'air' && <AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'badges' && <BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} />}
     </div>
   );

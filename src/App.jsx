@@ -6,6 +6,10 @@ import { useHighlights } from './data/useHighlights.js';
 import { useDayHistory } from './data/history.js';
 import { useBadges } from './data/badges.js';
 import { useAnomalies } from './data/useAnomalies.js';
+import { useAir, nearestStation } from './data/useAir.js';
+import { useHome, useNotify } from './data/useHome.js';
+import { usageAdvice } from './data/advice.js';
+import { homeSummary } from './components/Life.jsx';
 
 /**
  * 網址參數
@@ -49,6 +53,29 @@ export default function App() {
   const shown = replay.on && rows.length ? rows[Math.min(rows.length - 1, Math.floor(replay.idx))] : snapshot;
   const badges = useBadges(snapshot, rows, { replaying: replay.on });
   const highlights = useHighlights(snapshot, rows, stats, anomaly.list);
+  const air = useAir();
+  const { home, setHome } = useHome();
+  const advice = useMemo(
+    () => usageAdvice(shown, rows, snapshot?.curves?.yesterday, { touUser: home.touUser }),
+    [shown, rows, snapshot?.curves?.yesterday, home.touUser]
+  );
+  const homeSum = useMemo(() => homeSummary({ home, snapshot: shown, air, rows, advice }), [home, shown, air, rows, advice]);
+  useEffect(() => { engine.current?.setHome(home); }, [home.pos[0], home.pos[1], home.name, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { engine.current?.setAir(air.stations, air.cems); }, [air, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 提醒（開著 App 時的網頁通知）
+  const notifyEvents = useMemo(() => {
+    const st = nearestStation(air.stations, home.pos);
+    const nowHM = new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16);
+    return [
+      { kind: 'supply', on: snapshot?.source === 'live' && (snapshot?.supply?.level ?? 0) >= 1, text: `供電${snapshot?.supply?.label}：備轉容量率 ${snapshot?.supply?.rate}%，建議延後非必要用電` },
+      { kind: 'aqi', on: (st?.aqi ?? 0) >= 101, text: `${st?.site} AQI ${st?.aqi}，空氣品質不佳，減少戶外活動` },
+      { kind: 'anomaly', on: !!anomaly.active, text: anomaly.active ? `${anomaly.active.plant || anomaly.active.unit} 機組出力驟降（${Math.round(anomaly.active.from)}→${Math.round(anomaly.active.to)} MW）` : '' },
+      { kind: 'lowcarbon', on: !!advice?.best && nowHM >= advice.best.from && nowHM < advice.best.to, text: `低碳時段開始（到 ${advice?.best?.to}），適合洗衣、烘衣、充電` }
+    ];
+  }, [snapshot, air.stations, home.pos, anomaly.active, advice]);
+  useNotify(home.notify, notifyEvents);
+
   const recordRef = useRef(badges.record);
   recordRef.current = badges.record;
 
@@ -117,7 +144,7 @@ export default function App() {
       // 切到「用電」自動打開用電面板；切走時關掉
       setUiState((s) => ({
         ...s, ...patch,
-        panel: patch.filter === 'demand' ? 'demand' : s.panel === 'demand' ? null : s.panel
+        panel: patch.filter === 'demand' || patch.filter === 'air' ? patch.filter : s.panel === 'demand' || s.panel === 'air' ? null : s.panel
       }));
       return;
     }
@@ -142,6 +169,11 @@ export default function App() {
         replay={replay}
         setReplay={setReplay}
         onReplayFinish={() => badges.record('replay')}
+        home={home}
+        setHome={setHome}
+        homeSum={homeSum}
+        advice={advice}
+        air={air}
       />
     </main>
   );

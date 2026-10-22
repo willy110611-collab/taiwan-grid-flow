@@ -30,6 +30,7 @@ export function parseGenary(raw) {
   const byPlant = Object.fromEntries(PLANTS.map((p) => [p.id, {}]));
   /** 直接以機組名稱對應到的出力（= 台電即時） */
   const liveByPlant = Object.fromEntries(PLANTS.map((p) => [p.id, 0]));
+  const estimated = {};
   /** 每種燃料的全台總量 */
   const totals = {};
   /** 對不到座標的機組，先依燃料暫存，稍後依比例分配到節點 */
@@ -68,11 +69,21 @@ export function parseGenary(raw) {
 
   distributeUnallocated(byPlant, unallocated);
 
+  // 離島：台電若未即時公布（0 或 N/A），以典型負載推估，避免離島整片熄滅
+  for (const p of PLANTS) {
+    if (!p.island) continue;
+    const reported = Object.values(byPlant[p.id]).reduce((a, b) => a + b, 0);
+    if (reported < 1) {
+      byPlant[p.id] = { oil: p.est };
+      estimated[p.id] = true;
+    }
+  }
+
   const plants = PLANTS.map((p) => {
     const mix = byPlant[p.id];
     const mw = Object.values(mix).reduce((a, b) => a + b, 0);
     const liveMw = Math.min(mw, liveByPlant[p.id]);
-    return { id: p.id, mw, mix, liveMw, allocatedMw: mw - liveMw };
+    return { id: p.id, mw, mix, liveMw: estimated[p.id] ? 0 : liveMw, allocatedMw: mw - liveMw, estimated: !!estimated[p.id] };
   });
 
   return { timestamp, plants, totals, units };

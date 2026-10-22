@@ -115,3 +115,35 @@ export function supplyLevel(rate, cap, indicator) {
   if (rate < 10) return SUPPLY_LEVELS[1];
   return SUPPLY_LEVELS[0];
 }
+
+/* ───────── 台電「未來二個月電力供需預測」forecast.csv ───────── */
+/**
+ * 欄位：日期、預估淨尖峰供電能力(萬瓩)、預估瞬時尖峰負載(萬瓩)、預估尖峰備轉容量(萬瓩)、預估尖峰備轉容量率(%)
+ * 日期可能是 2026/10/22、2026-10-22、115/10/22 或 1151022，統一轉成 YYYY-MM-DD
+ */
+export function parseForecast(text) {
+  const out = [];
+  for (const r of lines(text)) {
+    const d = normDate(r[0]);
+    if (!d) continue;
+    const v = r.slice(1).map(num);
+    if (v.length < 4 || v.slice(0, 4).some((x) => !Number.isFinite(x))) continue;
+    const [cap, peak, resv, rate] = v;
+    if (rate < 0 || rate > 80) continue;
+    out.push({ date: d, cap: cap * W, peak: peak * W, resv: resv * W, rate, ...supplyLevel(rate, resv) });
+  }
+  return out.length ? out : null;
+}
+
+function normDate(s) {
+  const t = String(s || '').replace(/["\s]/g, '');
+  let m = t.match(/^(\d{3,4})[/-](\d{1,2})[/-](\d{1,2})/);
+  if (!m) {
+    const c = t.match(/^(\d{3})(\d{2})(\d{2})$/) || t.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (c) m = c;
+  }
+  if (!m) return null;
+  let y = Number(m[1]);
+  if (y < 1911) y += 1911; // 民國年
+  return `${y}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+}

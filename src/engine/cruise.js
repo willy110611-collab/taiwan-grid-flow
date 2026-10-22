@@ -11,7 +11,8 @@ export const SHOTS = [
   { name: '西部能量動脈', center: [120.5, 23.75], zoom: 7.75, pitch: 58, bearing: -32 },
   { name: '嘉南光電星海', center: [120.2, 23.25], zoom: 8.9, pitch: 50, bearing: 12 },
   { name: '南部電源基地', center: [120.32, 22.75], zoom: 8.8, pitch: 52, bearing: -18 },
-  { name: '彰濱離岸風場', center: [120.38, 24.08], zoom: 9.3, pitch: 55, bearing: 30 }
+  { name: '彰濱離岸風場', center: [120.38, 24.08], zoom: 9.3, pitch: 55, bearing: 30 },
+  { name: '離島微光', center: [119.4, 24.6], zoom: 6.7, pitch: 35, bearing: -10 }
 ];
 
 export class Cruise {

@@ -104,3 +104,21 @@ export function createBaseStyle({ hillshade = true } = {}) {
     ]
   };
 }
+
+/** 座標落在哪個供電區（射線法判斷點是否在縣市多邊形內） */
+export function regionAt([x, y]) {
+  const inRing = (ring) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  for (const f of land.features) {
+    const g = f.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+    if (polys.some((p) => inRing(p[0]))) return { region: f.properties.region, county: f.properties.COUNTYNAME };
+  }
+  return null;
+}

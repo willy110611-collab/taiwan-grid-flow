@@ -1,6 +1,8 @@
 import maplibregl from 'maplibre-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { ScatterplotLayer, IconLayer, PathLayer, TextLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, IconLayer, PathLayer, TextLayer, PolygonLayer } from '@deck.gl/layers';
+import { aqiLevel, nearestWind } from '../data/useAir.js';
+import { THERMAL } from '../config/energy.js';
 
 import { PLANTS, LOADS, TAIWAN_BOUNDS, REGIONS, REGION_KEYS, LOAD_REGION } from '../config/geo.js';
 import { FUELS, FUEL_KEYS, FILTERS, EVIDENCE } from '../config/energy.js';
@@ -56,6 +58,10 @@ export class GridFlowEngine {
     this.tension = 0;
     this.demandView = false;
     this.demandMix = 0;
+    this.airView = false;
+    this.airMix = 0;
+    this.stations = [];
+    this.home = null;
     this.clockOverride = null;
     this.regions = null;
     this.mode = mode;
@@ -147,12 +153,19 @@ export class GridFlowEngine {
       const s = byId[p.id];
       p.targetMw = s?.mw || 0;
       p.liveMw = s?.liveMw || 0;
+      p.estimated = !!s?.estimated;
       p.mix = s?.mix || {};
       p.dominant = Object.entries(p.mix).sort((a, b) => b[1] - a[1])[0]?.[0];
     }
     // 用電端：各區用電（台電即時或推估）分配到負載點 → 負載點的引力（需求權重）與光暈大小
     this.regions = snapshot.regions || null;
     for (const L of this.loads) {
+      if (L.island) {
+        // 離島：用電 ≈ 島上電廠的發電（獨立電網）
+        L.targetLoadMw = this.plants.filter((p) => p.island === L.island).reduce((a, p) => a + p.targetMw, 0);
+        L.demand = L.targetLoadMw;
+        continue;
+      }
       const [rk, share] = LOAD_REGION[L.id] || ['N', 0];
       const rl = this.regions?.byKey?.[rk]?.load;
       L.targetLoadMw = rl ? rl * share : L.demand * snapshot.total;
@@ -162,7 +175,17 @@ export class GridFlowEngine {
     this.updateRegionHeat(true);
 
     const sources = this.plants.map((p) => ({ pos: p.pos, mw: p.targetMw, mix: p.mix }));
-    const flows = solveFlows(sources, this.loads);
+    // 本島：重力模型分配；離島：獨立電網，電廠直接送到島上的城鎮
+    const mainP = this.plants.filter((p) => !p.island);
+    const mainL = this.loads.filter((l) => !l.island);
+    const flows = solveFlows(mainP.map((p) => sources[p.idx]), mainL).map((f) => ({
+      ...f, source: mainP[f.source].idx, target: mainL[f.target].idx
+    }));
+    for (const p of this.plants) {
+      if (!p.island || p.targetMw < 0.5) continue;
+      const L = this.loads.find((l) => l.island === p.island);
+      if (L) flows.push({ source: p.idx, target: L.idx, mw: p.targetMw, island: true });
+    }
     this.particles.setFlows(flows, sources, this.loads);
 
     const top = [...this.plants].sort((a, b) => b.targetMw - a.targetMw)[0];
@@ -176,9 +199,10 @@ export class GridFlowEngine {
   setFilter(id) {
     const f = FILTERS.find((x) => x.id === id) || FILTERS[0];
     this.demandView = !!f.demand;
+    this.airView = !!f.air;
     FUEL_KEYS.forEach((k, i) => {
       // 用電視角：發電粒子全部保留但調暗，讓注意力回到「誰在吸能」
-      this.fuelVisTarget[i] = f.demand ? 0.5 : !f.fuels || f.fuels.includes(k) ? 1 : 0;
+      this.fuelVisTarget[i] = f.demand ? 0.5 : f.air ? (THERMAL.has(k) ? 0.55 : 0.25) : !f.fuels || f.fuels.includes(k) ? 1 : 0;
     });
   }
 
@@ -199,6 +223,17 @@ export class GridFlowEngine {
 
   toggleCruise() {
     return this.cruise.toggle();
+  }
+
+  /** 我的家（地圖上的小光環） */
+  setHome(home) {
+    this.home = home;
+  }
+
+  /** 空品測站（環境部 AQI）與電廠煙道監測（CEMS） */
+  setAir(stations, cems) {
+    this.stations = stations || [];
+    this.cems = cems || {};
   }
 
   /** 回放時用回放時間計算日夜色調；null = 現在 */
@@ -258,6 +293,7 @@ export class GridFlowEngine {
     // 呼吸：以相位累加，供電燈號改變週期時不會跳動
     this.breathPhase += (dt * 2 * Math.PI) / TENSION[this.tension].period;
     this.demandMix += ((this.demandView ? 1 : 0) - this.demandMix) * (1 - Math.exp(-dt / 0.3));
+    this.airMix += ((this.airView ? 1 : 0) - this.airMix) * (1 - Math.exp(-dt / 0.3));
     if (Math.floor(this.time * 8) !== Math.floor((this.time - dt) * 8)) this.updateRegionHeat();
 
     // 能源篩選：各燃料可見度平滑淡入淡出（約 0.6 秒）
@@ -316,6 +352,7 @@ export class GridFlowEngine {
     };
     const glowSize = (p) => {
       const mw = p.mw * p.vis;
+      if (p.island) return mw > 0.5 ? (7000 + Math.sqrt(mw) * 700) * (0.96 + 0.08 * breath) : 0; // 離島：最小光暈
       return mw > 1 ? 2 * (2600 + Math.sqrt(mw) * 620) * (0.96 + 0.08 * breath) : 0;
     };
     const solarVis = this.particles.fuelVis[FUEL_KEYS.indexOf('solar')];
@@ -430,6 +467,101 @@ export class GridFlowEngine {
       parameters: ADDITIVE
     }));
 
+    // ⑥-b 空品視角：測站 AQI 光點 + 火力電廠「下風方向」示意扇形
+    const am = this.airMix;
+    if (am > 0.02 && this.stations.length) {
+      const plumes = [];
+      for (const p of this.plants) {
+        if (p.island) continue;
+        const thermal = Object.entries(p.mix).filter(([f]) => THERMAL.has(f)).reduce((a, [, v]) => a + v, 0);
+        if (thermal < 80) continue;
+        const w = nearestWind(this.stations, p.pos);
+        if (!w || w.d > 45 || w.speed < 0.3) continue;
+        const toward = ((w.dir + 180) % 360) * (Math.PI / 180); // 風向是「從哪裡吹來」，煙往反方向飄
+        const len = (0.06 + Math.sqrt(thermal) * 0.0028) * Math.min(1.6, 0.6 + w.speed * 0.18);
+        for (const [k, half, alpha] of [[1, 0.33, 26], [0.62, 0.22, 34]]) {
+          const pts = [p.pos];
+          for (let a = -half; a <= half + 1e-6; a += half / 6) {
+            const ang = toward + a;
+            pts.push([p.pos[0] + (Math.sin(ang) * len * k) / Math.cos((p.pos[1] * Math.PI) / 180), p.pos[1] + Math.cos(ang) * len * k]);
+          }
+          plumes.push({ poly: pts, alpha });
+        }
+      }
+      layers.push(new PolygonLayer({
+        id: 'plumes',
+        data: plumes,
+        getPolygon: (d) => d.poly,
+        getFillColor: (d) => [225, 190, 160, d.alpha * am * (0.85 + 0.15 * breath)],
+        stroked: false,
+        updateTriggers: { getFillColor: [am, frame] },
+        parameters: ADDITIVE
+      }));
+      const st = this.stations.filter((s) => s.aqi != null);
+      layers.push(new IconLayer({
+        id: 'aqi-glow',
+        data: st,
+        iconAtlas: this.sprite.atlas,
+        iconMapping: this.sprite.mapping,
+        getIcon: () => 'glow',
+        getPosition: (d) => [d.lng, d.lat],
+        getSize: (d) => 5000 + Math.min(200, d.aqi) * 70,
+        sizeUnits: 'meters',
+        sizeMinPixels: 8,
+        getColor: (d) => [...aqiLevel(d.aqi).color, 150 * am],
+        updateTriggers: { getColor: am },
+        parameters: ADDITIVE
+      }));
+      layers.push(new TextLayer({
+        id: 'aqi-num',
+        data: st,
+        getPosition: (d) => [d.lng, d.lat],
+        getText: (d) => String(d.aqi),
+        getSize: 10,
+        getColor: [235, 240, 255, 200 * am],
+        fontFamily: MONO,
+        characterSet: '0123456789',
+        outlineWidth: 3,
+        outlineColor: [3, 5, 10, 200 * am],
+        fontSettings: { sdf: true, fontSize: 40, buffer: 6 },
+        updateTriggers: { getColor: am },
+        parameters: NO_DEPTH
+      }));
+    }
+
+    // ⑥-c 我的家
+    if (this.home) {
+      layers.push(new ScatterplotLayer({
+        id: 'home',
+        data: [this.home],
+        getPosition: (d) => d.pos,
+        getRadius: 7 + breath * 3,
+        radiusUnits: 'pixels',
+        stroked: true,
+        filled: false,
+        getLineColor: [110, 240, 190, 220],
+        lineWidthUnits: 'pixels',
+        getLineWidth: 1.4,
+        updateTriggers: { getRadius: frame },
+        parameters: NO_DEPTH
+      }));
+      layers.push(new TextLayer({
+        id: 'home-label',
+        data: [this.home],
+        getPosition: (d) => d.pos,
+        getText: (d) => `我的家 · ${d.name}`,
+        getSize: 11,
+        getPixelOffset: [0, -18],
+        getColor: [150, 245, 205, 230],
+        fontFamily: FONT,
+        characterSet: 'auto',
+        outlineWidth: 3,
+        outlineColor: [3, 5, 10, 200],
+        fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
+        parameters: NO_DEPTH
+      }));
+    }
+
     // ⑦ 互動拾取層（透明圓，專門負責 hover / tap）
     layers.push(new ScatterplotLayer({
       id: 'pick',
@@ -515,7 +647,8 @@ export class GridFlowEngine {
           text: hp.targetMw > 1 ? `${Math.round(hp.mw).toLocaleString()} MW${fuelText ? '   ' + fuelText : ''}` : '— 停機 · 0 MW',
           size: 12, off: [22, 23], font: MONO, color: hp.color, weight: 400
         },
-        { pos: hp.pos, text: evidenceText(hp, this.source), size: 9.5, off: [22, 39], font: FONT, color: [150, 165, 195], weight: 300 }
+        { pos: hp.pos, text: evidenceText(hp, this.source), size: 9.5, off: [22, 39], font: FONT, color: [150, 165, 195], weight: 300 },
+        ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 9.5, off: [22, 54], font: FONT, color: [225, 190, 160], weight: 300 }] : [])
       ];
       layers.push(new TextLayer({
         id: 'hover-label',
@@ -555,9 +688,23 @@ export class GridFlowEngine {
   }
 }
 
+/** hover 標籤第 5 行：煙道排放（環境部 CEMS 1 小時值，取該廠最高的一根煙囪） */
+function cemsText(c) {
+  const parts = ['硫氧化物', '氮氧化物', '粒狀物', '不透光率']
+    .filter((k) => c.items[k])
+    .slice(0, 3)
+    .map((k) => {
+      const it = c.items[k];
+      const short = { 硫氧化物: 'SOx', 氮氧化物: 'NOx', 粒狀物: '粒狀物', 不透光率: '不透光' }[k];
+      return `${short} ${Math.round(it.max * 10) / 10}${it.std ? `/${it.std}` : ''}`;
+    });
+  return parts.length ? `煙道 ${parts.join(' · ')}（CEMS 值/標準）` : '';
+}
+
 /** hover 標籤第 4 行：這個數字的可信度（仿軌島「即時 / 推估」標示） */
 function evidenceText(p, source) {
   if (source !== 'live') return `● ${EVIDENCE.simulated.label}資料`;
+  if (p.estimated) return '◐ 推估（台電未即時公布離島出力）';
   if (p.targetMw < 1) return `● ${EVIDENCE.live.label} · 停機`;
   const liveShare = p.liveMw / p.targetMw;
   if (liveShare > 0.95) return `● ${EVIDENCE.live.label}`;

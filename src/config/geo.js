@@ -29,6 +29,13 @@ export const PLANTS = [
   { id: 'hoping',   name: '和平電廠',     en: 'Ho-Ping',    pos: [121.755, 24.300], match: /和平/ },
   { id: 'miaoli',   name: '苗栗離岸風場', en: 'Miaoli Offshore', pos: [120.780, 24.700], match: /海洋|竹南|苗栗|大鵬|Formosa/i, share: { wind: 0.20 } },
   { id: 'mingtan',  name: '明潭 / 大觀抽蓄', en: 'Sun Moon Lake Hydro', pos: [120.865, 23.835], match: /明潭|大觀|日月潭/, share: { hydro: 0.62 } },
+  // ── 離島（獨立電網，不與本島相連；電只在島內流動）──
+  //  est：台電若未即時公布（顯示 0 或 N/A），以典型負載推估（MW）
+  { id: 'penghu', name: '澎湖尖山電廠', en: 'Penghu · Jianshan', pos: [119.662, 23.583], match: /澎湖|尖山|中屯|湖西/, island: 'penghu', est: 75 },
+  { id: 'kinmen', name: '金門塔山電廠', en: 'Kinmen · Tashan', pos: [118.433, 24.487], match: /金門|塔山|夏興/, island: 'kinmen', est: 55 },
+  { id: 'matsu',  name: '馬祖珠山電廠', en: 'Matsu · Zhushan', pos: [119.952, 26.150], match: /馬祖|珠山|連江/, island: 'matsu', est: 14 },
+  { id: 'ludao',  name: '綠島發電廠',   en: 'Green Island', pos: [121.476, 22.659], match: /綠島/, island: 'ludao', est: 3 },
+  { id: 'lanyu',  name: '蘭嶼發電廠',   en: 'Orchid Island', pos: [121.512, 22.066], match: /蘭嶼/, island: 'lanyu', est: 2.5 },
   { id: 'tachien',  name: '德基 / 青山水力', en: 'Tachien Hydro', pos: [121.180, 24.240], match: /德基|青山|谷關|天輪|馬鞍#|卓蘭|萬大|松林|鉅工|水里/, share: { hydro: 0.38 } }
 ];
 
@@ -42,7 +49,12 @@ export const LOADS = [
   { id: 'xitun',     name: '台中西屯區',   en: 'Taichung · Xitun',    pos: [120.640, 24.180], demand: 0.17 },
   { id: 'stsp',      name: '台南科學園區', en: 'Tainan Science Park', pos: [120.280, 23.105], demand: 0.13 },
   { id: 'qianzhen',  name: '高雄前鎮區',   en: 'Kaohsiung · Qianzhen', pos: [120.310, 22.595], demand: 0.17 },
-  { id: 'hualien',   name: '花蓮市區',     en: 'Hualien City',        pos: [121.605, 23.985], demand: 0.02 }
+  { id: 'hualien',   name: '花蓮市區',     en: 'Hualien City',        pos: [121.605, 23.985], demand: 0.02 },
+  { id: 'magong',    name: '馬公市',       en: 'Magong',              pos: [119.566, 23.566], demand: 0, island: 'penghu' },
+  { id: 'jincheng',  name: '金城鎮',       en: 'Jincheng',            pos: [118.318, 24.434], demand: 0, island: 'kinmen' },
+  { id: 'nangan',    name: '南竿',         en: 'Nangan',              pos: [119.944, 26.160], demand: 0, island: 'matsu' },
+  { id: 'ludaotown', name: '綠島鄉',       en: 'Green Island',        pos: [121.493, 22.673], demand: 0, island: 'ludao' },
+  { id: 'lanyutown', name: '蘭嶼鄉',       en: 'Orchid Island',       pos: [121.557, 22.043], demand: 0, island: 'lanyu' }
 ];
 // 每個負載點屬於哪個供電區、在該區用電中所佔比例（區域即時用電 → 分配到負載點）
 export const LOAD_REGION = {
@@ -78,8 +90,12 @@ export const PLANT_REGION = {
   datan: 'N', linkou: 'N',
   taichung: 'C', tunghsiao: 'C', mailiao: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
   hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S',
-  hoping: 'E'
+  hoping: 'E',
+  penghu: 'X', kinmen: 'X', matsu: 'X', ludao: 'X', lanyu: 'X'
 };
+
+/** 住家預設位置：彰化北斗 */
+export const DEFAULT_HOME = { name: '北斗', pos: [120.520, 23.872] };
 
 /**
  * 西部「無形骨幹」— 對應真實 345kV 超高壓走廊的大致走向（由南到北）。
@@ -98,4 +114,4 @@ export const SPINE = [
 ];
 
 /** 地圖初始範圍：整座台灣本島 */
-export const TAIWAN_BOUNDS = [[119.95, 21.85], [122.05, 25.35]];
+export const TAIWAN_BOUNDS = [[119.45, 21.85], [122.05, 25.35]]; // 含澎湖

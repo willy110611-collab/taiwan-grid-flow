@@ -65,7 +65,7 @@ export class ParticleSystem {
         source: f.source,
         target: f.target,
         mw: f.mw,
-        rate: (f.mw / 100) * this.density,
+        rate: Math.max((f.mw / 100) * this.density, f.island ? 1.4 * this.density : 0), // 離島電量小，給最低粒子量才看得見
         acc: prev ? prev.acc : Math.random(),
         palette: buildPalette(sources[f.source].mix)
       };

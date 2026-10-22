@@ -1,0 +1,234 @@
+import { useState } from 'react';
+import { Panel } from './Panels.jsx';
+import { Sparkline, fmtMw, rgb } from './widgets.jsx';
+import { PLANTS, REGIONS, DEFAULT_HOME } from '../config/geo.js';
+import { THERMAL } from '../config/energy.js';
+import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js';
+import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
+import { locate, requestNotify } from '../data/useHome.js';
+import { SUPPLY_LEVELS } from '../data/parseAux.js';
+
+const DIRS = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
+export const windText = (deg) => (deg == null ? '—' : `${DIRS[Math.round(deg / 22.5) % 16]}風`);
+const ADVICE_COLOR = { good: [110, 240, 160], ok: [255, 214, 92], bad: [255, 130, 90] };
+
+/** 我的家的即時摘要（給卡片與面板共用） */
+export function homeSummary({ home, snapshot, air, rows, advice }) {
+  if (!snapshot) return null;
+  const station = nearestStation(air.stations, home.pos);
+  const wind = nearestWind(air.stations, home.pos);
+  // 附近的火力電廠（60 km 內），判斷是否位在下風側（僅示意）
+  const thermal = PLANTS.filter((p) => !p.island).map((p) => {
+    const s = snapshot.plants.find((x) => x.id === p.id);
+    const mw = s ? Object.entries(s.mix).filter(([f]) => THERMAL.has(f)).reduce((a, [, v]) => a + v, 0) : 0;
+    const d = distKm(home.pos, p.pos);
+    let downwind = false;
+    if (wind && mw > 80 && d < 60) {
+      const toward = (wind.dir + 180) % 360; // 煙飄去的方向
+      const bearing = (Math.atan2((home.pos[0] - p.pos[0]) * Math.cos((p.pos[1] * Math.PI) / 180), home.pos[1] - p.pos[1]) * 180) / Math.PI;
+      const diff = Math.abs(((bearing - toward + 540) % 360) - 180);
+      downwind = diff < 30;
+    }
+    return { ...p, mw, d, downwind };
+  }).filter((p) => p.mw > 50).sort((a, b) => a.d - b.d).slice(0, 3);
+  const region = home.region && REGIONS[home.region] ? { ...REGIONS[home.region], ...snapshot.regions?.byKey?.[home.region] } : null;
+  const ciSeries = rows.map((r) => carbonIntensity(r.totals)).filter((x) => x != null);
+  return { station, wind, thermal, region, ci: advice?.ci, ciSeries };
+}
+
+/* ───────── 右上角小卡（點了打開「我的家」） ───────── */
+export function HomeCard({ sum, advice, onOpen }) {
+  if (!sum || !advice) return null;
+  const c = rgb(ADVICE_COLOR[advice.level]);
+  const st = sum.station;
+  return (
+    <button className="home-card" onClick={onOpen}>
+      <span className="hc-advice"><i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />{advice.head}</span>
+      <span className="hc-row">
+        <b>{advice.ci?.toFixed(2) ?? '—'}</b><small>kg CO₂/度</small>
+        {st && (
+          <>
+            <em style={{ color: rgb(aqiLevel(st.aqi).color) }}>AQI {st.aqi ?? '—'}</em>
+            <small>{st.site}</small>
+          </>
+        )}
+      </span>
+    </button>
+  );
+}
+
+/* ───────── 我的家 面板 ───────── */
+export function HomePanel({ home, setHome, sum, advice, snapshot, air, onClose }) {
+  const [msg, setMsg] = useState('');
+  if (!sum) return <Panel title="我的家" onClose={onClose}><p className="muted">資料讀取中…</p></Panel>;
+  const st = sum.station;
+  const cl = carbonLevel(sum.ci);
+  const fc = (snapshot.forecast || []).filter((d) => d.date >= new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10)).slice(0, 6);
+
+  return (
+    <Panel title="我的家" onClose={onClose}>
+      <div className="home-loc">
+        <div>
+          <b>{home.name}</b>
+          <span className="muted">　{home.county || ''}{sum.region ? ` · ${sum.region.name}供電區` : ''}</span>
+        </div>
+        <div className="home-loc-btns">
+          <button onClick={() => locate(setHome).then(() => setMsg('')).catch((e) => setMsg(e.message))}>使用目前位置</button>
+          {home.name !== DEFAULT_HOME.name && <button onClick={() => setHome({ ...DEFAULT_HOME })}>回到{DEFAULT_HOME.name}</button>}
+        </div>
+      </div>
+      {msg && <p className="fine warm">{msg}</p>}
+
+      {/* 1. 用電時機 */}
+      <section className="life-sec">
+        <div className="hl-k">現在用電時機</div>
+        <div className="advice-head" style={{ color: rgb(ADVICE_COLOR[advice.level]) }}>{advice.head}</div>
+        <ul className="reasons">{advice.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+        {advice.best && (
+          <p className="fine">依昨日同時段推估，今天 <b className="green">{advice.best.from}–{advice.best.to}</b> 碳排最低，適合洗衣、烘衣、電動車充電。</p>
+        )}
+        <label className="switch">
+          <input type="checkbox" checked={!!home.touUser} onChange={(e) => setHome({ touUser: e.target.checked })} />
+          <span>我家有申請「時間電價」</span>
+        </label>
+        <p className="fine">時段依台電簡易型二段式時間電價（夏月 6–9 月平日 09–24 時為尖峰；其他月份平日 06–11、14–24 時為尖峰；週末全日離峰）。國定假日未納入。</p>
+      </section>
+
+      {/* 2. 碳排 */}
+      <section className="life-sec">
+        <div className="hl-k">每度電的碳排 <em className="tag modeled">推估</em></div>
+        <div className="big-num">{sum.ci?.toFixed(3) ?? '—'} <small>kg CO₂ / 度</small> <span className={cl.tone}>{cl.label}</span></div>
+        <Sparkline values={sum.ciSeries} color="rgb(255,170,110)" />
+        <p className="fine">依各燃料即時發電量 × 典型燃燒排放係數推算。對照：能源署公告 {OFFICIAL_FACTOR.year} 年度電力排碳係數 {OFFICIAL_FACTOR.value} kg CO₂e/度（全年平均）。</p>
+      </section>
+
+      {/* 3. 空氣 */}
+      <section className="life-sec">
+        <div className="hl-k">空氣品質　<span className="muted">環境部（每小時）</span></div>
+        {air.error ? (
+          <p className="fine warm">空品資料尚未接上：{air.error}</p>
+        ) : st ? (
+          <>
+            <div className="aqi-row">
+              <span className="aqi-dot" style={{ background: rgb(aqiLevel(st.aqi).color) }} />
+              <b>AQI {st.aqi ?? '—'}</b>
+              <span>{aqiLevel(st.aqi).label}</span>
+              <span className="muted">PM2.5 {st.pm25 ?? '—'} μg/m³ · {st.site}測站（{st.d.toFixed(0)} km）</span>
+            </div>
+            {sum.wind && <p className="fine">風向：{windText(sum.wind.dir)}，{sum.wind.speed} m/s（{sum.wind.site}）</p>}
+            <ul className="near-plants">
+              {sum.thermal.map((p) => (
+                <li key={p.id}>
+                  <span>{p.name}</span>
+                  <span className="muted">{p.d.toFixed(0)} km · 火力 {fmtMw(p.mw)} MW</span>
+                  {p.downwind && <em className="tag est">你在下風側</em>}
+                </li>
+              ))}
+            </ul>
+            <p className="fine">「下風側」只依最近測站的風向判斷位置關係，PM2.5 來源包含交通、工業、境外等，不代表污染來自該電廠。</p>
+          </>
+        ) : <p className="muted">讀取中…</p>}
+      </section>
+
+      {/* 4. 供電預報 */}
+      <section className="life-sec">
+        <div className="hl-k">未來供電預報　<span className="muted">台電，每 10 天一筆</span></div>
+        {fc.length ? (
+          <ul className="forecast">
+            {fc.map((d) => (
+              <li key={d.date}>
+                <small>{d.date.slice(5).replace('-', '/')}</small>
+                <i style={{ background: rgb(d.color) }} />
+                <b>{d.rate.toFixed(1)}%</b>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="fine">預報資料需要更新 Cloudflare 中繼站（v2）後才會出現。</p>}
+        <p className="fine">尖峰預估備轉容量率：綠 ≥10%、黃 6–10%、橘 &lt;6%。</p>
+      </section>
+
+      {/* 5. 所屬供電區 */}
+      {sum.region?.load && (
+        <section className="life-sec">
+          <div className="hl-k">{sum.region.name}供電區</div>
+          <p className="fine">用電 {fmtMw(sum.region.load)} MW · 發電 {fmtMw(sum.region.gen)} MW · 自給 {Math.round(sum.region.ratio * 100)}%（{sum.region.ratio >= 1 ? '供能給其他區' : '需要外區送電'}）</p>
+        </section>
+      )}
+
+      {/* 6. 提醒 */}
+      <section className="life-sec">
+        <div className="hl-k">提醒</div>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={!!home.notify}
+            onChange={async (e) => {
+              if (!e.target.checked) return setHome({ notify: false });
+              try { await requestNotify(); setHome({ notify: true }); setMsg(''); } catch (err) { setMsg(err.message); }
+            }}
+          />
+          <span>開著光脈搏時跳出通知（黃燈、空品不良、機組異常、低碳時段開始）</span>
+        </label>
+        <p className="fine">App 完全關閉時也想收到：在 Cloudflare 中繼站設定 LINE 提醒（說明在資料夾的 README）。</p>
+      </section>
+    </Panel>
+  );
+}
+
+/* ───────── 空品 面板（篩選列選「空品」時自動打開） ───────── */
+export function AirPanel({ air, snapshot, home, onClose }) {
+  const st = nearestStation(air.stations, home.pos);
+  const plants = PLANTS.filter((p) => air.cems?.[p.id]);
+  return (
+    <Panel title="空品" onClose={onClose}>
+      {air.error ? (
+        <div className="doc">
+          <p className="warm">空品資料尚未接上：{air.error}</p>
+          <p className="fine">需要到環境部資料開放平台免費申請 API 金鑰，貼到 Cloudflare 中繼站的 MOENV_KEY（說明在 README）。</p>
+        </div>
+      ) : (
+        <>
+          <ul className="aqi-legend">
+            {[25, 75, 125, 175, 250].map((v) => (
+              <li key={v}><i style={{ background: rgb(aqiLevel(v).color) }} />{aqiLevel(v).label}</li>
+            ))}
+          </ul>
+          {st && <p className="fine">離你最近：{st.site} AQI {st.aqi}（{aqiLevel(st.aqi).label}），PM2.5 {st.pm25} μg/m³</p>}
+          <p className="fine">地圖上的淡色扇形＝火力電廠依最近測站風向的「下風方向」示意，長度隨火力出力與風速變化。</p>
+        </>
+      )}
+
+      <div className="hl-k" style={{ marginTop: 12 }}>電廠煙道即時監測　<span className="muted">環境部 CEMS（1 小時值）</span></div>
+      {air.cemsError ? (
+        <p className="fine warm">{air.cemsError}</p>
+      ) : plants.length ? (
+        <ul className="cems">
+          {plants.map((p) => {
+            const c = air.cems[p.id];
+            const mw = snapshot?.plants.find((x) => x.id === p.id)?.mw || 0;
+            return (
+              <li key={p.id}>
+                <div><b>{p.name}</b><span className="muted">　出力 {fmtMw(mw)} MW{c.time ? ` · ${c.time.slice(11, 16)} 量測` : ''}</span>{!c.running && c.stopped ? <em className="tag est">煙道停機</em> : null}</div>
+                <div className="cems-items">
+                  {Object.entries(c.items).map(([k, it]) => {
+                    const u = it.unit ? <small> {it.unit}</small> : null;
+                    const pct = it.std ? Math.min(1, it.max / it.std) : null;
+                    return (
+                      <span key={k}>
+                        {k} <b>{Math.round(it.max * 10) / 10}</b>{it.std ? <small> / {it.std}</small> : null}{u}
+                        {pct != null && <i className="cems-bar"><i style={{ width: `${pct * 100}%`, background: pct > 0.8 ? 'rgb(255,120,90)' : 'rgb(110,240,190)' }} /></i>}
+                      </span>
+                    );
+                  })}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p className="fine">目前沒有電廠的 CEMS 資料（或格式尚待確認）。</p>}
+      <p className="fine">數值為該廠運轉中煙囪的最高值（1 小時平均，環境部約晚 1–2 小時公布）；斜線後為法規或環評承諾標準。只列台電與和平等發電廠本身，不含民營汽電共生廠。</p>
+    </Panel>
+  );
+}
+
+export { SUPPLY_LEVELS };

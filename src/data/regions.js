@@ -10,7 +10,10 @@ import { REGIONS, REGION_KEYS, PLANT_REGION } from '../config/geo.js';
  */
 export function regionalGeneration(plants) {
   const gen = { N: 0, C: 0, S: 0, E: 0 };
-  for (const p of plants) gen[PLANT_REGION[p.id] || 'C'] += p.mw;
+  for (const p of plants) {
+    const r = PLANT_REGION[p.id] || 'C';
+    if (r !== 'X') gen[r] += p.mw; // X = 離島獨立電網，不計入本島四區
+  }
   return gen;
 }
 
