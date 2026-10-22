@@ -24,7 +24,7 @@ export function useAnomalies(snapshot) {
   useEffect(() => {
     if (!snapshot) return;
     const demo = new URLSearchParams(location.search).get('demo') === 'anomaly';
-    if (snapshot.source !== 'live' && !demo) return;
+    if ((snapshot.source !== 'live' || snapshot.cached) && !demo) return;
     if (prev.current?.timestamp === snapshot.timestamp && !demo) return;
 
     const before = prev.current;

@@ -59,7 +59,8 @@ export class Cruise {
 
     const cam = this.camera(shot);
     const fly = 14000;
-    this.map.flyTo({ ...cam, duration: fly, curve: 1.2, essential: true });
+    // padding 歸零：避免殘留的抽屜留白讓畫面偏到上方
+    this.map.flyTo({ ...cam, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: fly, curve: 1.2, essential: true });
 
     const stay = (this.dwell[0] + Math.random() * (this.dwell[1] - this.dwell[0])) * 1000;
     // 抵達後：極慢速旋轉 + 微推近，像在空中漂浮

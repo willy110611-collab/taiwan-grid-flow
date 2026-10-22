@@ -1,9 +1,15 @@
 // 離線快取：頁面與程式用「先上網、失敗再用快取」，所以一鍵更新後重開就是新版。
 // 電力資料（data/、taipower/）永遠走網路，不快取，避免看到舊數字。
-const CACHE = 'tgf-v0.5.1';
+const CACHE = 'tgf-v0.5.2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // 連同首頁用到的程式檔一起先存好 → 第二次打開就完全不用下載
+  e.waitUntil(caches.open(CACHE).then(async (c) => {
+    await c.addAll(SHELL);
+    const html = await (await c.match('./index.html')).text();
+    const assets = [...new Set([...html.matchAll(/(?:href|src)="\.\/(assets\/[^"]+)"/g)].map((m) => './' + m[1]))];
+    await c.addAll(assets).catch(() => {});
+  }).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
@@ -14,11 +20,35 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // 字型、地形圖磚交給瀏覽器
   if (/\/(data|taipower)\//.test(url.pathname)) return; // 即時資料不快取
-  e.respondWith(
-    fetch(req)
-      .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res; })
-      .catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
-  );
+
+  // 程式檔（檔名含版本雜湊，內容永不改變）：快取優先 → 第二次打開幾乎不用下載
+  if (/\/assets\//.test(url.pathname)) {
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+      return res;
+    })));
+    return;
+  }
+
+  // 頁面：快取有就「立刻」開（不等網路），同時背景下載新版；新版不同時通知畫面顯示「更新」
+  e.respondWith(caches.open(CACHE).then(async (c) => {
+    const key = url.pathname.endsWith('/') ? './' : req;
+    const hit = await c.match(key) || await c.match('./index.html');
+    const net = fetch(req).then(async (res) => {
+      if (res.ok && res.type === 'basic') {
+        const fresh = await res.clone().text();
+        const old = hit ? await hit.clone().text() : null;
+        await c.put(key, res.clone());
+        if (old && old !== fresh) {
+          const list = await self.clients.matchAll({ type: 'window' });
+          list.forEach((w) => w.postMessage({ type: 'tgf-update' }));
+        }
+      }
+      return res;
+    });
+    if (hit) { e.waitUntil(net.catch(() => {})); return hit; }
+    return net.catch(() => Response.error());
+  }));
 });
 
 // ── App 通知（Web Push）：中繼站在空品不良、供電吃緊時送來 ──

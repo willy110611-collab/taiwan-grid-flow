@@ -124,6 +124,22 @@ export class GridFlowEngine {
     });
     this.map.on('style.load', () => this.updateDaylight(true));
 
+    // 畫面尺寸變動（iPhone 鍵盤收合、從背景回來、轉向、網址列伸縮）時，地圖畫布一定跟著重算，
+    // 避免畫布停在一半高度 →「電力網只顯示一半在最上方」
+    const fix = () => {
+      const c = this.map.getContainer();
+      const cv = this.map.getCanvas();
+      if (Math.abs(cv.clientHeight - c.clientHeight) > 1 || Math.abs(cv.clientWidth - c.clientWidth) > 1) this.map.resize();
+    };
+    this.resizeObs = new ResizeObserver(() => { this.map.resize(); });
+    this.resizeObs.observe(container);
+    this.onVis = () => { if (!document.hidden) setTimeout(() => { fix(); this.refitIfIdle?.(); }, 250); };
+    document.addEventListener('visibilitychange', this.onVis);
+    addEventListener('pageshow', this.onVis);
+    window.visualViewport?.addEventListener('resize', fix);
+    this.fixSize = fix;
+    this.sizeCheck = setInterval(fix, 2000); // 保險：每 2 秒檢查一次畫布是否和容器一樣大
+
     this.overlay = new MapboxOverlay({
       interleaved: true,
       layers: [],
@@ -233,6 +249,7 @@ export class GridFlowEngine {
     this.sheetSaved = null;
     this.userMoved = false;
     this.map.setMaxBounds(MAX_BOUNDS);
+    clearPadding(this.map);
     this.map.fitBounds(TAIWAN_BOUNDS, { padding: fitPadding(), pitch: 28, bearing: -8, duration: 1800, essential: true });
     this.onAway?.(false);
   }
@@ -240,6 +257,7 @@ export class GridFlowEngine {
   /** HUD 高度改變後（資料載入、出現小卡）重新把全島放進可見區域；使用者動過地圖或在巡航就不動 */
   refitIfIdle() {
     if (this.userMoved || this.cruise.active || this.sheetSaved || this.mode === 'wallpaper') return;
+    clearPadding(this.map);
     this.map.fitBounds(TAIWAN_BOUNDS, { padding: fitPadding(), pitch: this.map.getPitch(), bearing: this.map.getBearing(), duration: 800 });
   }
 
@@ -732,8 +750,19 @@ export class GridFlowEngine {
     this.hover.id = id;
   }
 
+  /** 地圖第一次畫好時呼叫（用來收起開機畫面） */
+  onFirstDraw(cb) {
+    const done = () => requestAnimationFrame(() => requestAnimationFrame(cb));
+    if (this.map.isStyleLoaded()) done(); else this.map.once('style.load', done);
+  }
+
   destroy() {
     cancelAnimationFrame(this.raf);
+    this.resizeObs?.disconnect();
+    clearInterval(this.sizeCheck);
+    document.removeEventListener('visibilitychange', this.onVis);
+    removeEventListener('pageshow', this.onVis);
+    window.visualViewport?.removeEventListener('resize', this.fixSize);
     this.cruise.stop();
     this.map.removeControl(this.overlay);
     this.overlay.finalize();
@@ -782,6 +811,12 @@ function makeSparkles(center, n) {
 }
 
 const MAX_BOUNDS = [[117.5, 20.2], [124.5, 27.0]];
+
+/** 抽屜用過的鏡頭留白若沒清掉，之後的視角會整個偏上 → 回全島前先歸零 */
+function clearPadding(map) {
+  const p = map.getPadding();
+  if (p.top || p.bottom || p.left || p.right) map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+}
 
 /**
  * 全島視角的留白：手機依畫面上「實際的」HUD 位置計算（iPhone 瀏海、狀態列、右上小卡都會改變高度），

@@ -13,8 +13,20 @@ export default function GridFlowMap({ snapshot, options, onReady }) {
   useEffect(() => {
     engine.current = new GridFlowEngine(container.current, options);
     onReady?.(engine.current);
+    // 地圖畫好就收起 index.html 的開機畫面（最多等 6 秒）
+    const hide = () => {
+      const el = document.getElementById('splash');
+      if (!el || el.classList.contains('out')) return;
+      // 樣式檔還沒套用完就再等一下，避免露出沒排版的畫面
+      if (document.querySelector('link[rel="preload"][as="style"]')) { setTimeout(hide, 50); return; }
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 600);
+    };
+    engine.current.onFirstDraw(hide);
+    const safety = setTimeout(hide, 6000);
     if (import.meta.env.DEV) window.__gridEngine = engine.current; // 方便在 console 調參
     return () => {
+      clearTimeout(safety);
       engine.current?.destroy();
       engine.current = null;
     };

@@ -39,7 +39,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         <div className="brand-en">TAIWAN GRID FLOW</div>
         <div className={`badge ${live ? 'live' : 'sim'}`}>
           <i />
-          {replay?.on && snapshot ? `REPLAY · 回放 ${twHM(snapshot.t)}` : snapshot ? (live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料') : 'CONNECTING'}
+          {replay?.on && snapshot ? `REPLAY · 回放 ${twHM(snapshot.t)}` : snapshot ? (snapshot.cached ? `更新中 · 上次 ${twHM(snapshot.t)}` : live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料') : 'CONNECTING'}
         </div>
       </header>
 

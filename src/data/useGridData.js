@@ -29,7 +29,7 @@ if (import.meta.env.VITE_GENARY_URL) FILES.genary.urls.unshift(import.meta.env.V
 const LIVE_REFRESH_MS = 10 * 60 * 1000; // 台電每 10 分鐘更新
 const SIM_REFRESH_MS = 60 * 1000;       // 模擬模式每分鐘推進一次，讓畫面有生命
 
-async function fetchText(url, ms = 8000) {
+async function fetchText(url, ms = 5000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -82,9 +82,16 @@ export function buildSnapshot(base, { source, areas = null, para = null, curves 
   return { ...base, source, total, regions, supply, curves, forecast, diag, t: date.getTime() };
 }
 
-export async function loadGridSnapshot({ forceSim = false } = {}) {
+export async function loadGridSnapshot({ forceSim = false, onFirst } = {}) {
   if (!forceSim) {
-    const results = await Promise.all(Object.keys(FILES).map(fetchFile));
+    const jobs = Object.keys(FILES).map(fetchFile);
+    // 先用最關鍵的三個小檔畫出畫面，曲線、預報等稍後補上（不讓最慢的檔案拖住整個畫面）
+    if (onFirst) {
+      Promise.all(jobs.slice(0, 3)).then(([g, a, p]) => {
+        if (g.data) onFirst(buildSnapshot(g.data, { source: 'live', areas: a.data, para: p.data, diag: [] }));
+      }).catch(() => {});
+    }
+    const results = await Promise.all(jobs);
     const [genary, areas, para, fuelCurve, areaCurve, yFuel, forecast] = results;
     const diag = results.map((r) => r.diag);
     if (genary.data) {
@@ -106,17 +113,45 @@ export async function loadGridSnapshot({ forceSim = false } = {}) {
  * React hook：回傳最新的電網快照，並自動輪詢。
  * URL 帶 ?sim=1 可強制使用模擬資料（展示 / 離線開發用）。
  */
+/* 上次的快照存在這台裝置：下次打開立刻有畫面與粒子，不用等網路 */
+const CACHE_KEY = 'tgf-last-snapshot';
+const CACHE_MAX_AGE = 6 * 3600e3;
+function loadCached() {
+  if (new URLSearchParams(location.search).has('sim')) return null;
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    return c && Date.now() - c.t < CACHE_MAX_AGE ? { ...c, cached: true } : null;
+  } catch { return null; }
+}
+function saveCached(snap) {
+  if (snap.source !== 'live') return;
+  try {
+    const { diag, ...rest } = snap; // eslint-disable-line no-unused-vars
+    localStorage.setItem(CACHE_KEY, JSON.stringify(rest));
+    const all = Object.entries(snap.totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0) || 1;
+    const green = ['solar', 'wind', 'hydro', 'otherRe'].reduce((a, f) => a + (snap.totals[f] || 0), 0);
+    const hm = new Date(snap.t + 8 * 3600e3).toISOString().slice(11, 16);
+    localStorage.setItem('tgf-last-brief', JSON.stringify({ t: snap.t, hm, green: ((green / all) * 100).toFixed(1), total: Math.round(all).toLocaleString() }));
+  } catch { /* 空間不足就算了 */ }
+}
+
 export function useGridData() {
-  const [snapshot, setSnapshot] = useState(null);
+  const [snapshot, setSnapshot] = useState(loadCached);
   const timer = useRef();
 
   useEffect(() => {
     const forceSim = new URLSearchParams(location.search).has('sim');
     let alive = true;
+    let gotFirst = false;
     const tick = async () => {
-      const snap = await loadGridSnapshot({ forceSim });
+      const snap = await loadGridSnapshot({
+        forceSim,
+        onFirst: (s) => { if (alive && !gotFirst) { gotFirst = true; setSnapshot((cur) => (cur && !cur.cached ? cur : s)); } }
+      });
       if (!alive) return;
+      gotFirst = true;
       setSnapshot(snap);
+      saveCached(snap);
       // 即時模式：對齊台電的 10 分鐘更新（整 10 分後 1 分鐘再抓）
       const wait = snap.source === 'live'
         ? Math.min(LIVE_REFRESH_MS, 10 * 60000 - (Date.now() % (10 * 60000)) + 60000)

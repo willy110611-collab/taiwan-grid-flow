@@ -26,10 +26,33 @@ const taipowerProxy = {
   }
 };
 
+/** 打包後的樣式檔改成「非阻擋」載入：開機畫面（index.html 內嵌樣式）不必等它，HTML 一到就顯示 */
+const nonBlockingCss = {
+  name: 'non-blocking-css',
+  enforce: 'post',
+  transformIndexHtml(html) {
+    return html.replace(/<link rel="stylesheet"( crossorigin)? href="([^"]+\.css)">/g,
+      (m, co, href) => `<link rel="preload" as="style"${co || ''} href="${href}" onload="this.onload=null;this.rel='stylesheet';window.__cssDone=(window.__cssDone||0)+1"><noscript><link rel="stylesheet" href="${href}"></noscript>`);
+  }
+};
+
 export default defineConfig({
   base: './', // 相對路徑：同一份 build 可放在 GitHub Pages 子路徑，也可本機開
-  plugins: [react()],
+  plugins: [react(), nonBlockingCss],
   server: { host: true, proxy: taipowerProxy },
   preview: { host: '127.0.0.1', port: 5180, strictPort: true, proxy: taipowerProxy },
-  build: { chunkSizeWarningLimit: 2500 }
+  build: {
+    chunkSizeWarningLimit: 2500,
+    // 地圖引擎拆成獨立檔：版本更新時通常不變 → 手機直接用快取，不用重新下載
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules/maplibre-gl')) return 'maplibre';
+          if (id.includes('node_modules/@deck.gl') || id.includes('node_modules/@luma.gl') || id.includes('node_modules/@loaders.gl') || id.includes('node_modules/@math.gl') || id.includes('node_modules/@probe.gl')) return 'deckgl';
+          if (id.includes('node_modules/react') || id.includes('node_modules/scheduler')) return 'react';
+          if (id.includes('node_modules/taiwan-atlas') || id.includes('node_modules/topojson')) return 'geo';
+        }
+      }
+    }
+  }
 });
