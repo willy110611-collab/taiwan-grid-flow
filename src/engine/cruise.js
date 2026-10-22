@@ -77,7 +77,9 @@ export class Cruise {
   camera(shot) {
     const { clientWidth: w, clientHeight: h } = this.map.getContainer();
     if (shot.bounds) {
-      const c = this.map.cameraForBounds(shot.bounds, { padding: Math.min(w, h) * 0.06 });
+      // 手機：上下留給 HUD，整座島不被擋住
+      const pad = w < 700 ? { top: 180, bottom: 200, left: 16, right: 16 } : Math.min(w, h) * 0.06;
+      const c = this.map.cameraForBounds(shot.bounds, { padding: pad });
       return { center: c.center, zoom: c.zoom, pitch: shot.pitch, bearing: shot.bearing };
     }
     // 依螢幕短邊微調縮放：手機直立螢幕不會擠、4K 桌面不會太遠

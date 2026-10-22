@@ -767,7 +767,7 @@ const MAX_BOUNDS = [[117.5, 20.2], [124.5, 27.0]];
 
 function fitPadding() {
   const w = window.innerWidth;
-  return w < 700 ? { top: 195, bottom: 150, left: 20, right: 20 } : { top: 20, bottom: 20, left: 40, right: 40 };
+  return w < 700 ? { top: 180, bottom: 200, left: 16, right: 16 } : { top: 20, bottom: 20, left: 40, right: 40 };
 }
 
 function mixRgb(a, b, t) {

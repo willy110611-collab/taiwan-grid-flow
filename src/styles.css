@@ -434,12 +434,13 @@ a:hover { text-decoration: underline; }
   .mix { min-width: 110px; }
   .mix-value { font-size: 23px; }
   .mix-bar { width: 110px; margin: 9px 0 6px auto; }
-  .filters { top: calc(196px + var(--safe-t)); }
+  /* 篩選列移到下方工具列上面，不擋電力流動 */
+  .filters { top: auto; bottom: calc(80px + var(--safe-b)); }
   .filters button { padding: 6px 12px; font-size: 11.5px; letter-spacing: 0.12em; }
-  .cruise-caption { top: calc(246px + var(--safe-t)); }
+  .cruise-caption { top: calc(186px + var(--safe-t)); }
 
   .clock {
-    bottom: calc(86px + var(--safe-b)); padding: 8px 12px; border-left: 0;
+    bottom: calc(118px + var(--safe-b)); padding: 4px 12px; border-left: 0;
     background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
   }
   .clock-time { font-size: 20px; }
@@ -450,20 +451,21 @@ a:hover { text-decoration: underline; }
   .toolbar { left: var(--gutter); right: var(--gutter); transform: none; justify-content: space-around; bottom: calc(14px + var(--safe-b)); }
   .toolbar button { flex: 1; padding: 8px 2px 6px; min-width: 0; letter-spacing: 0.1em; }
   .filters { left: var(--gutter); right: var(--gutter); transform: none; justify-content: space-between; }
-  .filters button { padding: 6px 6px; letter-spacing: 0.02em; gap: 4px; font-size: 11px; flex: 0 0 auto; }
+  .filters button { padding: 5px 6px; letter-spacing: 0.02em; gap: 4px; font-size: 11px; flex: 0 0 auto; }
+  .clock-time { line-height: 1.1; }
   .filters { overflow-x: auto; scrollbar-width: none; }
   .filters::-webkit-scrollbar { display: none; }
-  .replay { bottom: calc(86px + var(--safe-b)); flex-wrap: wrap; gap: 6px 10px; }
+  .replay { bottom: calc(122px + var(--safe-b)); flex-wrap: wrap; gap: 6px 10px; }
   .replay input[type=range] { order: 5; flex-basis: 100%; }
   .badges { grid-template-columns: repeat(3, 1fr); }
-  .badge-toast { width: calc(100% - 32px); border-radius: 18px; bottom: calc(150px + var(--safe-b)); }
-  .alert-banner { top: calc(242px + var(--safe-t)); width: calc(100% - 32px); }
+  .badge-toast { width: calc(100% - 32px); border-radius: 18px; bottom: calc(190px + var(--safe-b)); }
+  .alert-banner { top: calc(186px + var(--safe-t)); width: calc(100% - 32px); }
   .hud:has(.replay) .clock { display: none; }
   .supply { margin-top: 6px; }
   .home-card { padding: 6px 9px; margin-top: 8px; }
   /* 抽屜打開時收起上方的篩選列與小卡，讓出看地圖的空間 */
   .hud:has(.panel) .filters, .hud:has(.panel) .home-card, .hud:has(.panel) .cruise-caption, .hud:has(.panel) .alert-banner { opacity: 0; pointer-events: none; }
-  .pick-banner { top: calc(250px + var(--safe-t)); width: max-content; max-width: calc(100% - 32px); }
+  .pick-banner { top: calc(186px + var(--safe-t)); width: max-content; max-width: calc(100% - 32px); }
   .loc-search, .loc-select { font-size: 16px; }
   .hc-row small:last-child { display: none; }
   .forecast b { font-size: 9.5px; }
