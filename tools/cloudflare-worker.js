@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈搏 — Cloudflare Worker 中繼站 v3
+//  台灣光脈搏 — Cloudflare Worker 中繼站 v4
 //  貼到 Cloudflare：Workers & Pages → taiwan-grid-flow-data → Edit code → 全部取代 → Deploy
 //
 //  路徑                     來源（政府公開資料）
@@ -9,6 +9,7 @@
 //  /cems.json               環境部 固定污染源 CEMS 1 小時值，只保留電廠（需 MOENV_KEY）
 //  /config.json             給網頁：LINE 加好友連結
 //  POST /line               LINE Webhook（好友登記測站、查詢；回覆訊息免費）
+//  POST /push/subscribe     App 通知（Web Push，免費）訂閱／取消，金鑰自動產生存在 KV
 //
 //  設定（Worker → Settings → Variables and Secrets）：
 //   MOENV_KEY        Secret  環境部資料開放平台 API 金鑰
@@ -39,10 +40,12 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const name = new URL(req.url).pathname.replace(/^\/(data\/)?/, '');
     if (req.method === 'POST' && name === 'line') return lineWebhook(req, env, ctx);
+    if (req.method === 'POST' && (name === 'push/subscribe' || name === 'push/unsubscribe')) return pushRoute(req, env, name);
     try {
       if (name === 'config.json') {
         const id = (env.LINE_BASIC_ID || '').trim();
-        return new Response(JSON.stringify({ lineFriendUrl: id ? `https://line.me/R/ti/p/${encodeURIComponent(id.startsWith('@') ? id : '@' + id)}` : null, lineId: id || null }), { headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
+        const vapidPublic = env.NOTIFY ? (await vapidKeys(env)).pub : null;
+        return new Response(JSON.stringify({ lineFriendUrl: id ? `https://line.me/R/ti/p/${encodeURIComponent(id.startsWith('@') ? id : '@' + id)}` : null, lineId: id || null, vapidPublic }), { headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
       }
       if (!name) return text(`OK · 機房 ${req.cf?.colo || '?'} · 環境部金鑰${env.MOENV_KEY ? '已設定' : '未設定'}`);
       if (TP_FILES.has(name)) return await cached(ctx, name, 120, () => upstream(TP + name, name));
@@ -55,38 +58,168 @@ export default {
     }
   },
 
-  // ── 排程：每 10 分鐘檢查一次。每件事每天最多通知一次；超過每月上限就不再主動推播 ──
+  // ── 排程：每 10 分鐘檢查一次 ──
+  //  ・只在 07:00–21:59 發送；夜裡變差的，早上 7 點通知
+  //  ・每個測站每天最多一次（早上沒達標、下午才達標 → 下午通知）
+  //  ・LINE 當月用量超過上限 80%：只推供電，空品改由 App 通知與「現在」查詢
   async scheduled(event, env, ctx) {
-    if (!env.LINE_TOKEN || !env.NOTIFY) return;
+    if (!env.NOTIFY) return;
+    const hour = new Date(Date.now() + 8 * 3600e3).getUTCHours();
+    if (hour < SEND_FROM || hour >= SEND_TO) return;
     const today = twDate();
-    const users = await listUsers(env);
-    if (!users.length) return;
+    const users = env.LINE_TOKEN ? await listUsers(env) : [];
+    const subs = await listPushSubs(env);
+    if (!users.length && !subs.length) return;
 
     // 1) 供電（全台同一件事）
     const sup = await supplyNow();
-    if (sup && sup.alert && !(await env.NOTIFY.get(`${today}:supply`))) {
-      const to = users.filter((u) => u.supply !== false).map((u) => u.id);
-      if (await send(env, to, `⚡ 台灣光脈搏：今日供電${sup.label}，尖峰預估備轉 ${sup.rate}%（${sup.hours}）。建議尖峰時段減少用電。`)) {
-        await env.NOTIFY.put(`${today}:supply`, '1', { expirationTtl: 2 * 86400 });
+    if (sup?.alert) {
+      const text = `⚡ 今日供電${sup.label}，尖峰預估備轉 ${sup.rate}%（${sup.hours}）。建議尖峰時段減少用電。`;
+      if (users.length && !(await env.NOTIFY.get(`${today}:supply`))) {
+        const to = users.filter((u) => u.supply !== false).map((u) => u.id);
+        if (await send(env, to, `台灣光脈搏 ${text}`)) await env.NOTIFY.put(`${today}:supply`, '1', { expirationTtl: 2 * 86400 });
+      }
+      if (subs.length && !(await env.NOTIFY.get(`${today}:psupply`))) {
+        await pushAll(env, subs, { title: '台灣光脈搏・供電提醒', body: text });
+        await env.NOTIFY.put(`${today}:psupply`, '1', { expirationTtl: 2 * 86400 });
       }
     }
 
-    // 2) 空品（各自登記的測站）
+    // 2) 空品（各自登記的測站，AQI ≥ 101 對人體有害）
     if (!env.MOENV_KEY) return;
     const stations = await stationsNow(env);
-    const bySite = new Map();
-    for (const u of users) if (u.site && u.aqi !== false) (bySite.get(u.site) || bySite.set(u.site, []).get(u.site)).push(u.id);
-    for (const [site, ids] of bySite) {
-      const s = stations.find((x) => x.site === site);
-      if (!s || !(s.aqi >= 101)) continue;
+    const bad = new Map(stations.filter((x) => x.aqi >= AQI_ALERT).map((x) => [x.site, x]));
+    if (!bad.size) return;
+    const aqiText = (x) => `😷 ${x.site}測站 AQI ${x.aqi}（${x.status}），PM2.5 ${x.pm25 ?? '—'}。敏感族群請減少戶外活動，外出可戴口罩。`;
+
+    // 2a) App 通知（免費）
+    for (const [site, x] of bad) {
+      const targets = subs.filter((p) => p.site === site);
+      const key = `${today}:paqi:${site}`;
+      if (!targets.length || (await env.NOTIFY.get(key))) continue;
+      await pushAll(env, targets, { title: '台灣光脈搏・空品提醒', body: aqiText(x) });
+      await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
+    }
+
+    // 2b) LINE（額度快用完就暫停空品）
+    if (!users.length || (await quotaRatio(env)) >= 0.8) return;
+    for (const [site, x] of bad) {
+      const ids = users.filter((u) => u.site === site && u.aqi !== false).map((u) => u.id);
       const key = `${today}:aqi:${site}`;
-      if (await env.NOTIFY.get(key)) continue;
-      if (await send(env, ids, `😷 台灣光脈搏：${site}測站 AQI ${s.aqi}（${s.status}），PM2.5 ${s.pm25 ?? '—'}。敏感族群請減少戶外活動。`)) {
-        await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
-      }
+      if (!ids.length || (await env.NOTIFY.get(key))) continue;
+      if (await send(env, ids, `台灣光脈搏 ${aqiText(x)}`)) await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
     }
   }
 };
+
+const SEND_FROM = 7;   // 台灣時間 07:00 起才發送
+const SEND_TO = 22;    // 22:00 後不發送
+const AQI_ALERT = 101; // 對敏感族群不健康以上
+
+async function pushAll(env, subs, msg) {
+  await Promise.all(subs.map(async (p) => {
+    if ((await pushOne(env, p.sub, msg)) === 'gone') await env.NOTIFY.delete(p.key);
+  }));
+}
+
+async function quotaRatio(env) {
+  const used = Number(await env.NOTIFY.get(`quota:${twDate().slice(0, 7)}`)) || 0;
+  return used / (Number(env.LINE_MONTHLY_CAP) || 200);
+}
+
+/* ───────── App 通知（Web Push，免費、不限則數）─────────
+ * 金鑰（VAPID）第一次使用時自動產生並存在 KV，不需要手動設定。
+ * 加密依 RFC 8291（aes128gcm），只用 Cloudflare 內建的 WebCrypto。 */
+const b64u = {
+  enc: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+  dec: (str) => Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((str.length + 3) % 4)), (c) => c.charCodeAt(0))
+};
+const cat = (...arrs) => { const out = new Uint8Array(arrs.reduce((a, b) => a + b.length, 0)); let o = 0; for (const a of arrs) { out.set(a, o); o += a.length; } return out; };
+const te = (s) => new TextEncoder().encode(s);
+
+async function vapidKeys(env) {
+  let k = await env.NOTIFY.get('vapid', 'json');
+  if (!k) {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
+    const pub = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+    k = { jwk, pub: b64u.enc(pub) };
+    await env.NOTIFY.put('vapid', JSON.stringify(k));
+  }
+  return k;
+}
+
+async function hkdf(salt, ikm, info, len) {
+  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, len * 8));
+}
+
+/** RFC 8291 加密：回傳 aes128gcm 內容 */
+async function encryptPush(sub, payload) {
+  const uaPub = b64u.dec(sub.keys.p256dh);
+  const auth = b64u.dec(sub.keys.auth);
+  const as = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const asPub = new Uint8Array(await crypto.subtle.exportKey('raw', as.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', uaPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const ecdh = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, as.privateKey, 256));
+  const ikm = await hkdf(auth, ecdh, cat(te('WebPush: info\0'), uaPub, asPub), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, te('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, te('Content-Encoding: nonce\0'), 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, cat(te(payload), new Uint8Array([2]))));
+  const rs = new Uint8Array([0, 0, 16, 0]); // 4096
+  return cat(salt, rs, new Uint8Array([asPub.length]), asPub, ct);
+}
+
+async function vapidAuth(env, endpoint) {
+  const k = await vapidKeys(env);
+  const key = await crypto.subtle.importKey('jwk', k.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const head = b64u.enc(te(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const body = b64u.enc(te(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://willy110611-collab.github.io/taiwan-grid-flow/' })));
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, te(`${head}.${body}`));
+  return `vapid t=${head}.${body}.${b64u.enc(sig)}, k=${k.pub}`;
+}
+
+/** 送一則 App 通知；回傳 'ok' | 'gone'（訂閱已失效）| 'fail' */
+async function pushOne(env, sub, msg) {
+  try {
+    const r = await fetch(sub.endpoint, {
+      method: 'POST',
+      headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '43200', Urgency: 'normal' },
+      body: await encryptPush(sub, JSON.stringify(msg))
+    });
+    return r.ok ? 'ok' : r.status === 404 || r.status === 410 ? 'gone' : 'fail';
+  } catch { return 'fail'; }
+}
+
+const subKey = async (endpoint) => 'p:' + b64u.enc(await crypto.subtle.digest('SHA-256', te(endpoint))).slice(0, 32);
+
+async function pushRoute(req, env, name) {
+  const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
+  if (!env.NOTIFY) return json({ error: '中繼站尚未綁定 KV（NOTIFY）' }, 503);
+  const body = await req.json().catch(() => null);
+  const sub = body?.subscription;
+  if (!sub?.endpoint || !/^https:\/\//.test(sub.endpoint)) return json({ error: 'bad subscription' }, 400);
+  const key = await subKey(sub.endpoint);
+  if (name === 'push/unsubscribe') { await env.NOTIFY.delete(key); return json({ ok: true }); }
+  if (!sub.keys?.p256dh || !sub.keys?.auth) return json({ error: 'bad subscription' }, 400);
+  const site = String(body.site || '').slice(0, 20) || null;
+  await env.NOTIFY.put(key, JSON.stringify({ sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site, since: twDate() }));
+  if (body.test) await pushOne(env, sub, { title: '台灣光脈搏', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
+  return json({ ok: true, site });
+}
+
+async function listPushSubs(env) {
+  const out = [];
+  let cursor;
+  do {
+    const r = await env.NOTIFY.list({ prefix: 'p:', cursor });
+    for (const k of r.keys) { const v = await env.NOTIFY.get(k.name, 'json'); if (v) out.push({ key: k.name, ...v }); }
+    cursor = r.list_complete ? null : r.cursor;
+  } while (cursor);
+  return out;
+}
 
 /* ───────── LINE ───────── */
 const twDate = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
@@ -143,12 +276,20 @@ async function verify(env, body, sig) {
 }
 
 const HELP = `台灣光脈搏 提醒小幫手 ⚡
-・傳「測站名稱」登記你家附近的空品測站，例如：西屯、二林、忠明
-・傳「現在」：即時供電與你測站的空氣品質
-・傳「只要供電」：只收供電吃緊通知
-・傳「全部通知」：供電＋空品都收
-・傳「停止」：不再收任何通知
-空品 AQI ≥ 101 或供電非綠燈時才會通知，同一件事每天最多一次。`;
+
+📍 傳「測站名稱」登記你家附近的空品測站，例如：西屯、二林、忠明
+
+🆓 隨時查詢（免費、想查幾次都可以）
+・「現在」即時供電＋你測站的空氣品質
+・「預報」未來兩個月供電預測
+
+🔔 通知設定
+・「只要供電」只收供電吃緊
+・「全部通知」供電＋空品都收
+・「停止」不再通知
+
+空品 AQI ≥ 101（對人體有害）或供電非綠燈才通知，每天最多一次，只在 07–22 點發送。
+📲 想收更多免費通知：在光脈搏 App「我的家 → 提醒」開啟 App 通知。`;
 
 async function lineWebhook(req, env, ctx) {
   const body = await req.text();
@@ -177,6 +318,13 @@ async function handleEvent(env, ev) {
   if (/^(停止|關閉|取消)(通知)?$/.test(t)) { await save({ supply: false, aqi: false }); return reply(env, ev.replyToken, '已停止所有通知。想恢復請傳「全部通知」。'); }
   if (/^只要供電$/.test(t)) { await save({ supply: true, aqi: false }); return reply(env, ev.replyToken, '好的，只會通知供電吃緊。'); }
   if (/^(全部通知|開啟|開啟通知)$/.test(t)) { await save({ supply: true, aqi: true }); return reply(env, ev.replyToken, `供電與空品通知都已開啟${user.site ? `（測站：${user.site}）` : '，請再傳你家附近的測站名稱'}。`); }
+
+  if (/^(預報|明天|供電預報)$/.test(t)) {
+    const rows = await forecastNow();
+    if (!rows.length) return reply(env, ev.replyToken, '暫時讀不到台電供電預報。');
+    const dot = (r) => (r >= 10 ? '🟢' : r >= 6 ? '🟡' : '🟠');
+    return reply(env, ev.replyToken, `📅 台電未來供電預測（尖峰備轉容量率）\n${rows.slice(0, 6).map((x) => `${dot(x.rate)} ${x.date}　${x.rate}%`).join('\n')}\n\n🟢 ≥10% 充裕　🟡 6–10% 吃緊　🟠 <6% 警戒`);
+  }
 
   const stations = env.MOENV_KEY ? await stationsNow(env) : [];
   if (/^(現在|查詢|狀態|即時)$/.test(t)) {
@@ -215,6 +363,15 @@ async function supplyNow() {
   const label = { G: '充裕（綠燈）', Y: '吃緊（黃燈）', O: '警戒（橘燈）', R: '限電警戒（紅燈）', B: '限電準備（黑燈）' }[ind] || (rate < 6 ? '警戒' : rate < 10 ? '吃緊' : '充裕');
   const load = parseFloat(para.records.find((r) => r.curr_load)?.curr_load) * 10; // 萬瓩 → MW
   return { rate, label, load, hours: rec.fore_peak_hour_range || '', alert: (ind && ind !== 'G') || rate < 10 };
+}
+
+async function forecastNow() {
+  try {
+    const t = await (await upstream(FORECAST, 'forecast.csv')).text();
+    const today = twDate().replace(/-/g, '');
+    return t.trim().split(/\r?\n/).map((l) => l.split(',')).filter((c) => /^\d{8}$/.test(c[0]) && c[0] >= today)
+      .map((c) => ({ date: `${c[0].slice(4, 6)}/${c[0].slice(6, 8)}`, rate: parseFloat(c[4]) })).filter((x) => Number.isFinite(x.rate));
+  } catch { return []; }
 }
 
 async function stationsNow(env) {

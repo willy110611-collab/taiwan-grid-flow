@@ -81,3 +81,35 @@ export async function requestNotify() {
   const p = await Notification.requestPermission();
   if (p !== 'granted') throw new Error('通知權限未允許');
 }
+
+/* ───────── App 通知（Web Push，免費）───────── */
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const urlB64 = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+
+export function pushSupport() {
+  if (!('serviceWorker' in navigator)) return { ok: false, why: '此瀏覽器不支援 App 通知' };
+  if (isIOS() && !standalone()) return { ok: false, why: 'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈搏開啟（iOS 16.4 以上）', ios: true };
+  if (!('PushManager' in window) || typeof Notification === 'undefined') return { ok: false, why: '此瀏覽器不支援 App 通知' };
+  return { ok: true };
+}
+
+/** 開啟 App 通知：向中繼站登記（site = 我的家最近的空品測站） */
+export async function enablePush(relayUrl, vapidPublic, site, { test = true } = {}) {
+  const sup = pushSupport();
+  if (!sup.ok) throw new Error(sup.why);
+  if (!vapidPublic) throw new Error('中繼站尚未更新到 v4，暫時無法開啟');
+  if ((await Notification.requestPermission()) !== 'granted') throw new Error('通知權限未允許（可到手機設定 → 通知 開啟）');
+  const reg = await navigator.serviceWorker.ready;
+  const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(vapidPublic) }));
+  const r = await fetch(`${relayUrl}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), site, test }) });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `中繼站回應 ${r.status}`);
+}
+
+export async function disablePush(relayUrl) {
+  const reg = await navigator.serviceWorker?.ready;
+  const sub = await reg?.pushManager?.getSubscription();
+  if (!sub) return;
+  await fetch(`${relayUrl}/push/unsubscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON() }) }).catch(() => {});
+  await sub.unsubscribe().catch(() => {});
+}

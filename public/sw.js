@@ -1,6 +1,6 @@
 // 離線快取：頁面與程式用「先上網、失敗再用快取」，所以一鍵更新後重開就是新版。
 // 電力資料（data/、taipower/）永遠走網路，不快取，避免看到舊數字。
-const CACHE = 'tgf-v0.4.4';
+const CACHE = 'tgf-v0.5.0';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -19,4 +19,20 @@ self.addEventListener('fetch', (e) => {
       .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res; })
       .catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
   );
+});
+
+// ── App 通知（Web Push）：中繼站在空品不良、供電吃緊時送來 ──
+self.addEventListener('push', (e) => {
+  let msg = { title: '台灣光脈搏', body: '' };
+  try { msg = { ...msg, ...e.data.json() }; } catch { if (e.data) msg.body = e.data.text(); }
+  e.waitUntil(self.registration.showNotification(msg.title, {
+    body: msg.body, icon: './icon-192.png', badge: './icon-192.png', tag: msg.tag || msg.title, renotify: true
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const c = list.find((x) => x.url.includes(self.registration.scope));
+    return c ? c.focus() : self.clients.openWindow('./');
+  }));
 });

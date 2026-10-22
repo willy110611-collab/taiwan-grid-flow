@@ -6,7 +6,7 @@ import { PLANTS, REGIONS } from '../config/geo.js';
 import { THERMAL } from '../config/energy.js';
 import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js';
 import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
-import { locate, requestNotify, searchTowns } from '../data/useHome.js';
+import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSupport } from '../data/useHome.js';
 import { SUPPLY_LEVELS } from '../data/parseAux.js';
 
 const DIRS = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
@@ -64,7 +64,14 @@ export function HomeCard({ sum, advice, onOpen }) {
 /* ───────── 我的家 面板 ───────── */
 export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, onClose }) {
   const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
   const line = useLineConfig();
+  const st0 = sum?.station;
+  // 我的家換了地方 → App 通知改登記新的測站（不再發測試通知）
+  useEffect(() => {
+    if (!home.push || !st0 || !line?.vapidPublic || st0.site === home.pushSite) return;
+    enablePush(APP.relayUrl, line.vapidPublic, st0.site, { test: false }).then(() => setHome({ pushSite: st0.site })).catch(() => {});
+  }, [home.push, st0?.site, line?.vapidPublic]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!sum) return <Panel title="我的家" onClose={onClose}><p className="muted">資料讀取中…</p></Panel>;
   const st = sum.station;
   const cl = carbonLevel(sum.ci);
@@ -163,6 +170,45 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
       {/* 6. 提醒 */}
       <section className="life-sec">
         <div className="hl-k">提醒</div>
+        <p className="fine">空品 AQI ≥ 101（對人體有害）或供電非綠燈時通知；每天最多一次，只在 07–22 點發送。</p>
+
+        {/* App 通知（免費） */}
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={!!home.push}
+            disabled={busy}
+            onChange={async (e) => {
+              setBusy(true);
+              try {
+                if (e.target.checked) {
+                  if (!st) throw new Error('請先設定「我的家」地點');
+                  await enablePush(APP.relayUrl, line?.vapidPublic, st.site);
+                  setHome({ push: true, pushSite: st.site });
+                } else {
+                  await disablePush(APP.relayUrl);
+                  setHome({ push: false });
+                }
+                setMsg('');
+              } catch (err) { setMsg(err.message); }
+              setBusy(false);
+            }}
+          />
+          <span>📲 App 通知（免費、不限次數）{home.push && home.pushSite ? `：${home.pushSite}測站` : ''}</span>
+        </label>
+        {!home.push && pushSupport().ios && <p className="fine">iPhone：Safari「分享 → 加入主畫面」後，從主畫面打開光脈搏再開啟這個開關。</p>}
+
+        {/* LINE */}
+        {line?.lineFriendUrl && (
+          <div className="line-box">
+            <a className="line-btn" href={line.lineFriendUrl} target="_blank" rel="noreferrer">加 LINE 好友收提醒</a>
+            <p className="fine">加好友後傳你家附近的測站名稱登記{st ? <>，例如「<b>{st.site}</b>」</> : ''}。</p>
+            <p className="fine">🆓 隨時傳「現在」查即時供電與空品、「預報」查未來供電，免費不限次數。</p>
+            <p className="fine">LINE 主動通知每月有則數上限，快用完時只送供電警示；空品請優先用上面的 App 通知。</p>
+          </div>
+        )}
+
+        {/* 開著 App 時的提醒 */}
         <label className="switch">
           <input
             type="checkbox"
@@ -172,16 +218,8 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
               try { await requestNotify(); setHome({ notify: true }); setMsg(''); } catch (err) { setMsg(err.message); }
             }}
           />
-          <span>開著光脈搏時跳出通知（黃燈、空品不良、機組異常、低碳時段開始）</span>
+          <span>開著光脈搏時另外提醒：機組異常、低碳時段開始</span>
         </label>
-        {line?.lineFriendUrl ? (
-          <div className="line-box">
-            <a className="line-btn" href={line.lineFriendUrl} target="_blank" rel="noreferrer">加 LINE 好友收提醒</a>
-            <p className="fine">App 關著也收得到。加好友後傳你家附近的測站名稱登記{st ? <>，例如「<b>{st.site}</b>」</> : ''}；傳「現在」可隨時查詢、「停止」取消。</p>
-          </div>
-        ) : (
-          <p className="fine">App 完全關閉時也想收到：在 Cloudflare 中繼站設定 LINE 提醒（說明在資料夾的 README）。</p>
-        )}
       </section>
     </Panel>
   );
