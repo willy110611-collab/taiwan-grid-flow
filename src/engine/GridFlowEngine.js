@@ -113,7 +113,8 @@ export class GridFlowEngine {
     });
     // 桌布模式預設鎖定：點擊、滾輪、拖曳都無效，避免在桌面上誤觸縮放（按鎖頭才解鎖）
     if (wallpaper) this.setLocked(true);
-    if (onUserMove) this.map.on('moveend', (e) => { if (e.originalEvent) onUserMove(); });
+    this.userMoved = false;
+    this.map.on('moveend', (e) => { if (e.originalEvent) { this.userMoved = true; onUserMove?.(); } });
     if (!wallpaper) this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
     // 地形圖磚載不到（離線）時只會少了山影，其餘照常；這裡吞掉錯誤避免洗版
@@ -223,6 +224,12 @@ export class GridFlowEngine {
 
   toggleCruise() {
     return this.cruise.toggle();
+  }
+
+  /** HUD 高度改變後（資料載入、出現小卡）重新把全島放進可見區域；使用者動過地圖或在巡航就不動 */
+  refitIfIdle() {
+    if (this.userMoved || this.cruise.active || this.sheetSaved || this.mode === 'wallpaper') return;
+    this.map.fitBounds(TAIWAN_BOUNDS, { padding: fitPadding(), pitch: this.map.getPitch(), bearing: this.map.getBearing(), duration: 800 });
   }
 
   /** 手機底部抽屜打開：讓台灣（或我的家附近）落在抽屜上方的可見區域 */
@@ -765,9 +772,20 @@ function makeSparkles(center, n) {
 
 const MAX_BOUNDS = [[117.5, 20.2], [124.5, 27.0]];
 
-function fitPadding() {
-  const w = window.innerWidth;
-  return w < 700 ? { top: 180, bottom: 200, left: 16, right: 16 } : { top: 20, bottom: 20, left: 40, right: 40 };
+/**
+ * 全島視角的留白：手機依畫面上「實際的」HUD 位置計算（iPhone 瀏海、狀態列、右上小卡都會改變高度），
+ * 讓整座島落在上方數字與下方時鐘／篩選列之間，不被擋住。
+ */
+export function fitPadding() {
+  const w = window.innerWidth, h = window.innerHeight;
+  if (w >= 700) return { top: 20, bottom: 20, left: 40, right: 40 };
+  const box = (sel) => document.querySelector(sel)?.getBoundingClientRect();
+  const visible = (r) => r && r.height > 0;
+  const tops = ['.mix', '.brand'].map(box).filter(visible).map((r) => r.bottom);
+  const bottoms = ['.clock', '.filters', '.toolbar'].map(box).filter(visible).map((r) => r.top);
+  const top = (tops.length ? Math.max(...tops) : 180) + 10;
+  const bottom = h - (bottoms.length ? Math.min(...bottoms) : h - 200) + 10;
+  return { top, bottom, left: 16, right: 16 };
 }
 
 function mixRgb(a, b, t) {

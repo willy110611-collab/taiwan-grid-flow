@@ -1,4 +1,5 @@
 import { TAIWAN_BOUNDS } from '../config/geo.js';
+import { fitPadding } from './GridFlowEngine.js';
 
 /**
  * 放空巡航 — 鏡頭在幾個「能量場景」之間緩慢飛行，抵達後持續微微旋轉
@@ -78,7 +79,7 @@ export class Cruise {
     const { clientWidth: w, clientHeight: h } = this.map.getContainer();
     if (shot.bounds) {
       // 手機：上下留給 HUD，整座島不被擋住
-      const pad = w < 700 ? { top: 180, bottom: 200, left: 16, right: 16 } : Math.min(w, h) * 0.06;
+      const pad = w < 700 ? fitPadding() : Math.min(w, h) * 0.06;
       const c = this.map.cameraForBounds(shot.bounds, { padding: pad });
       return { center: c.center, zoom: c.zoom, pitch: shot.pitch, bearing: shot.bearing };
     }

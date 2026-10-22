@@ -171,6 +171,20 @@ export default function App() {
     setUiState((s) => ({ ...s, ...patch }));
   }, [lock]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 手機：資料載入後 HUD 變高（供電燈號、右上小卡），重新把全島放進可見區域
+  const hasCard = !!homeSum;
+  useEffect(() => {
+    if (!MOBILE || !hasCard) return;
+    const id = setTimeout(() => engine.current?.refitIfIdle(), 400);
+    return () => clearTimeout(id);
+  }, [hasCard, home.pos?.[0]]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!MOBILE) return;
+    const onResize = () => engine.current?.refitIfIdle();
+    addEventListener('orientationchange', onResize);
+    return () => removeEventListener('orientationchange', onResize);
+  }, []);
+
   // 手機：底部抽屜打開時，把地圖移到抽屜上方看得到的區域；關閉時回到原本的視角
   useEffect(() => {
     const e = engine.current;
