@@ -39,9 +39,11 @@ export function parseGenary(raw) {
   let currentFuel = null;
   for (const row of rows) {
     if (!Array.isArray(row) || row.length < 4) continue;
-    const fuel = classifyFuel(row[0]) || currentFuel;
+    let fuel = classifyFuel(row[0]) || currentFuel;
     if (!fuel) continue;
     currentFuel = fuel;
+    // 台電把抽蓄水力（明潭、大觀二）歸在「儲能」；發電時當作水力顯示，儲能負載（抽水 / 充電）則略過
+    if (fuel === 'storage' && /抽蓄/.test(String(row[1])) && !/負載|Load/i.test(String(row[0]))) fuel = 'hydro';
 
     const unit = cleanText(row[2] ?? row[1] ?? '');
     if (!unit || /小計|合計|總計|subtotal|total/i.test(unit)) continue;
@@ -54,6 +56,7 @@ export function parseGenary(raw) {
     if (mw <= 0) continue; // 停機或儲能充電（負值）不發光
 
     totals[fuel] = (totals[fuel] || 0) + mw;
+    if (fuel === 'storage') continue; // 電池儲能放電：只計入總量，不畫在地圖節點上
 
     const plant = PLANTS.find((p) => p.match && p.match.test(unit));
     if (plant) {

@@ -1,51 +1,98 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseGenary } from './parseGenary.js';
-import { mockGenary } from './mockGenary.js';
+import { mockGenary, mockLoadPara } from './mockGenary.js';
+import { parseGenLoadAreas, parseLoadAreasCurve, parseFuelCurve, parseLoadPara, supplyLevel } from './parseAux.js';
+import { computeRegions } from './regions.js';
+import { APP } from '../config/app.js';
 
 /**
- * 依序嘗試的資料來源。
- *  - 開發時 /taipower/* 由 vite.config.js 代理到台電網站（解決 CORS）
- *  - 可用環境變數 VITE_GENARY_URL 指定自架代理（例如 Cloudflare Worker）
+ * 資料來源：台電「今日電力資訊」公開資料（政府公開、免申請、每 10 分鐘更新）
+ * ─────────────────────────────────────────────────────────────
+ *  依序嘗試：
+ *  1. Cloudflare Worker 中繼站（任何裝置、任何網路都能用）
+ *  2. 同網域 ./data/（GitHub Actions 每 10 分鐘備份一份）
+ *  3. 本機 /taipower/* 代理（啟動.bat、桌布伺服器）
  */
-const SOURCES = [
-  import.meta.env.VITE_GENARY_URL,
-  // GitHub Pages 版：由 GitHub Actions 每 10 分鐘抓台電資料放在同網域（沒有 CORS 問題）
-  './data/genary.json',
-  // 本機版：由 Vite 代理轉發到台電
-  '/taipower/d006/loadGraph/loadGraph/data/genary.json',
-  '/taipower/d006/loadGraph/loadGraph/data/genary.txt'
-].filter(Boolean);
+const TP = '/taipower/d006/loadGraph/loadGraph/data';
+const R = APP.relayUrl;
+const FILES = {
+  genary:    { name: '各機組發電量', urls: [`${R}/genary.json`, './data/genary.json', `${TP}/genary.json`, `${TP}/genary.txt`], parse: parseGenary },
+  areas:     { name: '各區發電/用電', urls: [`${R}/genloadareaperc.csv`, './data/genloadareaperc.csv', `${TP}/genloadareaperc.csv`], parse: parseGenLoadAreas },
+  para:      { name: '供電狀況', urls: [`${R}/loadpara.json`, './data/loadpara.json', `${TP}/loadpara.json`], parse: parseLoadPara },
+  fuelCurve: { name: '今日燃料別曲線', urls: [`${R}/loadfueltype.csv`, './data/loadfueltype.csv', `${TP}/loadfueltype.csv`], parse: parseFuelCurve },
+  areaCurve: { name: '今日區域用電曲線', urls: [`${R}/loadareas.csv`, './data/loadareas.csv', `${TP}/loadareas.csv`], parse: parseLoadAreasCurve }
+};
+if (import.meta.env.VITE_GENARY_URL) FILES.genary.urls.unshift(import.meta.env.VITE_GENARY_URL);
 
 const LIVE_REFRESH_MS = 10 * 60 * 1000; // 台電每 10 分鐘更新
 const SIM_REFRESH_MS = 60 * 1000;       // 模擬模式每分鐘推進一次，讓畫面有生命
 
-async function fetchWithTimeout(url, ms = 7000) {
+async function fetchText(url, ms = 8000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`, {
-      signal: ctrl.signal,
-      cache: 'no-store'
-    });
+    const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`, { signal: ctrl.signal, cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.text();
+    const text = await res.text();
+    if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('收到網頁而不是資料（此網址不存在）');
+    return text;
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? '逾時' : e.message);
   } finally {
     clearTimeout(timer);
   }
 }
 
-export async function loadGridSnapshot({ forceSim = false } = {}) {
-  if (!forceSim) {
-    for (const url of SOURCES) {
-      try {
-        const snapshot = parseGenary(await fetchWithTimeout(url));
-        return { ...snapshot, source: 'live', sourceUrl: url };
-      } catch (err) {
-        console.info(`[grid] ${url} 無法使用：${err.message}`);
+/** 依序嘗試多個網址；回傳 { data, diag }，diag 記錄每個網址的結果（給「資訊 → 連線診斷」） */
+async function fetchFile(key) {
+  const f = FILES[key];
+  const tries = [];
+  for (const url of f.urls) {
+    try {
+      const data = f.parse(await fetchText(url));
+      if (data) {
+        tries.push({ url, ok: true });
+        return { data, diag: { name: f.name, ok: true, url, tries } };
       }
+      tries.push({ url, ok: false, msg: '格式不符' });
+    } catch (err) {
+      tries.push({ url, ok: false, msg: err.message });
     }
   }
-  return { ...parseGenary(mockGenary()), source: 'simulated' };
+  return { data: null, diag: { name: f.name, ok: false, tries } };
+}
+
+const totalOf = (totals) => Object.entries(totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
+
+/** 由 genary 結果 + 輔助資料組成完整快照 */
+export function buildSnapshot(base, { source, areas = null, para = null, curves = null, diag = [], date = new Date() }) {
+  const total = totalOf(base.totals);
+  const regions = computeRegions(base.plants, total, areas, date);
+  let supply = para ? { ...para, evidence: 'live' } : null;
+  if (!supply && source !== 'live') {
+    const m = mockLoadPara(total);
+    supply = { ...m, ...supplyLevel(m.rate, m.cap), evidence: 'simulated' };
+  }
+  return { ...base, source, total, regions, supply, curves, diag, t: date.getTime() };
+}
+
+export async function loadGridSnapshot({ forceSim = false } = {}) {
+  if (!forceSim) {
+    const results = await Promise.all(Object.keys(FILES).map(fetchFile));
+    const [genary, areas, para, fuelCurve, areaCurve] = results;
+    const diag = results.map((r) => r.diag);
+    if (genary.data) {
+      return buildSnapshot(genary.data, {
+        source: 'live',
+        areas: areas.data,
+        para: para.data,
+        curves: { fuel: fuelCurve.data, areas: areaCurve.data },
+        diag
+      });
+    }
+    return { ...buildSnapshot(parseGenary(mockGenary()), { source: 'simulated' }), diag };
+  }
+  return buildSnapshot(parseGenary(mockGenary()), { source: 'simulated', diag: [{ name: '強制模擬（網址帶 ?sim=1）', ok: false, tries: [] }] });
 }
 
 /**
@@ -63,7 +110,11 @@ export function useGridData() {
       const snap = await loadGridSnapshot({ forceSim });
       if (!alive) return;
       setSnapshot(snap);
-      timer.current = setTimeout(tick, snap.source === 'live' ? LIVE_REFRESH_MS : SIM_REFRESH_MS);
+      // 即時模式：對齊台電的 10 分鐘更新（整 10 分後 1 分鐘再抓）
+      const wait = snap.source === 'live'
+        ? Math.min(LIVE_REFRESH_MS, 10 * 60000 - (Date.now() % (10 * 60000)) + 60000)
+        : SIM_REFRESH_MS;
+      timer.current = setTimeout(tick, wait);
     };
     tick();
     return () => {

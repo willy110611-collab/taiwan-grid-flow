@@ -62,6 +62,16 @@ export function HighlightsPanel({ hl, onClose }) {
               </li>
             )}
           </ul>
+          {hl.anomalies?.length > 0 && (
+            <div className="hl-anom">
+              <div className="hl-k">今日機組異常（偵測）</div>
+              <ul>
+                {hl.anomalies.slice(-5).reverse().map((a, i) => (
+                  <li key={i}><span>{a.time}</span>{a.plant || a.unit}　{a.unit}　{fmtMw(a.from)} → {fmtMw(a.to)} MW</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="hl-chart">
             <div className="hl-k">今日綠能佔比</div>
             <Sparkline values={hl.spark} />
@@ -103,7 +113,8 @@ export function InfoPanel({ snapshot, onClose }) {
           <dl>
             <dt>各機組發電量</dt>
             <dd>
-              台灣電力公司「今日電力資訊 — 各機組發電量」，每 10 分鐘更新。
+              台灣電力公司「今日電力資訊」公開資料，每 10 分鐘更新：各機組發電量、各區發電／用電、
+              今日燃料別發電曲線、今日區域用電曲線、供電狀況（備轉容量率與燈號）。
               <a href={APP.taipowerPage} target="_blank" rel="noreferrer">台電原始頁面 ↗</a>
             </dd>
             <dt>電廠座標與機組對應</dt>
@@ -119,6 +130,25 @@ export function InfoPanel({ snapshot, onClose }) {
             <dt>技術</dt>
             <dd>MapLibre GL JS、deck.gl、React。</dd>
           </dl>
+          {snapshot?.diag?.length > 0 && (
+            <>
+              <div className="hl-k" style={{ marginTop: 14 }}>連線診斷</div>
+              <ul className="diag">
+                {snapshot.diag.map((d) => (
+                  <li key={d.name} className={d.ok ? 'ok' : 'fail'}>
+                    <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
+                    <b>{d.name}</b>
+                    <small>{d.ok ? '正常' : d.tries.map((t) => `${t.url.replace(/^.*\//, '')}：${t.msg}`).slice(-1)[0] || '未嘗試'}</small>
+                  </li>
+                ))}
+              </ul>
+              {!live && (
+                <p className="fine">
+                  本機版請用「啟動.bat」或桌布伺服器開啟（直接開 HTML 檔無法連到台電）；手機版需等 GitHub Actions 抓到資料。
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
 

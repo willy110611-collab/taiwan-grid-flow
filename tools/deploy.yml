@@ -30,20 +30,25 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - name: 抓取台電各機組發電量
+      - name: 抓取台電「今日電力資訊」公開資料
         continue-on-error: true
         run: |
           mkdir -p public/data
-          for f in genary.json genary.txt; do
-            if curl -fsSL --max-time 25 \
-                 -A "Mozilla/5.0 (TaiwanGridFlow; GitHub Actions)" \
-                 -e "https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html" \
-                 "https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/$f" -o public/data/genary.json \
-               && node -e "const j=JSON.parse(require('fs').readFileSync('public/data/genary.json','utf8').replace(/^﻿/,''));if(!Array.isArray(j.aaData)||j.aaData.length<5)process.exit(1)"; then
-              echo "取得 $f"; exit 0
+          # 先走 Cloudflare 中繼站（GitHub 的海外主機直連台電會被擋），失敗再直連台電
+          RELAY="https://taiwan-grid-flow-data.willy110611.workers.dev"
+          BASE="https://www.taipower.com.tw/d006/loadGraph/loadGraph/data"
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+          REF="https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html"
+          for f in genary.json genloadareaperc.csv loadpara.json loadfueltype.csv loadareas.csv; do
+            if curl -fsSL --max-time 25 "$RELAY/$f" -o "public/data/$f" || curl -fsSL --max-time 25 -A "$UA" -e "$REF" "$BASE/$f" -o "public/data/$f"; then
+              echo "✓ $f ($(wc -c < public/data/$f) bytes)"
+            else
+              echo "✗ $f 取得失敗"; rm -f "public/data/$f"
             fi
           done
-          echo "台電資料取得失敗，網頁會自動改用模擬資料"; rm -f public/data/genary.json
+          # genary 必須是有效 JSON，否則刪掉（網頁會改用模擬資料）
+          node -e "const j=JSON.parse(require('fs').readFileSync('public/data/genary.json','utf8').replace(/^\uFEFF/,''));if(!Array.isArray(j.aaData)||j.aaData.length<5)process.exit(1)" \
+            || { echo "genary 無效"; rm -f public/data/genary.json; }
 
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3

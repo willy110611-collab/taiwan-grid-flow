@@ -52,7 +52,8 @@ export const FILTERS = [
   { id: 'all',     label: '全部', fuels: null,                                   dot: [232, 238, 252] },
   { id: 'green',   label: '綠能', fuels: ['solar', 'wind', 'hydro', 'otherRe'],  dot: [110, 240, 190] },
   { id: 'thermal', label: '火力', fuels: ['gas', 'coal', 'cogen', 'oil'],        dot: [255, 150, 92] },
-  { id: 'nuclear', label: '核能', fuels: ['nuclear'],                            dot: [214, 228, 255] }
+  { id: 'nuclear', label: '核能', fuels: ['nuclear'],                            dot: [214, 228, 255] },
+  { id: 'demand',  label: '用電', fuels: null, demand: true,                     dot: [255, 120, 90] }
 ];
 
 /** 資料可信度分級（仿軌島「依證據區分即時與推估」） */

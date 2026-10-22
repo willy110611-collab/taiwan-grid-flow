@@ -77,3 +77,13 @@ export function mockGenary(now = new Date()) {
 
   return { '': stamp, aaData: rows };
 }
+
+/**
+ * 模擬的供電狀況（備轉容量率）：負載越高、備轉越低。
+ * 尖峰約 7%（黃燈），讓模擬模式也能看到燈號變化。
+ */
+export function mockLoadPara(totalMw) {
+  const x = Math.max(0, Math.min(1, (totalMw - 25500) / 10500));
+  const rate = 16.5 - 9.5 * x;
+  return { rate: Math.round(rate * 10) / 10, cap: Math.round(totalMw * rate / 100 / 10) };
+}

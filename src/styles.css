@@ -208,6 +208,128 @@ a:hover { text-decoration: underline; }
 .is-wallpaper .sourceline { opacity: 0.8; }
 .is-wallpaper .cruise-caption { top: auto; bottom: calc(40px + var(--safe-b)); }
 
+/* ── 桌布鎖頭：很淡，滑過才亮，避免誤觸 ── */
+.lock-btn {
+  bottom: calc(44px + var(--safe-b)); right: var(--gutter);
+  width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer;
+  border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--ink);
+  opacity: 0.22; transition: opacity 0.4s, background 0.4s, border-color 0.4s;
+}
+.lock-btn:hover { opacity: 0.9; background: var(--glass); border-color: var(--line); }
+.lock-btn.open { opacity: 1; color: var(--green); background: var(--glass); border-color: rgba(110, 240, 190, 0.4); }
+.lock-btn svg, .adjust-actions svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.4; stroke-linecap: round; }
+.adjust-banner {
+  top: calc(22px + var(--safe-t)); left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 20px;
+  background: var(--glass-strong); border: 1px solid rgba(110, 240, 190, 0.3); border-radius: 16px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); pointer-events: auto;
+  animation: rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.adjust-banner b { font-weight: 400; letter-spacing: 0.4em; color: var(--green); font-size: 13px; }
+.adjust-banner span { font-size: 11px; color: var(--ink-dim); letter-spacing: 0.1em; }
+.adjust-banner small { font-size: 10px; color: var(--ink-faint); }
+.adjust-actions { display: flex; gap: 8px; margin-top: 2px; }
+.adjust-actions button {
+  display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; letter-spacing: 0.1em;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--ink);
+}
+.adjust-actions button.primary { border-color: rgba(110, 240, 190, 0.5); color: var(--green); }
+.adjust-actions button:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* ── 供電燈號 ── */
+.supply { display: flex; align-items: center; justify-content: flex-end; gap: 7px; margin-top: 9px; font-size: 10.5px; letter-spacing: 0.12em; color: var(--ink-dim); }
+.supply i { width: 7px; height: 7px; border-radius: 50%; animation: breathe 3s ease-in-out infinite; }
+.supply b { font-family: var(--mono); font-weight: 400; color: var(--ink); letter-spacing: 0; }
+.supply small { color: var(--ink-faint); font-size: 9.5px; }
+
+/* ── 用電面板 ── */
+.warm { color: rgb(255, 160, 110); }
+.cool { color: rgb(120, 210, 255); }
+.region-bars { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 14px; }
+.rb-head { display: flex; justify-content: space-between; align-items: baseline; }
+.rb-head b { color: var(--ink); font-weight: 400; letter-spacing: 0.3em; font-size: 13px; }
+.rb-head span { font-size: 11px; font-family: var(--mono); }
+.rb-bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.05); margin-top: 5px; overflow: hidden; }
+.rb-bar span { display: block; height: 100%; border-radius: 2px; transition: width 1.2s ease; }
+.rb-bar .load { background: linear-gradient(90deg, rgba(255, 150, 80, 0.4), rgb(255, 150, 90)); }
+.rb-bar .gen { background: linear-gradient(90deg, rgba(90, 190, 255, 0.4), rgb(110, 210, 255)); }
+.rb-nums { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 4px; }
+
+/* ── 徽章 ── */
+.badge-group { margin: 10px 0 6px; }
+.badges { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; }
+.badges li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; cursor: default; }
+.badges li b { font-weight: 400; font-size: 11px; color: var(--ink-faint); letter-spacing: 0.08em; }
+.badges li.on b { color: var(--ink); }
+.badges li small { font-size: 9.5px; color: var(--ink-faint); font-family: var(--mono); }
+.badge-tip {
+  position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); width: 170px; z-index: 3;
+  padding: 8px 10px; border-radius: 10px; background: rgba(5, 8, 15, 0.96); border: 1px solid var(--line);
+  font-size: 11px; color: var(--ink-dim); white-space: pre-line; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.badges li:hover .badge-tip, .badges li:active .badge-tip { opacity: 1; }
+.medal.on { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.12)); }
+.badge-toast {
+  bottom: calc(100px + var(--safe-b)); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 16px; padding: 12px 22px 12px 14px; pointer-events: auto; cursor: pointer;
+  background: var(--glass-strong); border: 1px solid var(--line); border-radius: 999px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), fadeout 0.8s 5.2s forwards;
+}
+.badge-toast small { display: block; font-size: 9.5px; letter-spacing: 0.4em; color: var(--ink-faint); }
+.badge-toast b { display: block; font-weight: 400; font-size: 16px; letter-spacing: 0.3em; color: var(--ink); margin: 2px 0; }
+.badge-toast span { font-size: 11px; color: var(--ink-dim); }
+.converge { position: relative; width: 74px; height: 74px; }
+.converge svg { position: relative; animation: medalin 1.2s 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.converge i {
+  position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%;
+  background: var(--c); box-shadow: 0 0 8px var(--c);
+  animation: gather 0.9s var(--d) ease-in both;
+}
+@keyframes gather {
+  from { transform: rotate(var(--a)) translateX(70px); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: rotate(var(--a)) translateX(0); opacity: 0; }
+}
+@keyframes medalin { from { transform: scale(0.2); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fadeout { to { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* ── 機組異常橫幅 ── */
+.alert-banner {
+  top: calc(70px + var(--safe-t)); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 16px; pointer-events: auto;
+  background: rgba(40, 10, 14, 0.78); border: 1px solid rgba(255, 110, 110, 0.4); border-radius: 14px;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); animation: rise 0.5s ease;
+}
+.alert-banner > i { width: 7px; height: 7px; border-radius: 50%; background: rgb(255, 110, 110); box-shadow: 0 0 10px rgb(255, 110, 110); animation: breathe 1.4s infinite; }
+.alert-banner b { display: block; font-weight: 400; font-size: 13px; color: #ffd9d9; letter-spacing: 0.15em; }
+.alert-banner span { font-size: 11px; color: rgba(255, 210, 210, 0.7); font-family: var(--mono); }
+.hl-anom ul { list-style: none; padding: 0; margin: 6px 0 12px; font-size: 11.5px; }
+.hl-anom li { padding: 4px 0; color: var(--ink-dim); }
+.hl-anom li span { font-family: var(--mono); color: rgb(255, 130, 130); margin-right: 8px; }
+
+/* ── 連線診斷 ── */
+.diag { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; font-size: 11.5px; }
+.diag li { display: grid; grid-template-columns: 10px 110px 1fr; align-items: center; gap: 8px; }
+.diag b { font-weight: 400; color: var(--ink); }
+.diag small { color: var(--ink-faint); font-family: var(--mono); font-size: 10px; word-break: break-all; }
+
+/* ── 今日回放 ── */
+.replay {
+  bottom: calc(94px + var(--safe-b)); left: 50%; transform: translateX(-50%); width: min(720px, calc(100% - 32px));
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; pointer-events: auto;
+  background: var(--glass-strong); border: 1px solid var(--line); border-radius: 16px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: rise 0.4s ease;
+}
+.replay .play svg { width: 18px; height: 18px; fill: currentColor; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.replay-time { min-width: 92px; }
+.replay-time b { display: block; font-family: var(--mono); font-weight: 300; font-size: 20px; color: var(--ink); }
+.replay-time small { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.08em; }
+.replay input[type=range] { flex: 1; accent-color: rgb(110, 240, 190); }
+.speeds { display: flex; gap: 2px; }
+.speeds button { border: 0; background: none; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); padding: 4px 6px; border-radius: 6px; }
+.speeds button.on { color: var(--ink); background: rgba(255, 255, 255, 0.08); }
+
 /* ── 平板以下：縮小 ── */
 @media (max-width: 1000px) {
   .legend { display: none; }
@@ -222,9 +344,9 @@ a:hover { text-decoration: underline; }
   .mix { min-width: 110px; }
   .mix-value { font-size: 23px; }
   .mix-bar { width: 110px; margin: 9px 0 6px auto; }
-  .filters { top: calc(118px + var(--safe-t)); }
+  .filters { top: calc(146px + var(--safe-t)); }
   .filters button { padding: 6px 12px; font-size: 11.5px; letter-spacing: 0.12em; }
-  .cruise-caption { top: calc(168px + var(--safe-t)); }
+  .cruise-caption { top: calc(196px + var(--safe-t)); }
 
   .clock {
     bottom: calc(86px + var(--safe-b)); padding: 8px 12px; border-left: 0;
@@ -236,11 +358,20 @@ a:hover { text-decoration: underline; }
   .is-wallpaper .sourceline { display: block; }
 
   .toolbar { left: var(--gutter); right: var(--gutter); transform: none; justify-content: space-around; bottom: calc(14px + var(--safe-b)); }
-  .toolbar button { flex: 1; padding: 8px 4px 6px; }
+  .toolbar button { flex: 1; padding: 8px 2px 6px; min-width: 0; letter-spacing: 0.1em; }
+  .filters { left: var(--gutter); right: var(--gutter); transform: none; justify-content: space-between; }
+  .filters button { padding: 6px 9px; letter-spacing: 0.06em; gap: 5px; }
+  .replay { bottom: calc(86px + var(--safe-b)); flex-wrap: wrap; gap: 6px 10px; }
+  .replay input[type=range] { order: 5; flex-basis: 100%; }
+  .badges { grid-template-columns: repeat(3, 1fr); }
+  .badge-toast { width: calc(100% - 32px); border-radius: 18px; bottom: calc(150px + var(--safe-b)); }
+  .alert-banner { top: calc(192px + var(--safe-t)); width: calc(100% - 32px); }
+  .hud:has(.replay) .clock { display: none; }
+  .supply { margin-top: 6px; }
 
   /* 面板改為底部抽屜 */
   .panel {
-    left: 0; right: 0; bottom: 0; width: auto; max-height: 68%;
+    left: 0; right: 0; bottom: 0; width: auto; max-height: 58%;
     border-radius: 22px 22px 0 0; padding-bottom: var(--safe-b);
     animation: sheet 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
     z-index: 5;

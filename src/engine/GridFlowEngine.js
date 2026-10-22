@@ -2,7 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { ScatterplotLayer, IconLayer, PathLayer, TextLayer } from '@deck.gl/layers';
 
-import { PLANTS, LOADS, TAIWAN_BOUNDS } from '../config/geo.js';
+import { PLANTS, LOADS, TAIWAN_BOUNDS, REGIONS, REGION_KEYS, LOAD_REGION } from '../config/geo.js';
 import { FUELS, FUEL_KEYS, FILTERS, EVIDENCE } from '../config/energy.js';
 import { createBaseStyle } from '../map/baseStyle.js';
 import { solveFlows } from './flowModel.js';
@@ -27,6 +27,14 @@ const NO_DEPTH = { depthCompare: 'always', depthWriteEnabled: false };
 const FONT = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
 const MONO = '"JetBrains Mono", ui-monospace, Menlo, monospace';
 const BREATH_PERIOD = 7.5; // 秒；約每分鐘 8 次，接近人放鬆時的呼吸
+/** 供電燈號 → 呼吸週期（越吃緊呼吸越急促）與負載點色調 */
+const TENSION = [
+  { period: 7.5, tint: [235, 242, 255] },
+  { period: 5.6, tint: [255, 226, 160] },
+  { period: 4.3, tint: [255, 176, 110] },
+  { period: 3.2, tint: [255, 110, 100] },
+  { period: 3.2, tint: [255, 110, 100] }
+];
 
 /**
  * GridFlowEngine — 地圖 + deck.gl + 粒子系統的協調者
@@ -42,7 +50,14 @@ const BREATH_PERIOD = 7.5; // 秒；約每分鐘 8 次，接近人放鬆時的�
  *  onDaylight 日夜狀態改變時回報（給 HUD 調整天空色）
  */
 export class GridFlowEngine {
-  constructor(container, { density = 1, mode = 'app', fps = 60, onStats, onShot, onDaylight } = {}) {
+  constructor(container, { density = 1, mode = 'app', fps = 60, initialView = null, onStats, onShot, onDaylight, onUserMove, onPlantVisit } = {}) {
+    this.onPlantVisit = onPlantVisit;
+    this.breathPhase = 0;
+    this.tension = 0;
+    this.demandView = false;
+    this.demandMix = 0;
+    this.clockOverride = null;
+    this.regions = null;
     this.mode = mode;
     this.frameMs = 1000 / fps;
     this.onStats = onStats;
@@ -58,7 +73,7 @@ export class GridFlowEngine {
       ...p, idx: i, mw: 0, targetMw: 0, liveMw: 0, mix: {}, color: [255, 255, 255], vis: 1,
       phase: Math.random() * Math.PI * 2, sparkles: makeSparkles(p.pos, 260)
     }));
-    this.loads = LOADS.map((l, i) => ({ ...l, idx: i, energy: 0, pulse: 0 }));
+    this.loads = LOADS.map((l, i) => ({ ...l, idx: i, energy: 0, pulse: 0, mw: 0, targetLoadMw: 0 }));
     this.puffs = [];
 
     this.particles = new ParticleSystem({
@@ -81,25 +96,25 @@ export class GridFlowEngine {
     this.map = new maplibregl.Map({
       container,
       style: createBaseStyle(),
-      bounds: TAIWAN_BOUNDS,
-      fitBoundsOptions: { padding: fitPadding() },
-      pitch: 28,
-      bearing: -8,
+      // 有存過的桌布固定視角就直接用，否則顯示全島
+      ...(initialView || { bounds: TAIWAN_BOUNDS, fitBoundsOptions: { padding: fitPadding() }, pitch: 28, bearing: -8 }),
       maxPitch: 65,
       minZoom: 5.5,
       maxZoom: 12,
       maxBounds: [[117.5, 20.2], [124.5, 27.0]],
       attributionControl: false,
-      interactive: !wallpaper,
       fadeDuration: 0
     });
+    // 桌布模式預設鎖定：點擊、滾輪、拖曳都無效，避免在桌面上誤觸縮放（按鎖頭才解鎖）
+    if (wallpaper) this.setLocked(true);
+    if (onUserMove) this.map.on('moveend', (e) => { if (e.originalEvent) onUserMove(); });
     if (!wallpaper) this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
     // 地形圖磚載不到（離線）時只會少了山影，其餘照常；這裡吞掉錯誤避免洗版
     this.map.on('error', (e) => {
       if (e?.sourceId !== 'dem') console.warn('[map]', e?.error?.message || e);
     });
-    this.map.on('load', () => this.updateDaylight(true));
+    this.map.on('style.load', () => this.updateDaylight(true));
 
     this.overlay = new MapboxOverlay({
       interleaved: true,
@@ -107,13 +122,13 @@ export class GridFlowEngine {
       pickingRadius: 6,
       onHover: (info) => this.setHover(info.layer?.id === 'pick' ? info.object?.id : null),
       onClick: (info) => this.setHover(info.layer?.id === 'pick' ? info.object?.id : null),
-      getCursor: ({ isHovering }) => (isHovering ? 'pointer' : 'grab')
+      getCursor: ({ isHovering }) => (isHovering ? 'pointer' : this.map?.dragPan.isEnabled() ? 'grab' : 'default')
     });
     this.map.addControl(this.overlay);
 
     // 放空巡航：桌布模式場景停留 3–5 分鐘；App 模式 60–90 秒
     this.cruise = new Cruise(this.map, { dwell: wallpaper ? [180, 300] : [60, 90], onShot });
-    if (wallpaper) this.map.once('load', () => setTimeout(() => this.cruise.start(), 4000));
+    if (wallpaper && !initialView) setTimeout(() => this.cruise.start(), 5000);
     else {
       // 使用者一碰地圖就停止巡航，把鏡頭還給使用者
       const userStop = (e) => { if (e.originalEvent) this.cruise.stop(); };
@@ -135,6 +150,17 @@ export class GridFlowEngine {
       p.mix = s?.mix || {};
       p.dominant = Object.entries(p.mix).sort((a, b) => b[1] - a[1])[0]?.[0];
     }
+    // 用電端：各區用電（台電即時或推估）分配到負載點 → 負載點的引力（需求權重）與光暈大小
+    this.regions = snapshot.regions || null;
+    for (const L of this.loads) {
+      const [rk, share] = LOAD_REGION[L.id] || ['N', 0];
+      const rl = this.regions?.byKey?.[rk]?.load;
+      L.targetLoadMw = rl ? rl * share : L.demand * snapshot.total;
+      L.demand = L.targetLoadMw;
+    }
+    this.tension = snapshot.supply?.level ?? 0;
+    this.updateRegionHeat(true);
+
     const sources = this.plants.map((p) => ({ pos: p.pos, mw: p.targetMw, mix: p.mix }));
     const flows = solveFlows(sources, this.loads);
     this.particles.setFlows(flows, sources, this.loads);
@@ -149,17 +175,69 @@ export class GridFlowEngine {
   /** 能源篩選：'all' | 'green' | 'thermal' | 'nuclear' */
   setFilter(id) {
     const f = FILTERS.find((x) => x.id === id) || FILTERS[0];
+    this.demandView = !!f.demand;
     FUEL_KEYS.forEach((k, i) => {
-      this.fuelVisTarget[i] = !f.fuels || f.fuels.includes(k) ? 1 : 0;
+      // 用電視角：發電粒子全部保留但調暗，讓注意力回到「誰在吸能」
+      this.fuelVisTarget[i] = f.demand ? 0.5 : !f.fuels || f.fuels.includes(k) ? 1 : 0;
     });
+  }
+
+  /** 鎖定 / 解鎖地圖互動（桌布模式用） */
+  setLocked(locked) {
+    for (const h of ['scrollZoom', 'boxZoom', 'dragRotate', 'dragPan', 'keyboard', 'doubleClickZoom', 'touchZoomRotate', 'touchPitch']) {
+      locked ? this.map[h].disable() : this.map[h].enable();
+    }
+    this.map.getCanvas().style.cursor = locked ? 'default' : 'grab';
+  }
+
+  /** 目前鏡頭（存成桌布固定視角） */
+  getView() {
+    const m = this.map;
+    const c = m.getCenter();
+    return { center: [c.lng, c.lat], zoom: m.getZoom(), pitch: m.getPitch(), bearing: m.getBearing() };
   }
 
   toggleCruise() {
     return this.cruise.toggle();
   }
 
+  /** 回放時用回放時間計算日夜色調；null = 現在 */
+  setClock(date) {
+    this.clockOverride = date;
+    this.updateDaylight(true);
+  }
+
+  /**
+   * 區域用電熱度：用電 > 發電（吸能）→ 暖色，越缺越紅；發電 > 用電（供能）→ 冷色
+   * 用 MapLibre 圖層 paint 屬性更新（約每秒 8 次，含呼吸）
+   */
+  updateRegionHeat(force = false) {
+    if (!this.regions || !this.map.getLayer('region-heat')) return;
+    const breath = 0.5 + 0.5 * Math.sin(this.breathPhase);
+    const colors = ['match', ['get', 'region']];
+    const opac = ['match', ['get', 'region']];
+    for (const k of REGION_KEYS) {
+      const r = this.regions.byKey[k];
+      const d = Math.max(-1, Math.min(1, (r.ratio - 1) * 1.4)); // <0 吸能、>0 供能
+      const c = d < 0
+        ? mixRgb([255, 150, 70], [255, 70, 90], Math.min(1, -d * 1.3))
+        : mixRgb([80, 170, 255], [90, 240, 255], d);
+      const strength = Math.min(1, Math.abs(d) + 0.15);
+      const base = (d < 0 ? 0.05 : 0.035) + 0.09 * strength;
+      const boost = 1 + this.demandMix * 2.6;
+      colors.push(k, `rgb(${c.map(Math.round).join(',')})`);
+      opac.push(k, base * boost * (0.82 + 0.18 * breath));
+    }
+    colors.push('#000000');
+    opac.push(0);
+    try {
+      this.map.setPaintProperty('region-heat', 'fill-color', colors);
+      this.map.setPaintProperty('region-heat', 'fill-opacity', opac);
+    } catch { /* 樣式尚未載入 */ }
+  }
+
   updateDaylight(force = false) {
-    const st = daylightState(new Date());
+    const st = daylightState(this.clockOverride || new Date());
     if (!force && this.lastDay && Math.abs(st.elev - this.lastDay.elev) < 0.4) return;
     this.lastDay = st;
     const pal = daylightPalette(st);
@@ -177,6 +255,10 @@ export class GridFlowEngine {
 
     // 每 30 秒檢查一次日夜色調
     if (Math.floor(this.time / 30) !== Math.floor((this.time - dt) / 30)) this.updateDaylight();
+    // 呼吸：以相位累加，供電燈號改變週期時不會跳動
+    this.breathPhase += (dt * 2 * Math.PI) / TENSION[this.tension].period;
+    this.demandMix += ((this.demandView ? 1 : 0) - this.demandMix) * (1 - Math.exp(-dt / 0.3));
+    if (Math.floor(this.time * 8) !== Math.floor((this.time - dt) * 8)) this.updateRegionHeat();
 
     // 能源篩選：各燃料可見度平滑淡入淡出（約 0.6 秒）
     const kv = 1 - Math.exp(-dt / 0.22);
@@ -201,6 +283,7 @@ export class GridFlowEngine {
       if (shown > 0) p.color = c.map((v) => v / shown);
     }
     for (const L of this.loads) {
+      L.mw += (L.targetLoadMw - L.mw) * k;
       L.energy += (L.pulse - L.energy) * (1 - Math.exp(-dt / 0.35));
       L.pulse *= Math.exp(-dt / 0.6);
     }
@@ -218,7 +301,9 @@ export class GridFlowEngine {
 
   buildLayers() {
     const t = this.time;
-    const breath = 0.5 + 0.5 * Math.sin((t * 2 * Math.PI) / BREATH_PERIOD);
+    const breath = 0.5 + 0.5 * Math.sin(this.breathPhase);
+    const dm = this.demandMix; // 用電視角：發電端變暗、用電端放大
+    const tint = TENSION[this.tension].tint;
     const frame = Math.floor(t * 60);
 
     const glowAlpha = (p) => {
@@ -336,10 +421,11 @@ export class GridFlowEngine {
       iconMapping: this.sprite.mapping,
       getIcon: () => 'glow',
       getPosition: (d) => d.pos,
-      getSize: (d) => 9000 + Math.sqrt(d.energy) * 5200 + breath * 1500,
+      // 光暈大小 = 該負載點用電量（越耗電越大）＋ 粒子抵達的脈動
+      getSize: (d) => (5000 + Math.sqrt(d.mw) * 150 * (1 + dm * 0.7)) + Math.sqrt(d.energy) * 4200 + breath * 1500 * (1 + dm),
       sizeUnits: 'meters',
       sizeMinPixels: 10,
-      getColor: (d) => [235, 242, 255, Math.min(255, 70 + Math.sqrt(d.energy) * 60)],
+      getColor: (d) => [...mixRgb(tint, [255, 140, 90], dm * 0.6), Math.min(255, (70 + Math.sqrt(d.energy) * 60) * (1 + dm * 0.6))],
       updateTriggers: { getSize: frame, getColor: frame },
       parameters: ADDITIVE
     }));
@@ -361,16 +447,56 @@ export class GridFlowEngine {
       id: 'load-names',
       data: this.loads,
       getPosition: (d) => d.pos,
-      getText: (d) => d.name,
-      getColor: [190, 205, 235, 70],
-      getSize: 11,
-      getPixelOffset: [0, 16],
+      getText: (d) => (dm > 0.5 ? `${d.name}\n約 ${Math.round(d.mw / 10) * 10 > 0 ? (Math.round(d.mw / 10) * 10).toLocaleString() : '—'} MW` : d.name),
+      getColor: [190 + 50 * dm, 205 + 30 * dm, 235, 70 + 150 * dm],
+      getSize: 11 + dm,
+      getPixelOffset: [0, 16 + 4 * dm],
+      getAlignmentBaseline: 'top',
       fontFamily: FONT,
       fontWeight: 300,
+      lineHeight: 1.35,
       characterSet: 'auto',
       fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
+      outlineWidth: 3 * dm,
+      outlineColor: [3, 5, 10, 180],
+      updateTriggers: { getText: [dm > 0.5, Math.round(this.time)], getColor: dm, getSize: dm, getPixelOffset: dm },
       parameters: NO_DEPTH
     }));
+
+    // 用電視角：四大供電區的自給率標籤
+    if (dm > 0.02 && this.regions && window.innerWidth >= 700) {
+      const rows = REGION_KEYS.map((k) => {
+        const r = this.regions.byKey[k];
+        const pct = Math.round(r.ratio * 100);
+        return {
+          pos: REGIONS[k].label,
+          anchor: REGIONS[k].anchor,
+          head: `${r.name}  用電 ${Math.round(r.load).toLocaleString()} MW`,
+          sub: `發電 ${Math.round(r.gen).toLocaleString()} MW · 自給 ${pct}% · ${r.ratio >= 1 ? '供能 ↗' : '吸能 ↙'}`,
+          color: r.ratio >= 1 ? [120, 210, 255] : [255, 160, 110]
+        };
+      });
+      layers.push(new TextLayer({
+        id: 'region-labels',
+        data: rows.flatMap((r) => [
+          { pos: r.pos, anchor: r.anchor, text: r.head, size: 13, off: [0, -9], color: [235, 240, 255] },
+          { pos: r.pos, anchor: r.anchor, text: r.sub, size: 10.5, off: [0, 9], color: r.color }
+        ]),
+        getPosition: (d) => d.pos,
+        getText: (d) => d.text,
+        getSize: (d) => d.size,
+        getPixelOffset: (d) => d.off,
+        getTextAnchor: (d) => d.anchor || 'middle',
+        getColor: (d) => [...d.color, 255 * dm],
+        fontFamily: FONT,
+        characterSet: 'auto',
+        fontSettings: { sdf: true, fontSize: 56, buffer: 8 },
+        outlineWidth: 4,
+        outlineColor: [3, 5, 10, 220 * dm],
+        updateTriggers: { getColor: dm, getText: Math.round(this.time / 5) },
+        parameters: NO_DEPTH
+      }));
+    }
 
     const hp = this.hover.shownId && this.plants.find((p) => p.id === this.hover.shownId);
     if (hp && this.hover.alpha > 0.01) {
@@ -415,7 +541,8 @@ export class GridFlowEngine {
   }
 
   setHover(id) {
-    if (this.mode === 'wallpaper') return;
+    if (this.mode === 'wallpaper' && this.map.dragPan && !this.map.dragPan.isEnabled()) return;
+    if (id && id !== this.hover.id) this.onPlantVisit?.(id);
     this.hover.id = id;
   }
 
@@ -456,5 +583,9 @@ function makeSparkles(center, n) {
 
 function fitPadding() {
   const w = window.innerWidth;
-  return w < 700 ? { top: 165, bottom: 150, left: 20, right: 20 } : { top: 20, bottom: 20, left: 40, right: 40 };
+  return w < 700 ? { top: 195, bottom: 150, left: 20, right: 20 } : { top: 20, bottom: 20, left: 40, right: 40 };
+}
+
+function mixRgb(a, b, t) {
+  return [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t);
 }

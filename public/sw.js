@@ -1,6 +1,6 @@
 // 離線快取：頁面與程式用「先上網、失敗再用快取」，所以一鍵更新後重開就是新版。
 // 電力資料（data/、taipower/）永遠走網路，不快取，避免看到舊數字。
-const CACHE = 'tgf-v0.2.0';
+const CACHE = 'tgf-v0.3.1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

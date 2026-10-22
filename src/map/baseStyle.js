@@ -1,5 +1,6 @@
 import { feature, mesh } from 'topojson-client';
 import counties from 'taiwan-atlas/counties-10t.json';
+import { countyRegion } from '../config/geo.js';
 
 /**
  * 底圖：極簡午夜風（完全自建，不依賴任何圖磚商）
@@ -21,6 +22,8 @@ export const PALETTE = {
 };
 
 const land = feature(counties, counties.objects.counties);
+// 每個縣市標上所屬供電區（N/C/S/E），給「區域用電熱度」圖層上色
+for (const f of land.features) f.properties.region = countyRegion(f.properties.COUNTYNAME) || 'X';
 const countyLines = mesh(counties, counties.objects.counties, (a, b) => a !== b);
 const coastLines = mesh(counties, counties.objects.counties, (a, b) => a === b);
 
@@ -78,6 +81,8 @@ export function createBaseStyle({ hillshade = true } = {}) {
           }]
         : []),
       { id: 'sea-mask', type: 'fill', source: 'seaMask', paint: { 'fill-color': PALETTE.sea, 'fill-antialias': false } },
+      // 區域用電熱度：吸能（用電 > 發電）偏暖色、供能偏冷色；顏色與透明度由引擎即時更新
+      { id: 'region-heat', type: 'fill', source: 'land', paint: { 'fill-color': '#000000', 'fill-opacity': 0, 'fill-antialias': false } },
       {
         id: 'counties',
         type: 'line',

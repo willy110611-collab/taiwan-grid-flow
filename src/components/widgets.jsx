@@ -72,6 +72,18 @@ export const Icon = {
   full: (
     <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
   ),
+  lock: (
+    <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+  ),
+  unlock: (
+    <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 7.5-2" /></svg>
+  ),
+  medal: (
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="6" /><path d="M8.5 9L6 3h4l2 4 2-4h4l-2.5 6M12 11.5v5M10 14h4" /></svg>
+  ),
+  replay: (
+    <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4" /><path d="M10 9l5 3-5 3z" /></svg>
+  ),
   close: (
     <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
   ),

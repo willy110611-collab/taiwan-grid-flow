@@ -69,8 +69,9 @@ if errorlevel 1 (
   echo   1. 到 https://github.com/new 建立名為 taiwan-grid-flow 的儲存庫（Public，不要勾任何初始檔案）
   echo   2. 儲存庫 Settings → Pages → Source 選「GitHub Actions」
   echo   3. 重新執行這個檔案，跳出瀏覽器時登入 GitHub 一次即可
-  pause
-  exit /b 1
+  echo.
+  echo （手機版這次沒更新，但仍會繼續更新本機桌布）
+  goto WALLPAPER
 )
 echo.
 echo 手機版：約 2 分鐘後網址會變成新版
