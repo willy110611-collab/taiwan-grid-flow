@@ -442,6 +442,7 @@ a:hover { text-decoration: underline; }
 .donate p { margin: 0 0 10px; color: var(--ink); }
 .donate-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .donate-btn { display: inline-block; padding: 7px 16px; border-radius: 999px; background: var(--gold); color: #1a1205 !important; font-size: 12.5px; letter-spacing: 0.08em; }
+.donate-qr { display: block; width: 160px; margin: 12px 0 0; border-radius: 10px; background: #fff; padding: 6px; }
 .donate-link { border: 0; background: none; padding: 0; font: inherit; color: var(--gold); cursor: pointer; pointer-events: auto; }
 
 /* ── 平板以下：縮小 ── */
@@ -490,6 +491,7 @@ a:hover { text-decoration: underline; }
   .hud:has(.replay) .clock { display: none; }
   .supply { margin-top: 6px; }
   .home-card.hc-desktop { display: none; }
+  .donate-qr { display: none; }
   .home-card.hc-mobile {
     display: block; position: absolute; right: var(--gutter); bottom: calc(124px + var(--safe-b)); margin: 0;
     padding: 6px 10px; pointer-events: auto; z-index: 3;

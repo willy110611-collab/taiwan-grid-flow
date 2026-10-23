@@ -192,6 +192,10 @@ export function InfoPanel({ snapshot, onClose, initialTab }) {
                   <a key={d.url} className="donate-btn" href={d.url} target="_blank" rel="noreferrer">{d.label}</a>
                 ))}
               </div>
+              {/* 電腦版：顯示 QR Code 讓手機掃描（手機版直接點按鈕即可） */}
+              {APP.donate.filter((d) => d.qr).map((d) => (
+                <img key={d.qr} className="donate-qr" src={d.qr} alt="贊助 QR Code" />
+              ))}
             </div>
           )}
           <p className="fine">

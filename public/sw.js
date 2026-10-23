@@ -1,6 +1,6 @@
 // 離線快取：頁面與程式用「先上網、失敗再用快取」，所以一鍵更新後重開就是新版。
 // 電力資料（data/、taipower/）永遠走網路，不快取，避免看到舊數字。
-const CACHE = 'tgf-v0.5.6';
+const CACHE = 'tgf-v0.5.7';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   // 連同首頁用到的程式檔一起先存好 → 第二次打開就完全不用下載
@@ -33,7 +33,8 @@ self.addEventListener('fetch', (e) => {
   // 頁面：快取有就「立刻」開（不等網路），同時背景下載新版；新版不同時通知畫面顯示「更新」
   e.respondWith(caches.open(CACHE).then(async (c) => {
     const key = url.pathname.endsWith('/') ? './' : req;
-    const hit = await c.match(key) || await c.match('./index.html');
+    // 只有「打開頁面」才退回首頁；圖片等其他檔案沒快取就直接上網拿（否則圖片會被錯拿成首頁而顯示不出來）
+    const hit = await c.match(key) || (req.mode === 'navigate' ? await c.match('./index.html') : null);
     const net = fetch(req).then(async (res) => {
       if (res.ok && res.type === 'basic') {
         const fresh = await res.clone().text();
