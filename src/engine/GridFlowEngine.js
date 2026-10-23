@@ -309,8 +309,9 @@ export class GridFlowEngine {
     const canvas = this.map.getCanvas();
     const prev = canvas.style.cursor;
     canvas.style.cursor = 'crosshair';
+    this.picking = true;
     const onClick = (e) => { done(); cb([e.lngLat.lng, e.lngLat.lat]); };
-    const done = () => { this.map.off('click', onClick); canvas.style.cursor = prev; };
+    const done = () => { this.map.off('click', onClick); canvas.style.cursor = prev; this.picking = false; };
     this.map.on('click', onClick);
     return done;
   }
@@ -758,7 +759,9 @@ export class GridFlowEngine {
           size: 12, off: [22, 23], font: MONO, color: hp.color, weight: 400
         },
         { pos: hp.pos, text: evidenceText(hp, this.source), size: 9.5, off: [22, 39], font: FONT, color: [150, 165, 195], weight: 300 },
-        ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 9.5, off: [22, 54], font: FONT, color: [225, 190, 160], weight: 300 }] : [])
+        ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 9.5, off: [22, 54], font: FONT, color: [225, 190, 160], weight: 300 }] : []),
+        // 滑鼠裝置：提示可以點開電廠卡（手機點一下就直接開，不需要提示）
+        ...(CAN_HOVER ? [{ pos: hp.pos, text: '點一下看各機組 ›', size: 9.5, off: [22, this.cems?.[hp.id] ? 69 : 54], font: FONT, color: [110, 240, 190], weight: 300 }] : [])
       ];
       layers.push(new TextLayer({
         id: 'hover-label',
@@ -786,6 +789,10 @@ export class GridFlowEngine {
   setHover(id) {
     if (this.mode === 'wallpaper' && this.map.dragPan && !this.map.dragPan.isEnabled()) return;
     if (id && id !== this.hover.id) this.onPlantVisit?.(id);
+    if (CAN_HOVER && !this.picking && this.mode !== 'wallpaper' && !!id !== !!this.hover.id) {
+      const c = this.map.getCanvas();
+      if (id) { this.cursorPrev = c.style.cursor; c.style.cursor = 'pointer'; } else c.style.cursor = this.cursorPrev || '';
+    }
     this.hover.id = id;
   }
 
@@ -808,6 +815,8 @@ export class GridFlowEngine {
     this.map.remove();
   }
 }
+
+const CAN_HOVER = typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches;
 
 /** hover 標籤第 5 行：煙道排放（環境部 CEMS 1 小時值，取該廠最高的一根煙囪） */
 function cemsText(c) {

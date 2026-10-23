@@ -15,7 +15,7 @@ export function useHighlights(snapshot, rows, stats, anomalies) {
     return {
       since: enriched[0].hm,
       partial: snapshot.source === 'live' && enriched[0].hm > '01:00',
-      topPlant: topNow && { name: PLANTS.find((p) => p.id === topNow.id)?.name, mw: topNow.mw },
+      topPlant: topNow && { id: topNow.id, name: PLANTS.find((p) => p.id === topNow.id)?.name, mw: topNow.mw },
       solarPeak: solarPeak.solar > 50 ? solarPeak : null,
       greenPeak: max('greenPct'),
       loadPeak: max('load'),

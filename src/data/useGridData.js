@@ -20,11 +20,17 @@ const FILES = {
   genary:    { name: '各機組發電量', urls: [`${R}/genary.json`, './data/genary.json', `${TP}/genary.json`, `${TP}/genary.txt`], parse: parseGenary },
   areas:     { name: '各區發電/用電', urls: [`${R}/genloadareaperc.csv`, './data/genloadareaperc.csv', `${TP}/genloadareaperc.csv`], parse: parseGenLoadAreas },
   para:      { name: '供電狀況', urls: [`${R}/loadpara.json`, './data/loadpara.json', `${TP}/loadpara.json`], parse: parseLoadPara },
-  fuelCurve: { name: '今日燃料別曲線', urls: [`${R}/loadfueltype.csv`, './data/loadfueltype.csv', `${TP}/loadfueltype.csv`], parse: parseFuelCurve },
-  areaCurve: { name: '今日區域用電曲線', urls: [`${R}/loadareas.csv`, './data/loadareas.csv', `${TP}/loadareas.csv`], parse: parseLoadAreasCurve },
-  yFuel:     { name: '昨日燃料別曲線', urls: [`${R}/loadfueltype_1.csv`, `${TP}/loadfueltype_1.csv`], parse: parseFuelCurve },
-  forecast:  { name: '未來供電預測', urls: [`${R}/forecast.csv`], parse: parseForecast }
+  fuelCurve: { name: '今日燃料別曲線', urls: [`${R}/loadfueltype.csv`, './data/loadfueltype.csv', `${TP}/loadfueltype.csv`], parse: parseFuelCurve, ms: 9000 },
+  areaCurve: { name: '今日區域用電曲線', urls: [`${R}/loadareas.csv`, './data/loadareas.csv', `${TP}/loadareas.csv`], parse: parseLoadAreasCurve, ms: 9000 },
+  yFuel:     { name: '昨日燃料別曲線', urls: [`${R}/loadfueltype_1.csv`, './data/loadfueltype_1.csv', `${TP}/loadfueltype_1.csv`], parse: parseYesterday, ms: 9000 },
+  forecast:  { name: '未來供電預測', urls: [`${R}/forecast.csv`, './data/forecast.csv'], parse: parseForecast, ms: 9000 }
 };
+/** 昨日曲線：要是「完整的一天」才用（台電換日前後偶爾只有半天或空檔）→ 不完整就當作讀取失敗、改試下一個來源 */
+function parseYesterday(text) {
+  const rows = parseFuelCurve(text);
+  if (!rows || rows.length < 120) throw new Error(rows ? `只有 ${rows.length} 筆（不完整）` : '格式不符');
+  return rows;
+}
 if (import.meta.env.VITE_GENARY_URL) FILES.genary.urls.unshift(import.meta.env.VITE_GENARY_URL);
 
 const LIVE_REFRESH_MS = 10 * 60 * 1000; // 台電每 10 分鐘更新
@@ -52,10 +58,12 @@ async function fetchFile(key) {
   const tries = [];
   for (const url of f.urls) {
     try {
-      const data = f.parse(await fetchText(url));
+      const data = f.parse(await fetchText(url, f.ms));
       if (data) {
         tries.push({ url, ok: true });
-        return { data, diag: { name: f.name, ok: true, url, tries } };
+        // 曲線類資料：顯示筆數與時間範圍，方便確認是否完整
+        const detail = Array.isArray(data) && data[0]?.hm ? `${data.length} 筆 ${data[0].hm}–${data[data.length - 1].hm}` : Array.isArray(data) ? `${data.length} 筆` : '';
+        return { data, diag: { name: f.name, ok: true, url, tries, detail } };
       }
       tries.push({ url, ok: false, msg: '格式不符' });
     } catch (err) {

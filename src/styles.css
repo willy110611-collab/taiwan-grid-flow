@@ -558,3 +558,61 @@ a:hover { text-decoration: underline; }
 .bill-out li { display: flex; justify-content: space-between; padding: 3px 0; }
 .bill-out b { color: var(--ink); font-size: 14px; }
 .replay .day-sw { margin-left: 4px; }
+
+/* ── 新版提示／導覽／資料問題 ── */
+.upd-wrap {
+  position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(3, 6, 14, 0.45); backdrop-filter: blur(2px); pointer-events: auto;
+}
+.upd-card {
+  width: min(380px, 100%); max-height: calc(100% - 32px); overflow: auto; box-sizing: border-box;
+  padding: 18px 18px 14px; border-radius: 18px; border: 1px solid rgba(110, 240, 190, 0.35);
+  background: var(--glass-strong); color: var(--ink-dim); font-size: 13px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.upd-title { color: var(--ink); font-size: 16px; letter-spacing: 0.08em; margin-bottom: 10px; }
+.upd-title b { color: var(--green); font-weight: 500; }
+.upd-notes { margin: 0 0 12px; padding-left: 18px; line-height: 1.6; }
+.upd-btns { display: flex; gap: 10px; justify-content: flex-end; margin: 6px 0 10px; }
+.upd-btns button {
+  flex: 1; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-dim); font: inherit; font-size: 14px; cursor: pointer;
+}
+.upd-btns button.primary { background: rgb(110, 240, 190); border-color: transparent; color: #06140e; font-weight: 600; }
+.upd-card small { display: block; font-size: 11px; line-height: 1.5; }
+.guide-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.guide-list li { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.guide-list li:last-child { border-bottom: 0; }
+.guide-list .g-ico { flex: 0 0 26px; text-align: center; font-size: 16px; line-height: 1.4; color: var(--green); }
+.guide-list b { color: var(--ink); font-weight: 500; }
+.guide-list p { margin: 2px 0 0; font-size: 12px; line-height: 1.55; }
+
+.refresh-wrap { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; pointer-events: auto; }
+.refresh-btn {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-dim); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; position: relative;
+}
+.refresh-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.refresh-btn.has { color: rgb(110, 240, 190); border-color: rgba(110, 240, 190, 0.6); box-shadow: 0 0 10px rgba(110, 240, 190, 0.35); }
+.refresh-btn.has::after {
+  content: ''; position: absolute; top: -1px; right: -1px; width: 7px; height: 7px; border-radius: 50%;
+  background: rgb(255, 120, 90); box-shadow: 0 0 6px rgb(255, 120, 90);
+}
+.refresh-btn.spin svg { animation: tgf-spin 0.9s linear infinite; }
+@keyframes tgf-spin { to { transform: rotate(360deg); } }
+.refresh-tip {
+  position: absolute; left: 32px; white-space: nowrap; font-size: 11px; color: rgb(110, 240, 190);
+  padding: 3px 8px; border-radius: 999px; background: var(--glass-strong); border: 1px solid rgba(110, 240, 190, 0.35);
+}
+.refresh-tip.ok { color: var(--ink-dim); border-color: var(--line); }
+
+.data-issue {
+  display: block; margin-top: 8px; padding: 4px 10px; border-radius: 999px; pointer-events: auto; cursor: pointer;
+  border: 1px solid rgba(255, 190, 90, 0.45); background: rgba(255, 190, 90, 0.1); color: rgb(255, 205, 120);
+  font: inherit; font-size: 11px; letter-spacing: 0.04em; text-align: left; max-width: 100%;
+}
+.toolbar button { position: relative; }
+.tb-dot { position: absolute; top: 6px; right: 14px; width: 6px; height: 6px; border-radius: 50%; background: rgb(255, 190, 90); }
+.hl-list li.clickable { cursor: pointer; }
+.hl-list li.clickable:hover .hl-v { color: var(--ink); }
+.refresh-tip { animation: tgf-tip 5s forwards; pointer-events: none; }
+@keyframes tgf-tip { 0%, 80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }

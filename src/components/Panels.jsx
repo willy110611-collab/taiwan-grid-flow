@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { GUIDE } from './Guide.jsx';
 import { APP } from '../config/app.js';
 import { EVIDENCE } from '../config/energy.js';
 import { Icon, Sparkline, fmtMw } from './widgets.jsx';
@@ -31,7 +32,7 @@ const REC_ROWS = [
   ['load', '全台用電', 'MW', '']
 ];
 
-export function HighlightsPanel({ hl, records, onClose }) {
+export function HighlightsPanel({ hl, records, onPlant, onClose }) {
   useT();
   return (
     <Panel title="今日亮點" onClose={onClose}>
@@ -41,9 +42,9 @@ export function HighlightsPanel({ hl, records, onClose }) {
         <>
           <ul className="hl-list">
             {hl.topPlant && (
-              <li>
+              <li className="clickable" onClick={() => hl.topPlant.id && onPlant?.(hl.topPlant.id)} title="看這座電廠的機組">
                 <span className="hl-k">{t('目前出力最大')}</span>
-                <span className="hl-v">{hl.topPlant.name}</span>
+                <span className="hl-v">{hl.topPlant.name} <small className="muted">›</small></span>
                 <span className="hl-n">{fmtMw(hl.topPlant.mw)} <small>MW</small></span>
               </li>
             )}
@@ -115,13 +116,20 @@ export function HighlightsPanel({ hl, records, onClose }) {
 
 /* ───────────── 資訊（資料來源 / 準確度 / 關於） ───────────── */
 const TABS = [
+  ['guide', '使用說明'],
   ['source', '資料來源'],
   ['accuracy', '準確度'],
   ['about', '關於']
 ];
 
 export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
-  const [tab, setTab] = useState(initialTab || 'source');
+  const [tab, setTab] = useState(initialTab === 'diag' ? 'source' : initialTab || 'guide');
+  // 從「部分資料讀不到」點進來 → 直接捲到連線診斷
+  useEffect(() => {
+    if (initialTab !== 'diag') return;
+    const id = setTimeout(() => document.querySelector('.panel .diag')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 120);
+    return () => clearTimeout(id);
+  }, [initialTab]);
   const live = snapshot?.source === 'live';
   return (
     <Panel title="資訊" onClose={onClose}>
@@ -130,6 +138,24 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
           <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{t(label)}</button>
         ))}
       </nav>
+
+      {tab === 'guide' && (
+        <div className="doc">
+          <ul className="guide-list">
+            {GUIDE.map(([ico, k, v]) => (
+              <li key={k}><span className="g-ico">{ico}</span><div><b>{t(k)}</b><p>{v}</p></div></li>
+            ))}
+          </ul>
+          <div className="hl-k" style={{ marginTop: 12 }}>小技巧</div>
+          <ul className="reasons">
+            <li>上方「綠能／火力／核能／用電／空品」可以只看某一種；「用電」看哪一區最吃電。</li>
+            <li>左上角 ⟳：檢查並更新到最新版（目前 v{APP.version}）。</li>
+            <li>右上角「供電充裕／吃緊」：台電備轉容量率燈號。</li>
+            <li>資料每 10 分鐘更新一次（台電公布頻率），左下角顯示資料時間。</li>
+            <li>iPhone：Safari 開啟 → 分享 → 加入主畫面，就像 App 一樣。</li>
+          </ul>
+        </div>
+      )}
 
       {tab === 'source' && (
         <div className="doc">
@@ -183,7 +209,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
                   <li key={d.name} className={d.ok ? 'ok' : 'fail'}>
                     <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
                     <b>{d.name}</b>
-                    <small>{d.ok ? '正常' : d.tries.map((t) => `${t.url.replace(/^.*\//, '')}：${t.msg}`).slice(-1)[0] || '未嘗試'}</small>
+                    <small>{d.ok ? `${t('正常')}${d.detail ? ` · ${d.detail}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || '未嘗試'}</small>
                   </li>
                 ))}
                 {[

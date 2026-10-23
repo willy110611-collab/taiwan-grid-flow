@@ -9,6 +9,8 @@ import { twHM } from '../data/history.js';
 import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 import { PlantPanel } from './Plant.jsx';
 import { useT, useLang } from '../i18n.js';
+import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
+import { useUpdate } from '../update.js';
 
 /**
  * HUD — 絕對乾淨的排版
@@ -40,6 +42,8 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const t = useT();
   const [lang, setLang] = useLang();
   const charge = (snapshot?.charging?.pump || 0) + (snapshot?.charging?.battery || 0);
+  const upd = useUpdate();
+  const hasIssue = (snapshot?.diag || []).some((d) => !d.ok);
 
   return (
     <div className={`hud ${wallpaper ? 'is-wallpaper' : ''}`}>
@@ -55,6 +59,8 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
             {lang === 'en' ? '中文' : 'EN'}
           </button>
         )}
+        {!wallpaper && <RefreshBtn />}
+        {!wallpaper && <DataIssue snapshot={snapshot} air={air} onOpen={() => setUi({ panel: 'info', infoTab: 'diag' })} />}
       </header>
 
       {!wallpaper && (
@@ -138,7 +144,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
             {Icon.replay}<span>{t('回放')}</span>
           </button>
           <button className={ui.panel === 'info' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'info' ? null : 'info', infoTab: null })}>
-            {Icon.info}<span>{t('資訊')}</span>
+            {Icon.info}<span>{t('資訊')}</span>{hasIssue && <i className="tb-dot" />}
           </button>
           <button className="desktop-only" onClick={toggleFullscreen}>
             {Icon.full}<span>{t('全螢幕')}</span>
@@ -187,7 +193,10 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         </>
       )}
 
-      {ui.panel === 'highlights' && <HighlightsPanel hl={highlights} records={records} onClose={() => setUi({ panel: null })} />}
+      {!wallpaper && <UpdatePrompt />}
+      {!wallpaper && !(upd.available && !upd.dismissed) && <Tour />}
+
+      {ui.panel === 'highlights' && <HighlightsPanel hl={highlights} records={records} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'info' && <InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} onClose={() => setUi({ panel: null, infoTab: null })} />}
       {ui.panel === 'demand' && <DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'home' && <HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}

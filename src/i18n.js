@@ -70,6 +70,11 @@ const EN = {
   '目前出力最大': 'Top plant now', '太陽能今日尖峰': 'Solar peak today', '日出後開始累計': 'counts after sunrise', '綠能佔比最高': 'Peak green share',
   '全台負載最高': 'Peak demand', '南電北送': 'South → North', '模型推估': 'modeled', '中南部 → 北部': 'Central/South → North',
   '今日機組異常（偵測）': 'Unit anomalies today', '今日綠能佔比': 'Green share today', '資料讀取中…': 'Loading…', '統計範圍：今日 00:00 至現在。': 'Range: today 00:00 to now.',
+  '有新版本': 'New version', '稍後': 'Later', '立即更新': 'Update now', '已是最新版': 'Up to date', '更新到': 'Update to', '檢查新版本': 'Check for updates',
+  '按「稍後」之後，左上角的 ⟳ 隨時可以更新。': 'You can update any time with ⟳ at top-left.',
+  '歡迎來到': 'Welcome to', '開始': 'Start', '之後可以在「資訊 → 使用說明」再看一次。': 'See it again under Info → Guide.',
+  '看現在': 'Now', '點光球': 'Tap a plant', '使用說明': 'Guide', '部分資料暫時讀不到': 'Some data unavailable', '等': '+', '項': 'more',
+  '連不到台電資料，目前是模擬畫面': 'Cannot reach Taipower — showing simulation',
   // 語言
   '中文': '中文', 'English': 'English'
 };

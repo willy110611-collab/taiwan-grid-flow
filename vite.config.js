@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'fs';
 
 // 台電網站沒有開 CORS，瀏覽器直接打會被擋。
 // 本機（開發 npm run dev、桌布 npm run wallpaper）由 Vite 代理轉發：/taipower/* → https://www.taipower.com.tw/*
@@ -36,9 +37,23 @@ const nonBlockingCss = {
   }
 };
 
+/**
+ * 產生 version.json：給已開著的頁面（尤其 iPhone 主畫面 App）檢查有沒有新版
+ *  entry = 主程式檔名（內容雜湊）：程式有改才會不同；GitHub Actions 每 10 分鐘重建資料不會誤判成新版
+ */
+const versionFile = {
+  name: 'version-file',
+  apply: 'build',
+  generateBundle(_, bundle) {
+    const entry = Object.values(bundle).find((c) => c.type === 'chunk' && c.isEntry)?.fileName.replace(/^assets\//, '');
+    const cl = JSON.parse(readFileSync(new URL('./src/config/changelog.json', import.meta.url), 'utf8'));
+    this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ ...cl, entry }) });
+  }
+};
+
 export default defineConfig({
   base: './', // 相對路徑：同一份 build 可放在 GitHub Pages 子路徑，也可本機開
-  plugins: [react(), nonBlockingCss],
+  plugins: [react(), nonBlockingCss, versionFile],
   server: { host: true, proxy: taipowerProxy },
   preview: { host: '127.0.0.1', port: 5180, strictPort: true, proxy: taipowerProxy },
   build: {
