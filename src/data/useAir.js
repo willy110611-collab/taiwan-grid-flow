@@ -125,9 +125,12 @@ export function useSun() {
     const tick = async () => {
       try {
         const { stations } = await getJson('sun.json');
-        const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
-        const ok = stations.filter((x) => x.value > 0 && (!x.time || x.time.replace(/\//g, '-').startsWith(today)));
-        if (ok.length < 5) throw new Error('今日日射量資料不足');
+        // 用「最新一天」的資料（氣象署可能是逐時，也可能是隔天公布的日總量）；超過 3 天前就不用
+        const day = (x) => String(x.time || '').replace(/\//g, '-').slice(0, 10);
+        const latest = stations.map(day).filter(Boolean).sort().pop();
+        const tooOld = latest && Date.now() - new Date(latest + 'T00:00:00+08:00').getTime() > 3 * 86400e3;
+        const ok = stations.filter((x) => x.value > 0 && (!latest || day(x) === latest));
+        if (ok.length < 5 || tooOld) throw new Error('日射量資料不足或過舊');
         const sorted = ok.map((x) => x.value).sort((a, b) => a - b);
         const median = sorted[Math.floor(sorted.length / 2)];
         const factors = {};

@@ -54,7 +54,7 @@ export default {
       if (name === 'forecast.csv') return await cached(ctx, name, 3600, () => upstream(FORECAST, name));
       if (name === 'aqi.json') return await cached(ctx, name, 600, () => aqi(env));
       if (name === 'cems.json') return await cached(ctx, name, 900, () => cems(env));
-      if (name === 'sun.json') return await cached(ctx, name, 1800, () => sun(env));
+      if (name === 'sun.json') return new URL(req.url).searchParams.has('raw') ? await sun(env, new URL(req.url)) : await cached(ctx, name, 1800, () => sun(env));
       return new Response('not found', { status: 404, headers: CORS });
     } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
@@ -428,32 +428,45 @@ async function aqi(env) {
   return new Response(JSON.stringify({ stations }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 }
 
-// 日射量：氣象署 O-A0091-001（署屬氣象站，MJ/m²）。欄位依官方文件：StationName、StationLongitude/Latitude、DateTime、SolarRadiation
-async function sun(env) {
+// 日射量：氣象署 O-A0091-001（署屬氣象站，MJ/m²）
+//  這個資料集只提供「檔案 API」（fileapi），即時查詢 API（rest/datastore）會回 404。
+//  JSON 層級未公開 → 自動尋找「同時含測站名稱與日射量、且子層沒有更完整一筆」的物件；同站多個時間取最新。
+async function sun(env, url) {
   if (!env.CWA_KEY) throw new Error('尚未設定氣象署授權碼（CWA_KEY）');
-  const r = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0091-001?Authorization=${env.CWA_KEY}&format=JSON`);
-  const j = await r.json().catch(() => null);
-  if (!j) throw new Error(`氣象署回應 ${r.status}`);
-  const out = [];
+  const r = await fetch(`https://opendata.cwa.gov.tw/fileapi/v1/opendataapi/O-A0091-001?Authorization=${env.CWA_KEY}&format=JSON`, { headers: { Accept: 'application/json' } });
+  const text = await r.text();
+  if (url?.searchParams.has('raw')) return new Response(text.slice(0, 4000), { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  let j; try { j = JSON.parse(text.replace(/^﻿/, '')); } catch { throw new Error(`氣象署回應 ${r.status}：${text.slice(0, 80)}`); }
+
+  const lc = (k) => String(k).toLowerCase();
+  const has = (o, key) => { let f = false; const w = (x) => { if (f || !x || typeof x !== 'object') return; for (const [k, v] of Object.entries(x)) { if (lc(k) === key) { f = true; return; } w(v); } }; w(o); return f; };
+  const all = (o, key) => { const out = []; const w = (x) => { if (!x || typeof x !== 'object') return; for (const [k, v] of Object.entries(x)) { if (lc(k) === key) out.push(v); w(v); } }; w(o); return out; };
+  const stationObjs = [];
   const walk = (o) => {
     if (!o || typeof o !== 'object') return;
-    if (Array.isArray(o)) return o.forEach(walk);
-    if (o.StationName && JSON.stringify(o).includes('SolarRadiation')) {
-      const find = (obj, key) => { let v; const w = (x) => { if (v !== undefined || !x || typeof x !== 'object') return; if (key in x) { v = x[key]; return; } Object.values(x).forEach(w); }; w(obj); return v; };
-      const val = parseFloat(find(o, 'SolarRadiation'));
-      // 同一站可能有 TWD67／WGS84 兩組座標：優先取 WGS84
-      const coords = [];
-      const cw = (x) => { if (!x || typeof x !== 'object') return; if ('StationLongitude' in x) coords.push(x); else Object.values(x).forEach(cw); };
-      cw(o);
-      const c = coords.find((x) => /WGS/i.test(x.CoordinateName || '')) || coords[coords.length - 1] || {};
-      const lng = parseFloat(c.StationLongitude), lat = parseFloat(c.StationLatitude);
-      if (Number.isFinite(val) && val >= 0 && lng > 118 && lat > 21) out.push({ site: o.StationName, lng, lat, value: val, time: String(find(o, 'DateTime') || '') });
-      return;
-    }
-    Object.values(o).forEach(walk);
+    const kids = Array.isArray(o) ? o : Object.values(o);
+    const both = (x) => has(x, 'stationname') && has(x, 'solarradiation');
+    if (!Array.isArray(o) && both(o) && !kids.some((k) => k && typeof k === 'object' && !Array.isArray(k) && both(k) && has(k, 'stationname')) &&
+        all(o, 'stationname').length === 1) { stationObjs.push(o); return; }
+    kids.forEach(walk);
   };
   walk(j);
-  if (!out.length) throw new Error('日射量資料格式不符');
+
+  const out = [];
+  for (const o of stationObjs) {
+    const name = all(o, 'stationname')[0];
+    // 座標：優先 WGS84
+    const coords = []; const cw = (x) => { if (!x || typeof x !== 'object') return; const ks = Object.keys(x).map(lc); if (ks.includes('stationlongitude')) coords.push(x); else Object.values(x).forEach(cw); }; cw(o);
+    const c = coords.find((x) => /WGS/i.test(x.CoordinateName || x.coordinateName || '')) || coords[coords.length - 1] || {};
+    const lng = parseFloat(c.StationLongitude ?? c.stationLongitude), lat = parseFloat(c.StationLatitude ?? c.stationLatitude);
+    // 時間＋數值：找同時含 DateTime 與 SolarRadiation 的物件；沒有就用整站的
+    const pairs = [];
+    const pw = (x) => { if (!x || typeof x !== 'object') return; const ks = Object.keys(x).map(lc); if (ks.includes('datetime') && has(x, 'solarradiation')) pairs.push(x); Object.values(x).forEach(pw); }; pw(o);
+    const cands = (pairs.length ? pairs : [o]).map((x) => ({ time: String(all(x, 'datetime')[0] ?? all(o, 'datetime')[0] ?? ''), value: parseFloat(all(x, 'solarradiation')[0]) }))
+      .filter((x) => Number.isFinite(x.value) && x.value >= 0).sort((a, b) => (a.time < b.time ? 1 : -1));
+    if (cands.length && lng > 118 && lat > 21) out.push({ site: name, lng, lat, value: cands[0].value, time: cands[0].time });
+  }
+  if (!out.length) throw new Error(`日射量資料格式不符（${text.slice(0, 120)}）`);
   return new Response(JSON.stringify({ stations: out }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 }
 

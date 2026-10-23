@@ -1,7 +1,7 @@
 {
   "name": "taiwan-grid-flow",
   "private": true,
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "台灣光脈搏 Taiwan Grid Flow — 即時電力流動視覺化",
   "type": "module",
   "scripts": {
