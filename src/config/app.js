@@ -1,7 +1,7 @@
 export const APP = {
   name: '台灣光脈搏',
   en: 'Taiwan Grid Flow',
-  version: '0.5.7',
+  version: '0.5.8',
   designer: '無聊的人',
   // GitHub Pages 網址（一鍵更新.bat 推送後由 GitHub Actions 自動部署）
   pagesUrl: 'https://willy110611-collab.github.io/taiwan-grid-flow/',
@@ -9,7 +9,8 @@ export const APP = {
   relayUrl: 'https://taiwan-grid-flow-data.willy110611.workers.dev',
   // 小額贊助：填入網址才會顯示按鈕（可放多個平台）
   donate: [
-    { label: '用 Portaly 贊助', url: 'https://portaly.cc/tp6ej04jo3', qr: './donate-qr.png' }
+    // 暫時關閉；要開啟時取消下一行註解
+    // { label: '用 Portaly 贊助', url: 'https://portaly.cc/tp6ej04jo3', qr: './donate-qr.png' }
   ],
   taipowerPage: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html'
 };
