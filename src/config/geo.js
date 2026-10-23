@@ -10,24 +10,36 @@
  *          依此比例把總量分配到各節點。share 以燃料別為鍵。
  */
 export const PLANTS = [
+  // ── 離岸風場：台電每 10 分鐘公布「每個風場」的即時淨發電量，各自一個光點（位置為風場約略中心）──
+  //    放在最前面：機組名稱優先對應到這裡，不會被下面的區域節點吃掉
+  { id: 'ow_formosa1', name: '海洋竹南離岸風場', en: 'Formosa 1',           pos: [120.815, 24.715], match: /海洋竹南/, offshore: true },
+  { id: 'ow_formosa2', name: '海能離岸風場',     en: 'Formosa 2',           pos: [120.600, 24.550], match: /海能/, offshore: true },
+  { id: 'ow_zhongneng', name: '中能離岸風場',    en: 'Zhong Neng',          pos: [120.200, 24.290], match: /中能/, offshore: true },
+  { id: 'ow_changfang', name: '彰芳西島離岸風場', en: 'Changfang & Xidao',  pos: [120.180, 24.165], match: /芳[一二]風/, offshore: true },
+  { id: 'ow_gch12',    name: '沃旭大彰化東南 / 西南', en: 'Greater Changhua 1 & 2a', pos: [120.070, 24.170], match: /沃[一二]風/, offshore: true },
+  { id: 'ow_gch4',     name: '沃旭大彰化 2b / 4', en: 'Greater Changhua 2b & 4', pos: [120.020, 24.050], match: /沃[四南]風/, offshore: true },
+  { id: 'ow_tpc',      name: '台電離岸一 / 二期', en: 'TPC Offshore 1 & 2',  pos: [120.225, 23.985], match: /離岸[一二]期/, offshore: true },
+  { id: 'ow_hailong',  name: '海龍離岸風場',     en: 'Hai Long',            pos: [119.930, 24.110], match: /龍[AB三]風/, offshore: true },
+  { id: 'ow_yunneng',  name: '允能雲林離岸風場', en: 'Yunneng',             pos: [120.050, 23.800], match: /允湖|允西/, offshore: true },
+
   // ── 使用者指定的 6 個主節點 ──
   { id: 'datan',    name: '大潭發電廠',   en: 'Datan',      pos: [121.047, 25.029], match: /大潭|海湖|新桃|國光|觀園|觀威/ },
   { id: 'taichung', name: '台中發電廠',   en: 'Taichung',   pos: [120.481, 24.213], match: /台中|中火/ },
   { id: 'hsinta',   name: '興達發電廠',   en: 'Hsinta',     pos: [120.198, 22.856], match: /興達/ },
   { id: 'maanshan', name: '第三核能發電廠', en: 'Maanshan', pos: [120.751, 21.958], match: /核三|馬鞍山/ },
-  { id: 'changbin', name: '彰濱離岸風電 / 太陽能群', en: 'Changhua Offshore', pos: [120.354, 24.083],
-    match: /彰濱|彰工|彰品|王功|大彰化|海能|沃|中能|芳[一二]|龍[AB三]|海峽|台電離岸|離岸[一二]期|星彰/, share: { wind: 0.62, solar: 0.22 } },
+  { id: 'changbin', name: '彰濱風電 / 太陽能群', en: 'Changhua Coast', pos: [120.354, 24.083],
+    match: /彰濱|彰工|彰品|王功|星彰/, share: { wind: 0.62, solar: 0.22 } },
   { id: 'cigu',     name: '七股鹽山太陽能群', en: 'Cigu Solar', pos: [120.106, 23.149], match: /南鹽|七股/, share: { solar: 0.30 } },
 
   // ── 補充節點：讓全台光網更完整（可自行刪減） ──
   { id: 'linkou',   name: '林口發電廠',   en: 'Linkou',     pos: [121.305, 25.120], match: /林口/ },
   { id: 'tunghsiao',name: '通霄發電廠',   en: 'Tunghsiao',  pos: [120.672, 24.492], match: /通霄/ },
-  { id: 'mailiao',  name: '麥寮電廠',     en: 'Mailiao',    pos: [120.195, 23.790], match: /麥寮|允|雲林|雲麥|四湖|崙背|星元/, share: { wind: 0.18 } },
+  { id: 'mailiao',  name: '麥寮電廠',     en: 'Mailiao',    pos: [120.195, 23.790], match: /麥寮|雲林|雲麥|四湖|崙背|星元/, share: { wind: 0.18 } },
   { id: 'chiayi',   name: '嘉義沿海太陽能群', en: 'Chiayi Solar', pos: [120.170, 23.420], share: { solar: 0.26 } },
   { id: 'pingtung', name: '屏東太陽能群', en: 'Pingtung Solar', pos: [120.560, 22.560], share: { solar: 0.22 } },
   { id: 'nanbu',    name: '南部 / 大林發電廠', en: 'Nanbu · Talin', pos: [120.330, 22.590], match: /南部|大林/ },
   { id: 'hoping',   name: '和平電廠',     en: 'Ho-Ping',    pos: [121.755, 24.300], match: /和平/ },
-  { id: 'miaoli',   name: '苗栗離岸風場', en: 'Miaoli Offshore', pos: [120.780, 24.700], match: /海洋|竹南|苗栗|大鵬|Formosa/i, share: { wind: 0.20 } },
+  { id: 'miaoli',   name: '苗栗風場', en: 'Miaoli Wind', pos: [120.780, 24.640], match: /苗栗|大鵬/, share: { wind: 0.20 } },
   { id: 'mingtan',  name: '明潭 / 大觀抽蓄', en: 'Sun Moon Lake Hydro', pos: [120.865, 23.835], match: /明潭|大觀|日月潭/, share: { hydro: 0.62 } },
   // ── 離島（獨立電網，不與本島相連；電只在島內流動）──
   //  est：台電若未即時公布（顯示 0 或 N/A），以典型負載推估（MW）
@@ -88,6 +100,7 @@ export const countyRegion = (name = '') => {
 /** 電廠所在供電區 */
 export const PLANT_REGION = {
   datan: 'N', linkou: 'N',
+  ow_formosa1: 'C', ow_formosa2: 'C', ow_zhongneng: 'C', ow_changfang: 'C', ow_gch12: 'C', ow_gch4: 'C', ow_tpc: 'C', ow_hailong: 'C', ow_yunneng: 'C',
   taichung: 'C', tunghsiao: 'C', mailiao: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
   hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S',
   hoping: 'E',

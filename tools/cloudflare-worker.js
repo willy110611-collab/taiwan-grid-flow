@@ -389,11 +389,16 @@ async function upstream(url, name) {
   const up = await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`, { headers: UA });
   if (!up.ok) throw new Error(`來源回應 ${up.status}`);
   const type = name.endsWith('.json') ? 'application/json' : 'text/csv';
-  // 台電開放資料 CSV 可能是 Big5；若解不出中文就用 big5 再解一次
+  // 台電即時資料是 UTF-8；部分開放資料 CSV 是 Big5。兩種都解一次，選「無法辨識字元」較少的那個。
+  // （注意：用 \uFFFD 跳脫字元，不要直接寫那個符號——貼進 Cloudflare 編輯器時會被吃掉，造成每個檔案都被誤判成 Big5）
   const buf = await up.arrayBuffer();
+  const bad = (t) => (t.match(/\uFFFD/g) || []).length;
   let body = new TextDecoder('utf-8').decode(buf);
-  if (body.includes('�')) {
-    try { body = new TextDecoder('big5').decode(buf); } catch { /* 保持 utf-8 */ }
+  if (bad(body) > 0) {
+    try {
+      const big5 = new TextDecoder('big5').decode(buf);
+      if (bad(big5) < bad(body)) body = big5;
+    } catch { /* 保持 utf-8 */ }
   }
   return new Response(body, { headers: { 'Content-Type': `${type}; charset=utf-8` } });
 }

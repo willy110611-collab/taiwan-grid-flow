@@ -30,6 +30,10 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const green = useTween(stats?.green);
   const thermal = useTween(stats?.thermal);
   const total = useTween(stats?.total);
+  // 即時用電：台電 loadpara「目前用電量」（= 北中南東四區用電加總），每 10 分鐘更新
+  const loadMw = snapshot?.supply?.load ?? (snapshot?.regions?.evidence === 'live'
+    ? Object.values(snapshot.regions.byKey).reduce((a, r) => a + r.load, 0) : null);
+  const load = useTween(loadMw ?? 0);
   const live = snapshot?.source === 'live';
 
   return (
@@ -73,6 +77,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           ))}
         </div>
         <div className="mix-total">{fmtMw(total)} <small>MW · 全台發電</small></div>
+        {loadMw ? <div className="mix-total">{fmtMw(load)} <small>MW · 全台用電</small></div> : null}
         <SupplyChip supply={snapshot?.supply} />
         {!wallpaper && <HomeCard sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}
       </section>

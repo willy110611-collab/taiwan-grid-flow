@@ -95,9 +95,10 @@ export function parseGenary(raw) {
  */
 function distributeUnallocated(byPlant, unallocated) {
   for (const [fuel, mw] of Object.entries(unallocated)) {
-    let weights = PLANTS.filter((p) => p.share?.[fuel]).map((p) => [p.id, p.share[fuel]]);
+    let weights = PLANTS.filter((p) => !p.island && p.share?.[fuel]).map((p) => [p.id, p.share[fuel]]);
     if (!weights.length) {
-      weights = PLANTS.map((p) => [p.id, byPlant[p.id][fuel] || 0]).filter(([, w]) => w > 0);
+      // 離島是獨立電網：本島對不到的出力（例如基隆協和的燃油）不能分給澎湖、金門
+      weights = PLANTS.filter((p) => !p.island).map((p) => [p.id, byPlant[p.id][fuel] || 0]).filter(([, w]) => w > 0);
     }
     const sum = weights.reduce((a, [, w]) => a + w, 0);
     if (!sum) continue; // 例如儲能、燃油沒有節點 → 只計入總量

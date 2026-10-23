@@ -66,8 +66,9 @@ export function mockGenary(now = new Date()) {
   push('汽電共生', 'Co-Gen', [['汽電共生', 4000]], cogen);
   push('水力', 'Hydro', [['明潭#1-6', 1620], ['大觀二#1-4', 1000], ['德基', 234], ['青山', 360], ['其他小水力', 600]], hydro);
   push('風力', 'Wind', [
-    ['台電離岸一期', 110], ['海能', 376], ['沃旭大彰化東南', 900], ['中能', 300],
-    ['海洋竹南', 128], ['允能雲林', 640], ['陸域風力', 1100]
+    // 名稱與台電 genary 一致（離岸風場各自對應地圖光點）
+    ['離岸一期', 109], ['海能風', 376], ['沃一風', 605], ['沃二風', 295], ['沃南風', 337], ['芳一風', 96], ['芳二風', 499],
+    ['中能風', 295], ['海洋竹南', 128], ['允湖', 320], ['允西', 320], ['龍A風', 300], ['其它購電風力', 1100]
   ], wind);
   push('太陽能', 'Solar', [['太陽能購電', 13000], ['台電自有', 600]], solar);
   push('其它再生能源', 'Other Renewable', [['生質/地熱', 800]], other);
@@ -85,7 +86,7 @@ export function mockGenary(now = new Date()) {
 export function mockLoadPara(totalMw) {
   const x = Math.max(0, Math.min(1, (totalMw - 25500) / 10500));
   const rate = 16.5 - 9.5 * x;
-  return { rate: Math.round(rate * 10) / 10, cap: Math.round(totalMw * rate / 100 / 10) };
+  return { rate: Math.round(rate * 10) / 10, cap: Math.round(totalMw * rate / 100 / 10), load: Math.round(totalMw * 0.955) };
 }
 
 /** 模擬「昨日燃料曲線」：每 10 分鐘一點，太陽能白天鐘形、燃煤夜間較高 */
