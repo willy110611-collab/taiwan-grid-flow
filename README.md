@@ -56,6 +56,11 @@
 3. 打開 https://taiwan-grid-flow-data.willy110611.workers.dev/ 應顯示「環境部金鑰已設定」；
    再開 `/aqi.json`、`/cems.json`、`/forecast.csv` 確認有資料
 
+**太陽能即時日照（選用）**
+- 台電即時資料約 86% 的太陽能是「其它購電太陽能」一整行，沒有位置 → 依台電公布的「各縣市太陽光電裝置容量」（`src/config/geo.js` 的 SOLAR_COUNTY_KW，每年更新一次）分配到各縣市太陽能群
+- 想讓陰天的縣市變暗、晴天的變亮：到 https://opendata.cwa.gov.tw 註冊取得授權碼 → Cloudflare 新增 Secret `CWA_KEY`
+- 有名字的案場（彰濱光、崙尾光、星崙光、南鹽光）直接用台電即時數字
+
 **LINE 提醒（App 關閉也能收到，開放給朋友加好友）**
 
 1. LINE 官方帳號管理後台建立帳號 → 設定 → Messaging API → 啟用

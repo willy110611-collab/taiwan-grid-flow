@@ -93,9 +93,18 @@ export function parseGenary(raw) {
  * 對不到節點的出力（例如台電把全部太陽能彙總成一列、或民營小電廠），
  * 依各節點的 share 設定分配；沒有 share 的燃料，就依「已有同燃料節點」的比例分配。
  */
+/**
+ * 即時日照係數（氣象署日射量，依各太陽能群最近測站；1 = 平均）
+ * 由 useSun() 每 30 分鐘更新；沒有資料時全部視為 1（只依裝置容量分配）
+ */
+let SUN = null;
+export function setSolarSun(map) { SUN = map && Object.keys(map).length ? map : null; }
+export function solarSun() { return SUN; }
+
 function distributeUnallocated(byPlant, unallocated) {
   for (const [fuel, mw] of Object.entries(unallocated)) {
-    let weights = PLANTS.filter((p) => !p.island && p.share?.[fuel]).map((p) => [p.id, p.share[fuel]]);
+    let weights = PLANTS.filter((p) => !p.island && p.share?.[fuel])
+      .map((p) => [p.id, p.share[fuel] * (fuel === 'solar' && SUN ? (SUN[p.id] ?? 1) : 1)]);
     if (!weights.length) {
       // 離島是獨立電網：本島對不到的出力（例如基隆協和的燃油）不能分給澎湖、金門
       weights = PLANTS.filter((p) => !p.island).map((p) => [p.id, byPlant[p.id][fuel] || 0]).filter(([, w]) => w > 0);

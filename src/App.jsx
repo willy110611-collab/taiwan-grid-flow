@@ -6,7 +6,7 @@ import { useHighlights } from './data/useHighlights.js';
 import { useDayHistory } from './data/history.js';
 import { useBadges } from './data/badges.js';
 import { useAnomalies } from './data/useAnomalies.js';
-import { useAir, nearestStation } from './data/useAir.js';
+import { useAir, useSun, nearestStation } from './data/useAir.js';
 import { useHome, useNotify, townName } from './data/useHome.js';
 import { usageAdvice } from './data/advice.js';
 import { homeSummary } from './components/Life.jsx';
@@ -56,6 +56,7 @@ export default function App() {
   const badges = useBadges(snapshot, rows, { replaying: replay.on });
   const highlights = useHighlights(snapshot, rows, stats, anomaly.list);
   const air = useAir();
+  useSun(); // 太陽能依各地即時日照分配（中繼站需設定 CWA_KEY）
   const { home, setHome } = useHome();
   setHomeRef.current = setHome;
   const advice = useMemo(

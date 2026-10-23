@@ -11,6 +11,7 @@ import { solveFlows } from './flowModel.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { createGlowSprite } from './glowSprite.js';
 import { Cruise } from './cruise.js';
+import { solarSun } from '../data/parseGenary.js';
 import { daylightState, daylightPalette, applyDaylight } from './daylight.js';
 
 /** 加法混合：光疊光會更亮，是「發光感」的關鍵 */
@@ -790,7 +791,7 @@ function evidenceText(p, source) {
   if (p.targetMw < 1) return `● ${EVIDENCE.live.label} · 停機`;
   const liveShare = p.liveMw / p.targetMw;
   if (liveShare > 0.95) return `● ${EVIDENCE.live.label}`;
-  if (liveShare < 0.05) return `◐ ${EVIDENCE.allocated.label}`;
+  if (liveShare < 0.05) return p.solar ? `◐ 依台電各縣市裝置容量分配${solarSun() ? '＋即時日照' : ''}` : `◐ ${EVIDENCE.allocated.label}`;
   return `● 即時 ${Math.round(liveShare * 100)}% ＋ ◐ 推估分配 ${Math.round((1 - liveShare) * 100)}%`;
 }
 

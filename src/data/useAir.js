@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { APP } from '../config/app.js';
 import { PLANTS } from '../config/geo.js';
+import { setSolarSun } from './parseGenary.js';
 
 /**
  * 空氣品質（環境部 AQI，每小時）與電廠煙道排放（環境部 CEMS 1 小時值）
@@ -112,4 +113,39 @@ export function aqiLevel(aqi) {
   if (aqi <= 200) return { label: '對所有族群不健康', color: [255, 40, 40] };
   if (aqi <= 300) return { label: '非常不健康', color: [170, 60, 200] };
   return { label: '危害', color: [126, 0, 35] };
+}
+
+/* ── 即時日照（氣象署日射量）→ 各太陽能群的分配係數 ──
+ * 係數 = 最近測站日射量 ÷ 全台中位數（限制在 0.3–1.8）；只改變「全台總量怎麼分到各縣市」，總量仍是台電即時值。
+ * 中繼站沒有設定 CWA_KEY 時拿不到資料 → 係數全部 1（只依裝置容量）。 */
+export function useSun() {
+  const [sun, setSun] = useState({ factors: null, error: null });
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const { stations } = await getJson('sun.json');
+        const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+        const ok = stations.filter((x) => x.value > 0 && (!x.time || x.time.replace(/\//g, '-').startsWith(today)));
+        if (ok.length < 5) throw new Error('今日日射量資料不足');
+        const sorted = ok.map((x) => x.value).sort((a, b) => a - b);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        const factors = {};
+        for (const p of PLANTS.filter((x) => x.solar)) {
+          let best = null;
+          for (const x of ok) { const d = distKm(p.pos, [x.lng, x.lat]); if (!best || d < best.d) best = { d, v: x.value }; }
+          if (best && best.d < 90) factors[p.id] = Math.max(0.3, Math.min(1.8, best.v / median));
+        }
+        setSolarSun(factors);
+        if (alive) setSun({ factors, error: null });
+      } catch (e) {
+        setSolarSun(null);
+        if (alive) setSun({ factors: null, error: e.message });
+      }
+    };
+    tick();
+    const id = setInterval(tick, 30 * 60 * 1000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  return sun;
 }

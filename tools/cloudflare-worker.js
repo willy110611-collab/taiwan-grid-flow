@@ -7,12 +7,14 @@
 //  /forecast.csv            台電「未來二個月電力供需預測」（免金鑰）
 //  /aqi.json                環境部 空氣品質指標 AQI（需 MOENV_KEY）
 //  /cems.json               環境部 固定污染源 CEMS 1 小時值，只保留電廠（需 MOENV_KEY）
+//  /sun.json                氣象署 署屬氣象站日射量 O-A0091-001（需 CWA_KEY）
 //  /config.json             給網頁：LINE 加好友連結
 //  POST /line               LINE Webhook（好友登記測站、查詢；回覆訊息免費）
 //  POST /push/subscribe     App 通知（Web Push，免費）訂閱／取消，金鑰自動產生存在 KV
 //
 //  設定（Worker → Settings → Variables and Secrets）：
 //   MOENV_KEY        Secret  環境部資料開放平台 API 金鑰
+//   CWA_KEY          Secret  （選用）氣象署開放資料授權碼：太陽能依各地即時日照分配
 //   LINE_TOKEN       Secret  LINE Channel access token
 //   LINE_SECRET      Secret  LINE Channel secret（驗證 Webhook 真的來自 LINE）
 //   LINE_BASIC_ID    Text    官方帳號 ID，例如 @123abcde（網頁顯示加好友按鈕）
@@ -52,6 +54,7 @@ export default {
       if (name === 'forecast.csv') return await cached(ctx, name, 3600, () => upstream(FORECAST, name));
       if (name === 'aqi.json') return await cached(ctx, name, 600, () => aqi(env));
       if (name === 'cems.json') return await cached(ctx, name, 900, () => cems(env));
+      if (name === 'sun.json') return await cached(ctx, name, 1800, () => sun(env));
       return new Response('not found', { status: 404, headers: CORS });
     } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
@@ -423,6 +426,35 @@ async function aqi(env) {
     lng: n(r.longitude), lat: n(r.latitude), time: r.publishtime
   })).filter((s) => s.lng && s.lat);
   return new Response(JSON.stringify({ stations }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+}
+
+// 日射量：氣象署 O-A0091-001（署屬氣象站，MJ/m²）。欄位依官方文件：StationName、StationLongitude/Latitude、DateTime、SolarRadiation
+async function sun(env) {
+  if (!env.CWA_KEY) throw new Error('尚未設定氣象署授權碼（CWA_KEY）');
+  const r = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0091-001?Authorization=${env.CWA_KEY}&format=JSON`);
+  const j = await r.json().catch(() => null);
+  if (!j) throw new Error(`氣象署回應 ${r.status}`);
+  const out = [];
+  const walk = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) return o.forEach(walk);
+    if (o.StationName && JSON.stringify(o).includes('SolarRadiation')) {
+      const find = (obj, key) => { let v; const w = (x) => { if (v !== undefined || !x || typeof x !== 'object') return; if (key in x) { v = x[key]; return; } Object.values(x).forEach(w); }; w(obj); return v; };
+      const val = parseFloat(find(o, 'SolarRadiation'));
+      // 同一站可能有 TWD67／WGS84 兩組座標：優先取 WGS84
+      const coords = [];
+      const cw = (x) => { if (!x || typeof x !== 'object') return; if ('StationLongitude' in x) coords.push(x); else Object.values(x).forEach(cw); };
+      cw(o);
+      const c = coords.find((x) => /WGS/i.test(x.CoordinateName || '')) || coords[coords.length - 1] || {};
+      const lng = parseFloat(c.StationLongitude), lat = parseFloat(c.StationLatitude);
+      if (Number.isFinite(val) && val >= 0 && lng > 118 && lat > 21) out.push({ site: o.StationName, lng, lat, value: val, time: String(find(o, 'DateTime') || '') });
+      return;
+    }
+    Object.values(o).forEach(walk);
+  };
+  walk(j);
+  if (!out.length) throw new Error('日射量資料格式不符');
+  return new Response(JSON.stringify({ stations: out }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 }
 
 // CEMS：資料量很大，只保留名稱含「電廠／發電」的設施

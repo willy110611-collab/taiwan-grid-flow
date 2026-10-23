@@ -9,6 +9,20 @@
  *  share : 若該燃料是「全台總量」型資料（例如太陽能、風力在台電資料中是彙總列），
  *          依此比例把總量分配到各節點。share 以燃料別為鍵。
  */
+/**
+ * 各縣市太陽光電裝置容量（台電「各縣市太陽光電裝置容量排名」115 年 08 月，單位瓩）
+ * 台電即時資料裡約 86% 的太陽能是「其它購電太陽能」一整行、沒有位置 → 依這份裝置容量分配到各縣市光點。
+ * 每年更新一次即可：https://www.taipower.com.tw/chart/（歷年各縣市太陽光電裝置容量 CSV）
+ */
+export const SOLAR_COUNTY_KW = {
+  version: '115-08',
+  台南市: 3014337, 彰化縣: 2219385, 雲林縣: 1714586, 高雄市: 1601699, 屏東縣: 1550424,
+  嘉義縣: 1221705, 嘉義市: 61223, 台中市: 989219, 桃園市: 963946, 苗栗縣: 419590, 南投縣: 334201,
+  新北市: 223625, 台北市: 87706, 基隆市: 32246, 新竹縣: 231268, 新竹市: 56824,
+  宜蘭縣: 232256, 花蓮縣: 239251, 台東縣: 111132
+};
+const kw = (...cs) => cs.reduce((a, c) => a + SOLAR_COUNTY_KW[c], 0) / 1e6; // → GW，當作分配權重
+
 export const PLANTS = [
   // ── 離岸風場：台電每 10 分鐘公布「每個風場」的即時淨發電量，各自一個光點（位置為風場約略中心）──
   //    放在最前面：機組名稱優先對應到這裡，不會被下面的區域節點吃掉
@@ -27,16 +41,27 @@ export const PLANTS = [
   { id: 'taichung', name: '台中發電廠',   en: 'Taichung',   pos: [120.481, 24.213], match: /台中|中火/ },
   { id: 'hsinta',   name: '興達發電廠',   en: 'Hsinta',     pos: [120.198, 22.856], match: /興達/ },
   { id: 'maanshan', name: '第三核能發電廠', en: 'Maanshan', pos: [120.751, 21.958], match: /核三|馬鞍山/ },
-  { id: 'changbin', name: '彰濱風電 / 太陽能群', en: 'Changhua Coast', pos: [120.354, 24.083],
-    match: /彰濱|彰工|彰品|王功|星彰/, share: { wind: 0.62, solar: 0.22 } },
-  { id: 'cigu',     name: '七股鹽山太陽能群', en: 'Cigu Solar', pos: [120.106, 23.149], match: /南鹽|七股/, share: { solar: 0.30 } },
+  // 彰濱：彰濱光、崙尾光、星崙光（彰濱工業區崙尾區，台電即時逐案公布）＋陸域風電
+  { id: 'changbin', name: '彰濱風電 / 光電', en: 'Changbin', pos: [120.400, 24.110],
+    match: /彰濱|彰工|彰品|王功|星彰|崙尾|星崙/, share: { wind: 0.62 } },
+  { id: 'cigu',     name: '台南太陽能群', en: 'Tainan Solar', pos: [120.140, 23.160], match: /南鹽|七股/, share: { solar: kw('台南市') }, solar: true },
 
   // ── 補充節點：讓全台光網更完整（可自行刪減） ──
   { id: 'linkou',   name: '林口發電廠',   en: 'Linkou',     pos: [121.305, 25.120], match: /林口/ },
   { id: 'tunghsiao',name: '通霄發電廠',   en: 'Tunghsiao',  pos: [120.672, 24.492], match: /通霄/ },
   { id: 'mailiao',  name: '麥寮電廠',     en: 'Mailiao',    pos: [120.195, 23.790], match: /麥寮|雲林|雲麥|四湖|崙背|星元/, share: { wind: 0.18 } },
-  { id: 'chiayi',   name: '嘉義沿海太陽能群', en: 'Chiayi Solar', pos: [120.170, 23.420], share: { solar: 0.26 } },
-  { id: 'pingtung', name: '屏東太陽能群', en: 'Pingtung Solar', pos: [120.560, 22.560], share: { solar: 0.22 } },
+  { id: 'chiayi',   name: '嘉義太陽能群', en: 'Chiayi Solar', pos: [120.200, 23.420], share: { solar: kw('嘉義縣', '嘉義市') }, solar: true },
+  { id: 'pingtung', name: '屏東太陽能群', en: 'Pingtung Solar', pos: [120.560, 22.560], share: { solar: kw('屏東縣') }, solar: true },
+  // ── 各縣市太陽能群（依台電各縣市裝置容量分配「其它購電太陽能」；位置取該縣市光電較集中處）──
+  { id: 'sol_changhua', name: '彰化太陽能群', en: 'Changhua Solar',  pos: [120.330, 23.930], share: { solar: kw('彰化縣') }, solar: true },
+  { id: 'sol_yunlin',   name: '雲林太陽能群', en: 'Yunlin Solar',    pos: [120.230, 23.620], share: { solar: kw('雲林縣') }, solar: true },
+  { id: 'sol_kaohsiung', name: '高雄太陽能群', en: 'Kaohsiung Solar', pos: [120.290, 22.800], share: { solar: kw('高雄市') }, solar: true },
+  { id: 'sol_taichung', name: '台中太陽能群', en: 'Taichung Solar',  pos: [120.590, 24.280], share: { solar: kw('台中市') }, solar: true },
+  { id: 'sol_taoyuan',  name: '桃園太陽能群', en: 'Taoyuan Solar',   pos: [121.170, 24.980], share: { solar: kw('桃園市') }, solar: true },
+  { id: 'sol_miaoli',   name: '苗栗太陽能群', en: 'Miaoli Solar',    pos: [120.820, 24.520], share: { solar: kw('苗栗縣') }, solar: true },
+  { id: 'sol_nantou',   name: '南投太陽能群', en: 'Nantou Solar',    pos: [120.690, 23.880], share: { solar: kw('南投縣') }, solar: true },
+  { id: 'sol_north',    name: '北北基竹太陽能群', en: 'North Solar', pos: [121.030, 24.820], share: { solar: kw('新北市', '台北市', '基隆市', '新竹縣', '新竹市') }, solar: true },
+  { id: 'sol_east',     name: '宜花東太陽能群', en: 'East Solar',    pos: [121.580, 23.950], share: { solar: kw('宜蘭縣', '花蓮縣', '台東縣') }, solar: true },
   { id: 'nanbu',    name: '南部 / 大林發電廠', en: 'Nanbu · Talin', pos: [120.330, 22.590], match: /南部|大林/ },
   { id: 'hoping',   name: '和平電廠',     en: 'Ho-Ping',    pos: [121.755, 24.300], match: /和平/ },
   { id: 'miaoli',   name: '苗栗風場', en: 'Miaoli Wind', pos: [120.780, 24.640], match: /苗栗|大鵬/, share: { wind: 0.20 } },
@@ -102,6 +127,7 @@ export const PLANT_REGION = {
   datan: 'N', linkou: 'N',
   ow_formosa1: 'C', ow_formosa2: 'C', ow_zhongneng: 'C', ow_changfang: 'C', ow_gch12: 'C', ow_gch4: 'C', ow_tpc: 'C', ow_hailong: 'C', ow_yunneng: 'C',
   taichung: 'C', tunghsiao: 'C', mailiao: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
+  sol_changhua: 'C', sol_yunlin: 'C', sol_taichung: 'C', sol_miaoli: 'C', sol_nantou: 'C', sol_taoyuan: 'N', sol_north: 'N', sol_kaohsiung: 'S', sol_east: 'E',
   hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S',
   hoping: 'E',
   penghu: 'X', kinmen: 'X', matsu: 'X', ludao: 'X', lanyu: 'X'
