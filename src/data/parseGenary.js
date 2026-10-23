@@ -36,6 +36,7 @@ export function parseGenary(raw) {
   /** 對不到座標的機組，先依燃料暫存，稍後依比例分配到節點 */
   const unallocated = {};
   const units = [];
+  const charging = { pump: 0, battery: 0 };
 
   let currentFuel = null;
   for (const row of rows) {
@@ -53,13 +54,20 @@ export function parseGenary(raw) {
     const mw = num(row[4] ?? row[3]);
     if (!Number.isFinite(mw)) continue;
 
-    units.push({ fuel, unit, capacity, mw, note: cleanText(row[6] ?? '') });
-    if (mw <= 0) continue; // 停機或儲能充電（負值）不發光
+    const isLoad = /負載|Load/i.test(String(row[0]));
+    const matched = PLANTS.find((p) => p.match && p.match.test(unit));
+    units.push({ fuel, unit, capacity, mw, note: cleanText(row[6] ?? ''), plantId: matched?.id || null, load: isLoad, sub: cleanText(row[1] ?? '') });
+    // 儲能充電（抽蓄抽水、電池充電）：負值，另外統計給「反向流」與 HUD
+    if (isLoad && mw < 0) {
+      if (/抽蓄/.test(String(row[1]))) charging.pump += -mw; else charging.battery += -mw;
+      continue;
+    }
+    if (mw <= 0) continue; // 停機不發光
 
     totals[fuel] = (totals[fuel] || 0) + mw;
     if (fuel === 'storage') continue; // 電池儲能放電：只計入總量，不畫在地圖節點上
 
-    const plant = PLANTS.find((p) => p.match && p.match.test(unit));
+    const plant = matched;
     if (plant) {
       byPlant[plant.id][fuel] = (byPlant[plant.id][fuel] || 0) + mw;
       liveByPlant[plant.id] += mw;
@@ -86,7 +94,7 @@ export function parseGenary(raw) {
     return { id: p.id, mw, mix, liveMw: estimated[p.id] ? 0 : liveMw, allocatedMw: mw - liveMw, estimated: !!estimated[p.id] };
   });
 
-  return { timestamp, plants, totals, units };
+  return { timestamp, plants, totals, units, charging };
 }
 
 /**

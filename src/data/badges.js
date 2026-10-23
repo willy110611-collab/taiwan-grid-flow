@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { greenPct, twDateKey } from './history.js';
 import { sunElevation } from '../engine/daylight.js';
 import { PLANTS } from '../config/geo.js';
+// 很多離岸風場、離島常常 0 MW（光球不亮、摸不到）→ 不要求全部，摸過 20 座就算完成
+const DEX_GOAL = Math.min(20, PLANTS.length);
 import { SHOTS } from '../engine/cruise.js';
 
 /**
@@ -75,10 +77,10 @@ export const BADGES = [
   },
   {
     id: 'plant-dex', name: '電廠圖鑑', kind: 'explore', rarity: '常見', color: [214, 228, 255],
-    desc: `點過（或滑過）全部 ${PLANTS.length} 座電廠。`, hint: '把每顆光球都摸一遍',
+    desc: `點過（或滑過）${DEX_GOAL} 座不同的電廠或風場。`, hint: '把亮著的光球都摸一遍',
     glyph: 'M5 4h9a5 5 0 0 1 5 5v11H10a5 5 0 0 1-5-5zM10 4v16',
-    check: ({ progress }) => (progress.plants || []).length >= PLANTS.length,
-    progress: (p) => `${(p.plants || []).length} / ${PLANTS.length}`
+    check: ({ progress }) => (progress.plants || []).length >= DEX_GOAL,
+    progress: (p) => `${Math.min(DEX_GOAL, (p.plants || []).length)} / ${DEX_GOAL}`
   },
   {
     id: 'time-traveler', name: '時光旅人', kind: 'explore', rarity: '常見', color: [180, 150, 255],

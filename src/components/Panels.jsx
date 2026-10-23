@@ -2,9 +2,14 @@ import { useState } from 'react';
 import { APP } from '../config/app.js';
 import { EVIDENCE } from '../config/energy.js';
 import { Icon, Sparkline, fmtMw } from './widgets.jsx';
+import { t, useT } from '../i18n.js';
+import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
+import { twHM } from '../data/history.js';
 
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
 export function Panel({ title, onClose, children }) {
+  useT();
+  title = t(title);
   return (
     <section className="panel" role="dialog" aria-label={title}>
       <div className="panel-grip" onClick={onClose} />
@@ -18,53 +23,62 @@ export function Panel({ title, onClose, children }) {
 }
 
 /* ───────────── 今日亮點 ───────────── */
-export function HighlightsPanel({ hl, onClose }) {
+const md = (ts) => { const d = new Date(ts + 8 * 3600e3); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${twHM(ts)}`; };
+const REC_ROWS = [
+  ['green', '綠能佔比', '%', 'green'],
+  ['solar', '太陽能出力', 'MW', 'gold'],
+  ['wind', '風力出力', 'MW', ''],
+  ['load', '全台用電', 'MW', '']
+];
+
+export function HighlightsPanel({ hl, records, onClose }) {
+  useT();
   return (
     <Panel title="今日亮點" onClose={onClose}>
       {!hl ? (
-        <p className="muted">資料讀取中…</p>
+        <p className="muted">{t('資料讀取中…')}</p>
       ) : (
         <>
           <ul className="hl-list">
             {hl.topPlant && (
               <li>
-                <span className="hl-k">目前出力最大</span>
+                <span className="hl-k">{t('目前出力最大')}</span>
                 <span className="hl-v">{hl.topPlant.name}</span>
                 <span className="hl-n">{fmtMw(hl.topPlant.mw)} <small>MW</small></span>
               </li>
             )}
             <li>
-              <span className="hl-k">太陽能今日尖峰</span>
+              <span className="hl-k">{t('太陽能今日尖峰')}</span>
               {hl.solarPeak ? (
                 <>
                   <span className="hl-v gold">{hl.solarPeak.hm}</span>
                   <span className="hl-n">{fmtMw(hl.solarPeak.solar)} <small>MW</small></span>
                 </>
               ) : (
-                <span className="hl-v muted">日出後開始累計</span>
+                <span className="hl-v muted">{t('日出後開始累計')}</span>
               )}
             </li>
             <li>
-              <span className="hl-k">綠能佔比最高</span>
+              <span className="hl-k">{t('綠能佔比最高')}</span>
               <span className="hl-v green">{hl.greenPeak.hm}</span>
               <span className="hl-n">{hl.greenPeak.greenPct.toFixed(1)} <small>%</small></span>
             </li>
             <li>
-              <span className="hl-k">全台負載最高</span>
+              <span className="hl-k">{t('全台負載最高')}</span>
               <span className="hl-v">{hl.loadPeak.hm}</span>
               <span className="hl-n">{fmtMw(hl.loadPeak.load)} <small>MW</small></span>
             </li>
             {hl.southToNorth != null && (
               <li>
-                <span className="hl-k">南電北送 <em className="tag est">模型推估</em></span>
-                <span className="hl-v">中南部 → 北部</span>
+                <span className="hl-k">{t('南電北送')} <em className="tag est">{t('模型推估')}</em></span>
+                <span className="hl-v">{t('中南部 → 北部')}</span>
                 <span className="hl-n">≈ {fmtMw(Math.round(hl.southToNorth / 50) * 50)} <small>MW</small></span>
               </li>
             )}
           </ul>
           {hl.anomalies?.length > 0 && (
             <div className="hl-anom">
-              <div className="hl-k">今日機組異常（偵測）</div>
+              <div className="hl-k">{t('今日機組異常（偵測）')}</div>
               <ul>
                 {hl.anomalies.slice(-5).reverse().map((a, i) => (
                   <li key={i}><span>{a.time}</span>{a.plant || a.unit}　{a.unit}　{fmtMw(a.from)} → {fmtMw(a.to)} MW</li>
@@ -73,11 +87,25 @@ export function HighlightsPanel({ hl, onClose }) {
             </div>
           )}
           <div className="hl-chart">
-            <div className="hl-k">今日綠能佔比</div>
+            <div className="hl-k">{t('今日綠能佔比')}</div>
             <Sparkline values={hl.spark} />
           </div>
+          {records && REC_ROWS.some(([k]) => records[k]) && (
+            <div className="hl-anom">
+              <div className="hl-k">{t('我的紀錄')}<small className="muted">　{t('這台裝置看過的最高值')}{records.since ? `（${md(records.since).split(' ')[0]} 起）` : ''}</small></div>
+              <ul className="hl-list">
+                {REC_ROWS.filter(([k]) => records[k]).map(([k, label, unit, cls]) => (
+                  <li key={k}>
+                    <span className="hl-k">{t(label)}</span>
+                    <span className={`hl-v ${cls}`}>{md(records[k].t)}</span>
+                    <span className="hl-n">{unit === '%' ? records[k].v.toFixed(1) : fmtMw(records[k].v)} <small>{unit}</small></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="fine">
-            {hl.partial ? `今日紀錄從 ${hl.since} 開始（打開頁面後才開始累計）。` : '統計範圍：今日 00:00 至現在。'}
+            {hl.partial ? `今日紀錄從 ${hl.since} 開始（打開頁面後才開始累計）。` : t('統計範圍：今日 00:00 至現在。')}
           </p>
         </>
       )}
@@ -92,14 +120,14 @@ const TABS = [
   ['about', '關於']
 ];
 
-export function InfoPanel({ snapshot, onClose, initialTab }) {
+export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
   const [tab, setTab] = useState(initialTab || 'source');
   const live = snapshot?.source === 'live';
   return (
     <Panel title="資訊" onClose={onClose}>
       <nav className="tabs">
         {TABS.map(([id, label]) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{label}</button>
+          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{t(label)}</button>
         ))}
       </nav>
 
@@ -118,7 +146,24 @@ export function InfoPanel({ snapshot, onClose, initialTab }) {
               <a href={APP.taipowerPage} target="_blank" rel="noreferrer">台電原始頁面 ↗</a>
             </dd>
             <dt>電廠座標與機組對應</dt>
-            <dd>本專案整理（src/config/geo.js），以機組名稱比對到 16 個發電節點。</dd>
+            <dd>本專案整理（src/config/geo.js），以機組名稱比對到 {PLANTS.length} 個發電節點（含 9 座離岸風場、12 個縣市太陽能群）。離岸風場座標參考維基百科與開發商公開資料。</dd>
+            <dt>太陽能分配</dt>
+            <dd>
+              台電「各縣市太陽光電裝置容量」（{SOLAR_COUNTY_KW.version}）＋ 交通部中央氣象署「日射量」O-A0091-001（每小時）。
+              台電即時資料約 86% 的太陽能沒有位置，依縣市容量 × 當地日照分配。
+            </dd>
+            <dt>空氣品質、風向風速</dt>
+            <dd>環境部「空氣品質指標 AQI」（每小時）；電廠煙道排放為環境部「固定污染源連續自動監測 CEMS」。</dd>
+            <dt>未來供電預測</dt>
+            <dd>台電「未來兩個月電力供需預測」（每 10 天一筆）。</dd>
+            <dt>電價與碳排</dt>
+            <dd>
+              台電「電價表」（114/10/1 起）住宅非時間電價與簡易型二段式時間電價；
+              碳排以經濟部能源署公告電力排碳係數（0.467 kg/度）為基準，依機組類型細分。
+              假日依行政院人事行政總處「政府行政機關辦公日曆表」。
+            </dd>
+            <dt>中繼站</dt>
+            <dd>Cloudflare Workers：轉送台電、環境部、氣象署資料（解決跨網域、編碼與金鑰），並負責 LINE／網頁推播通知。</dd>
             <dt>縣市界、海岸線</dt>
             <dd>內政部國土測繪中心開放資料（經 taiwan-atlas 整理）。</dd>
             <dt>山脈陰影</dt>
@@ -139,6 +184,17 @@ export function InfoPanel({ snapshot, onClose, initialTab }) {
                     <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
                     <b>{d.name}</b>
                     <small>{d.ok ? '正常' : d.tries.map((t) => `${t.url.replace(/^.*\//, '')}：${t.msg}`).slice(-1)[0] || '未嘗試'}</small>
+                  </li>
+                ))}
+                {[
+                  ['環境部 AQI', air?.stations?.length > 0, air?.error],
+                  ['環境部 CEMS', air?.cems && Object.keys(air.cems).length > 0, air?.cemsError],
+                  ['氣象署日射量', !!sun?.factors, sun?.error]
+                ].map(([name, ok, err]) => (
+                  <li key={name} className={ok ? 'ok' : 'fail'}>
+                    <span className={`dot ${ok ? 'live' : 'sim'}`} />
+                    <b>{name}</b>
+                    <small>{ok ? t('正常') : err || '讀取中…'}</small>
                   </li>
                 ))}
               </ul>

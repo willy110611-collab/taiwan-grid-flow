@@ -3,3 +3,5 @@ dist/
 .vite/
 public/data/
 *.local
+# 個人筆記，不上傳
+gemini/

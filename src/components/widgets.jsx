@@ -6,6 +6,8 @@ export function useTween(value, ms = 1600) {
   const from = useRef(v);
   useEffect(() => {
     if (value == null) return;
+    // 背景分頁不會跑動畫（rAF 暫停）→ 直接跳到目標值，切回來時不會顯示 0
+    if (document.hidden) { from.current = value; setV(value); return; }
     const start = performance.now();
     const a = from.current;
     let raf;

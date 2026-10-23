@@ -8,6 +8,8 @@ import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js
 import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
 import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSupport } from '../data/useHome.js';
 import { SUPPLY_LEVELS } from '../data/parseAux.js';
+import { billCompare } from '../data/advice.js';
+import { t } from '../i18n.js';
 
 const DIRS = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
 export const windText = (deg) => (deg == null ? '—' : `${DIRS[Math.round(deg / 22.5) % 16]}風`);
@@ -46,7 +48,7 @@ export function HomeCard({ sum, advice, onOpen, className = '' }) {
   const st = sum.station;
   return (
     <button className={`home-card ${className} ${sum.unset ? 'unset' : ''}`} onClick={onOpen}>
-      <span className="hc-advice"><i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />{advice.head}</span>
+      <span className="hc-advice"><i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />{t(advice.head)}</span>
       <span className="hc-row">
         <b>{advice.ci?.toFixed(2) ?? '—'}</b><small>kg CO₂/度</small>
         {st && (
@@ -56,7 +58,7 @@ export function HomeCard({ sum, advice, onOpen, className = '' }) {
           </>
         )}
       </span>
-      {sum.unset && <span className="hc-set">＋ 設定我的家</span>}
+      {sum.unset && <span className="hc-set">{t('＋ 設定我的家')}</span>}
     </button>
   );
 }
@@ -101,7 +103,8 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
           <input type="checkbox" checked={!!home.touUser} onChange={(e) => setHome({ touUser: e.target.checked })} />
           <span>我家有申請「時間電價」</span>
         </label>
-        <p className="fine">時段依台電簡易型二段式時間電價：平日夏月（6–9 月）09–24 時尖峰、其他月份 06–11、14–24 時尖峰；週六同時段為半尖峰；週日與國定假日全日離峰。</p>
+        <p className="fine">時段依台電簡易型二段式時間電價（114 年 10 月起）：平日夏月（6–9 月）09–24 時尖峰、其他月份 06–11、14–24 時尖峰；週六、週日與國定假日全日離峰。</p>
+        <BillCalc home={home} setHome={setHome} />
       </section>
 
       {/* 2. 碳排 */}
@@ -351,3 +354,34 @@ export function AirPanel({ air, snapshot, home, onClose }) {
 }
 
 export { SUPPLY_LEVELS };
+
+/** 電費試算：一般（累進）電價 vs 簡易型二段式時間電價 */
+function BillCalc({ home, setHome }) {
+  const [open, setOpen] = useState(false);
+  const kwh = home.billKwh ?? 350;
+  const peak = home.billPeak ?? 50;
+  const tw = new Date(Date.now() + 8 * 3600e3);
+  const [summer, setSummer] = useState(() => { const m = tw.getUTCMonth() + 1; return m >= 6 && m <= 9; });
+  const r = billCompare(Math.max(0, kwh), peak / 100, summer);
+  const diff = r.tiered - r.tou;
+  if (!open) return <button className="bill-open" onClick={() => setOpen(true)}>🧮 {t('試算：時間電價划算嗎？')}</button>;
+  return (
+    <div className="bill">
+      <div className="bill-row">
+        <label>每月用電<input type="number" min="0" max="5000" inputMode="numeric" value={kwh} onChange={(e) => setHome({ billKwh: Number(e.target.value) || 0 })} /> 度</label>
+        <label className="switch"><input type="checkbox" checked={summer} onChange={(e) => setSummer(e.target.checked)} /><span>夏月</span></label>
+      </div>
+      <label className="bill-range">尖峰時段用電 <b>{peak}%</b>
+        <input type="range" min="0" max="100" step="5" value={peak} onChange={(e) => setHome({ billPeak: Number(e.target.value) })} />
+      </label>
+      <ul className="bill-out">
+        <li><span>一般電價（累進）</span><b>{r.tiered.toLocaleString()} 元</b></li>
+        <li><span>時間電價（二段式）</span><b>{r.tou.toLocaleString()} 元</b></li>
+      </ul>
+      <p className={`fine ${diff > 0 ? 'green' : 'warm'}`}>
+        {Math.abs(diff) < 20 ? '兩種差不多，不用特地改。' : diff > 0 ? `改時間電價每月約省 ${diff.toLocaleString()} 元。` : `維持一般電價較划算（時間電價每月多 ${(-diff).toLocaleString()} 元）。`}
+      </p>
+      <p className="fine">台電帳單兩個月一期，請把帳單度數除以 2。估算未含電費折扣與流動電費調整，申請前請以台電試算為準。</p>
+    </div>
+  );
+}

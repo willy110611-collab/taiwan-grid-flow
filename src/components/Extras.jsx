@@ -5,6 +5,7 @@ import { EVIDENCE } from '../config/energy.js';
 import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
 import { twHM } from '../data/history.js';
+import { t, useT } from '../i18n.js';
 
 /* ───────────── 供電燈號 ───────────── */
 export function SupplyChip({ supply }) {
@@ -13,9 +14,9 @@ export function SupplyChip({ supply }) {
   return (
     <div className="supply" title={supply.evidence === 'live' ? '台電公布：今日尖峰預估備轉容量率' : '模擬值'}>
       <i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />
-      <span>{supply.label}</span>
+      <span>{t(supply.label)}</span>
       <b>{supply.rate?.toFixed(1)}%</b>
-      <small>{supply.evidence === 'live' ? '尖峰備轉' : '模擬'}</small>
+      <small>{t(supply.evidence === 'live' ? '尖峰備轉' : '模擬')}</small>
     </div>
   );
 }
@@ -36,7 +37,7 @@ export function DemandPanel({ snapshot, onClose }) {
           <ul className="region-bars">
             {REGION_KEYS.map((k) => {
               const r = regions.byKey[k];
-              const absorb = r.ratio < 1;
+              const absorb = Math.round(r.ratio * 100) < 100;
               return (
                 <li key={k}>
                   <div className="rb-head">
@@ -161,7 +162,8 @@ export function AlertBanner({ alert, onClose }) {
 
 /* ───────────── 今日回放 ───────────── */
 const SPEEDS = [60, 300, 900];
-export function ReplayBar({ rows, replay, setReplay, onFinish }) {
+export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
+  useT();
   const raf = useRef();
   const last = useRef(performance.now());
   const finish = useRef(onFinish);
@@ -172,7 +174,7 @@ export function ReplayBar({ rows, replay, setReplay, onFinish }) {
     if (!replay.playing) return;
     last.current = performance.now();
     const step = (now) => {
-      const dt = (now - last.current) / 1000;
+      const dt = Math.max(0, (now - last.current) / 1000); // rAF 時間戳可能早於 performance.now() → 不可為負
       last.current = now;
       setReplay((r) => {
         const idx = r.idx + (dt * r.speed) / 600; // 每筆 = 10 分鐘 = 600 秒
@@ -186,7 +188,8 @@ export function ReplayBar({ rows, replay, setReplay, onFinish }) {
   }, [replay.playing, n, setReplay]);
 
   if (!n) return null;
-  const cur = rows[Math.min(n - 1, Math.floor(replay.idx))];
+  const cur = rows[Math.max(0, Math.min(n - 1, Math.floor(replay.idx) || 0))];
+  if (!cur) return null;
   return (
     <div className="replay">
       <button className="icon-btn play" onClick={() => setReplay((r) => ({ ...r, playing: !r.playing, idx: r.idx >= n - 1 ? 0 : r.idx }))}>
@@ -194,8 +197,15 @@ export function ReplayBar({ rows, replay, setReplay, onFinish }) {
       </button>
       <div className="replay-time">
         <b>{twHM(cur.t)}</b>
-        <small>{cur.reconstructed ? '回放 · 電廠出力依燃料曲線推估' : '回放'}</small>
+        <small>{cur.reconstructed ? t('回放 · 電廠出力依燃料曲線推估') : t('回放')}</small>
       </div>
+      {hasYesterday && (
+        <div className="speeds day-sw">
+          {['today', 'yesterday'].map((d) => (
+            <button key={d} className={(replay.day || 'today') === d ? 'on' : ''} onClick={() => setReplay((r) => ({ ...r, day: d, idx: 0, playing: true }))}>{t(d === 'today' ? '今天' : '昨天')}</button>
+          ))}
+        </div>
+      )}
       <input
         type="range" min="0" max={n - 1} step="0.01" value={replay.idx}
         onChange={(e) => setReplay((r) => ({ ...r, idx: Number(e.target.value), playing: false }))}

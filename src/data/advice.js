@@ -25,11 +25,15 @@ const HOLIDAYS = new Set([
 ]);
 
 /**
- * 台電簡易型時間電價「二段式」（新時間帶）
+ * 台電簡易型時間電價「二段式」（114 年 10 月 1 日起，台電「各類電價表及計算範例」第 4 頁）
  *  週一至週五：夏月 09–24 尖峰；非夏月 06–11、14–24 尖峰；其餘離峰
- *  週六：同樣時段為「半尖峰」（電價介於尖峰與離峰之間）
- *  週日與離峰日（國定假日）：全日離峰
+ *  週六、週日及離峰日（國定假日）：全日離峰
  */
+export const TOU_RATES = { base: 75, peak: { summer: 5.16, other: 4.93 }, off: { summer: 2.06, other: 1.99 }, over2000: 1.04 };
+export const TIERED_RATES = [ // 表燈非時間電價（住宅），每月度數上限：[夏月, 非夏月]
+  [120, 1.78, 1.78], [330, 2.55, 2.26], [500, 3.80, 3.13], [700, 5.14, 4.24], [1000, 6.44, 5.27], [Infinity, 8.86, 7.03]
+];
+
 export function touPeriod(date = new Date()) {
   const t = tw(date);
   const dow = t.getUTCDay();
@@ -37,17 +41,29 @@ export function touPeriod(date = new Date()) {
   const m = t.getUTCMonth() + 1;
   const summer = m >= 6 && m <= 9;
   const ymd = t.toISOString().slice(0, 10);
-  if (dow === 0) return { peak: false, half: false, label: '週日全日離峰', summer, next: null };
-  if (HOLIDAYS.has(ymd)) return { peak: false, half: false, label: '國定假日全日離峰', summer, next: null };
+  if (dow === 0 || dow === 6) return { peak: false, label: '週末全日離峰', summer, next: null };
+  if (HOLIDAYS.has(ymd)) return { peak: false, label: '國定假日全日離峰', summer, next: null };
   const ranges = summer ? [[9, 24]] : [[6, 11], [14, 24]];
-  const inRange = ranges.some(([a, b]) => h >= a && h < b);
-  const edges = ranges.flat().filter((x) => x > h).sort((a, b) => a - b);
-  const hm = `${String(Math.floor(edges[0] ?? 24) % 24).padStart(2, '0')}:00`;
-  const sat = dow === 6;
-  if (!inRange) return { peak: false, half: false, label: '離峰時段', summer, next: `${hm} 起${sat ? '半尖峰' : '尖峰'}` };
-  return sat
-    ? { peak: false, half: true, label: '週六半尖峰', summer, next: `${hm} 起離峰` }
-    : { peak: true, half: false, label: '尖峰時段', summer, next: `${hm} 起離峰` };
+  const inPeak = ranges.some(([a, b]) => h >= a && h < b);
+  const nextH = ranges.flat().filter((x) => x > h).sort((a, b) => a - b)[0] ?? 24;
+  const when = nextH >= 24 ? '今晚 24:00' : `${String(nextH).padStart(2, '0')}:00`;
+  return inPeak
+    ? { peak: true, label: '尖峰時段', summer, next: `${when} 起離峰` }
+    : { peak: false, label: '離峰時段', summer, next: `${when} 起尖峰` };
+}
+
+/** 電費試算：每月度數 kwh、尖峰用電比例 peakShare（0–1）、是否夏月 → { tiered, tou } 元 */
+export function billCompare(kwh, peakShare, summer) {
+  let rest = kwh, prev = 0, tiered = 0;
+  for (const [cap, s, o] of TIERED_RATES) {
+    const n = Math.max(0, Math.min(rest, cap - prev));
+    tiered += n * (summer ? s : o);
+    rest -= n; prev = cap;
+    if (rest <= 0) break;
+  }
+  const k = summer ? 'summer' : 'other';
+  const tou = TOU_RATES.base + kwh * peakShare * TOU_RATES.peak[k] + kwh * (1 - peakShare) * TOU_RATES.off[k] + Math.max(0, kwh - 2000) * TOU_RATES.over2000;
+  return { tiered: Math.round(tiered), tou: Math.round(tou) };
 }
 
 /**
@@ -68,8 +84,7 @@ export function usageAdvice(snap, rows = [], yRows = null, { touUser = false } =
 
   let score = 0;
   const reasons = [];
-  if (tou.half) { reasons.push(`${tou.label}${touUser ? '，電價中等' : ''}（${tou.next}）`); }
-  else if (!tou.peak) { score += touUser ? 2 : 1; reasons.push(`${tou.label}${touUser ? '，電價較低' : ''}`); }
+  if (!tou.peak) { score += touUser ? 2 : 1; reasons.push(`${tou.label}${touUser ? '，電價較低' : ''}`); }
   else { score -= touUser ? 2 : 1; reasons.push(`${tou.label}${touUser ? '，電價較高' : ''}（${tou.next}）`); }
   if (rel <= 0.35) { score += 1; reasons.push('碳排接近今日低點'); }
   else if (rel >= 0.7) { score -= 1; reasons.push('碳排接近今日高點'); }

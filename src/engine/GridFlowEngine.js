@@ -53,8 +53,9 @@ const TENSION = [
  *  onDaylight 日夜狀態改變時回報（給 HUD 調整天空色）
  */
 export class GridFlowEngine {
-  constructor(container, { density = 1, mode = 'app', fps = 60, initialView = null, onStats, onShot, onDaylight, onUserMove, onPlantVisit, onAway } = {}) {
+  constructor(container, { density = 1, mode = 'app', fps = 60, initialView = null, onStats, onShot, onDaylight, onUserMove, onPlantVisit, onAway, onPlantSelect } = {}) {
     this.onAway = onAway;
+    this.onPlantSelect = onPlantSelect;
     this.onPlantVisit = onPlantVisit;
     this.breathPhase = 0;
     this.tension = 0;
@@ -146,7 +147,11 @@ export class GridFlowEngine {
       layers: [],
       pickingRadius: 6,
       onHover: (info) => this.setHover(info.layer?.id === 'pick' ? info.object?.id : null),
-      onClick: (info) => this.setHover(info.layer?.id === 'pick' ? info.object?.id : null),
+      onClick: (info) => {
+        const id = info.layer?.id === 'pick' ? info.object?.id : null;
+        this.setHover(id);
+        if (id && this.mode !== 'wallpaper') this.onPlantSelect?.(id); // 點電廠 → 打開電廠詳細卡
+      },
       getCursor: ({ isHovering }) => (isHovering ? 'pointer' : this.map?.dragPan.isEnabled() ? 'grab' : 'default')
     });
     this.map.addControl(this.overlay);
@@ -205,11 +210,24 @@ export class GridFlowEngine {
       const L = this.loads.find((l) => l.island === p.island);
       if (L) flows.push({ source: p.idx, target: L.idx, mw: p.targetMw, island: true });
     }
-    this.particles.setFlows(flows, sources, this.loads);
+    // 抽蓄抽水（儲能負載）：電從各電廠「流進」明潭／大觀二，依各電廠出力比例分攤
+    const pumpMw = snapshot.charging?.pump || 0;
+    const pumpPlant = this.plants.find((p) => p.id === 'mingtan');
+    const targets = [...this.loads];
+    if (pumpMw > 5 && pumpPlant) {
+      const tIdx = targets.push({ id: 'pump', pos: pumpPlant.pos }) - 1;
+      const sumMw = mainP.reduce((a, p) => a + p.targetMw, 0) || 1;
+      for (const p of mainP) {
+        if (p.id === 'mingtan' || p.targetMw < 50) continue;
+        flows.push({ source: p.idx, target: tIdx, mw: (pumpMw * p.targetMw) / sumMw });
+      }
+    }
+    this.charging = snapshot.charging || null;
+    this.particles.setFlows(flows, sources, targets);
 
     const top = [...this.plants].sort((a, b) => b.targetMw - a.targetMw)[0];
     this.onStats?.({
-      southToNorthMw: this.particles.southToNorth(sources, this.loads),
+      southToNorthMw: this.particles.southToNorth(sources, targets),
       topPlant: top ? { name: top.name, mw: top.targetMw } : null
     });
   }
@@ -425,6 +443,7 @@ export class GridFlowEngine {
     const glowSize = (p) => {
       const mw = p.mw * p.vis;
       if (p.island) return mw > 0.5 ? (7000 + Math.sqrt(mw) * 700) * (0.96 + 0.08 * breath) : 0; // 離島：最小光暈
+      if (p.offshore) return mw > 1 ? (2200 + Math.sqrt(mw) * 380) * (0.96 + 0.08 * breath) : 0; // 離岸風場：小光點，避免彰化外海擠成一團
       return mw > 1 ? 2 * (2600 + Math.sqrt(mw) * 620) * (0.96 + 0.08 * breath) : 0;
     };
     const solarVis = this.particles.fuelVis[FUEL_KEYS.indexOf('solar')];
@@ -649,9 +668,10 @@ export class GridFlowEngine {
     // ⑧ 融入地圖的文字：負載點名稱（極淡） + hover 電廠標籤（淡入）
     layers.push(new TextLayer({
       id: 'load-names',
-      data: this.loads,
+      // 手機的用電視角只標主要城市（離島與小負載點只留名字），避免數字擠成一團
+      data: window.innerWidth < 700 && dm > 0.5 ? this.loads.filter((l) => !l.island && (l.demand || 0) >= 0.1) : this.loads,
       getPosition: (d) => d.pos,
-      getText: (d) => (dm > 0.5 ? `${d.name}\n約 ${Math.round(d.mw / 10) * 10 > 0 ? (Math.round(d.mw / 10) * 10).toLocaleString() : '—'} MW` : d.name),
+      getText: (d) => (dm > 0.5 && Math.round(d.mw / 10) * 10 > 0 ? `${d.name}\n約 ${(Math.round(d.mw / 10) * 10).toLocaleString()} MW` : d.name),
       getColor: [190 + 50 * dm, 205 + 30 * dm, 235, 70 + 150 * dm],
       getSize: 11 + dm,
       getPixelOffset: [0, 16 + 4 * dm],
@@ -663,9 +683,27 @@ export class GridFlowEngine {
       fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
       outlineWidth: 3 * dm,
       outlineColor: [3, 5, 10, 180],
-      updateTriggers: { getText: [dm > 0.5, Math.round(this.time)], getColor: dm, getSize: dm, getPixelOffset: dm },
+      updateTriggers: { getText: [dm > 0.5, Math.round(this.time)], getColor: dm, getSize: dm, getPixelOffset: dm, data: dm > 0.5 },
       parameters: NO_DEPTH
     }));
+
+    // 彰化外海離岸風場群：一個總量標籤（各風場細節點光點看）
+    {
+      const ow = this.plants.filter((p) => p.offshore && p.pos[1] < 24.35);
+      const owMw = ow.reduce((a, p) => a + (p.mw || 0), 0);
+      if (ow.length && dm < 0.5) {
+        const c = [Math.min(...ow.map((p) => p.pos[0])) - 0.05, ow.reduce((a, p) => a + p.pos[1], 0) / ow.length];
+        layers.push(new TextLayer({
+          id: 'offshore-cluster',
+          data: [{ pos: c, text: `彰化外海風場群\n${owMw >= 1 ? `${Math.round(owMw).toLocaleString()} MW` : '目前風小'}` }],
+          getPosition: (d) => d.pos, getText: (d) => d.text,
+          getColor: [150, 235, 255, 150], getSize: 10.5, getTextAnchor: 'end', getAlignmentBaseline: 'center',
+          fontFamily: FONT, fontWeight: 300, lineHeight: 1.35, characterSet: 'auto',
+          fontSettings: { sdf: true, fontSize: 48, buffer: 6 }, outlineWidth: 3, outlineColor: [3, 5, 10, 180],
+          updateTriggers: { getText: Math.round(owMw) }, parameters: NO_DEPTH
+        }));
+      }
+    }
 
     // 用電視角：四大供電區的自給率標籤
     if (dm > 0.02 && this.regions && window.innerWidth >= 700) {

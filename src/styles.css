@@ -445,6 +445,29 @@ a:hover { text-decoration: underline; }
 .donate-qr { display: block; width: 160px; margin: 12px 0 0; border-radius: 10px; background: #fff; padding: 6px; }
 .donate-link { border: 0; background: none; padding: 0; font: inherit; color: var(--gold); cursor: pointer; pointer-events: auto; }
 
+.lang-btn {
+  margin-top: 10px; pointer-events: auto; cursor: pointer; font: inherit; font-size: 10px; letter-spacing: 0.18em;
+  color: var(--ink-dim); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+}
+.lang-btn:hover { color: var(--ink); }
+.mix-total.charge { color: rgb(150, 220, 255); }
+/* 電廠詳細卡 */
+.plant-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.plant-head b { font-family: var(--mono); font-weight: 300; font-size: 26px; color: var(--ink); }
+.plant-mix { display: flex; height: 4px; gap: 2px; margin: 8px 0 4px; border-radius: 2px; overflow: hidden; }
+.plant-note { margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: rgba(110, 200, 255, 0.07); font-size: 12px; }
+.plant-note.cool, .tag.cool { color: rgb(150, 220, 255); }
+.tag.gold { color: var(--gold); }
+.tag.warm { color: rgb(255, 150, 110); }
+.units { list-style: none; margin: 6px 0 0; padding: 0; }
+.units li { display: grid; grid-template-columns: minmax(84px, 1.2fr) 1fr auto; align-items: center; gap: 4px 10px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.units .u-name { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.units .u-bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+.units .u-bar i { display: block; height: 100%; }
+.units .u-mw { font-family: var(--mono); font-size: 11.5px; text-align: right; }
+.units .u-mw small { color: var(--ink-faint); }
+.units .tag { grid-column: 1 / -1; justify-self: start; font-size: 9.5px; padding: 1px 7px; }
+
 /* ── 平板以下：縮小 ── */
 @media (max-width: 1000px) {
   .legend { display: none; }
@@ -515,3 +538,23 @@ a:hover { text-decoration: underline; }
   .panel-head { padding-top: 8px; }
   .doc dl { grid-template-columns: 82px 1fr; }
 }
+
+/* 電費試算 */
+.bill-open {
+  margin-top: 8px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--ink-dim);
+  border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.bill-open:hover { color: var(--ink); }
+.bill { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.03); font-size: 12px; color: var(--ink-dim); }
+.bill-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bill-row .switch { margin-top: 0; }
+.bill input[type='number'] {
+  width: 72px; margin: 0 6px; font: inherit; font-size: 14px; color: var(--ink); text-align: right;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px;
+}
+.bill-range { display: block; margin-top: 8px; }
+.bill-range input { width: 100%; accent-color: rgb(255, 214, 92); }
+.bill-out { list-style: none; margin: 6px 0 0; padding: 0; }
+.bill-out li { display: flex; justify-content: space-between; padding: 3px 0; }
+.bill-out b { color: var(--ink); font-size: 14px; }
+.replay .day-sw { margin-left: 4px; }

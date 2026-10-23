@@ -72,6 +72,10 @@ export function mockGenary(now = new Date()) {
   ], wind);
   push('太陽能', 'Solar', [['太陽能購電', 13000], ['台電自有', 600]], solar);
   push('其它再生能源', 'Other Renewable', [['生質/地熱', 800]], other);
+  // 儲能負載：中午太陽能多時，抽蓄水力抽水、電池充電（負值）
+  const charge = Math.max(0, solar - 5000) * 0.18;
+  rows.push([typeCell('儲能負載', 'Energy Storage System Load'), '抽蓄水力(Pumped Hydro)', '明潭#2', '-', (-charge * 0.6).toFixed(1), '-', '']);
+  rows.push([typeCell('儲能負載', 'Energy Storage System Load'), '電池(Battery)', '電池(註16)', '-', (-charge * 0.4).toFixed(1), '-', '']);
 
   const pad = (n) => String(n).padStart(2, '0');
   const stamp = `${tw.getUTCFullYear()}-${pad(tw.getUTCMonth() + 1)}-${pad(tw.getUTCDate())} ${pad(tw.getUTCHours())}:${pad(Math.floor(tw.getUTCMinutes() / 10) * 10)}`;

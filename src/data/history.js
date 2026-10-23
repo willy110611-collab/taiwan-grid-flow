@@ -68,11 +68,10 @@ function simulatedDay(now = Date.now()) {
  * 即時模式：用台電「今日燃料別曲線」+「今日區域用電曲線」重建整天（每 10 分鐘一筆）。
  * 曲線只有「各燃料全台總量」，所以各電廠的出力是依「目前各電廠在該燃料中的比例」分配（推估）。
  */
-function reconstructDay(snap) {
-  const fuel = snap.curves?.fuel;
+function reconstructDay(snap, fuel = snap.curves?.fuel, areaRows = snap.curves?.areas, dayOffset = 0) {
   if (!fuel?.length) return null;
-  const areaByHm = new Map((snap.curves.areas || []).map((r) => [r.hm, r.load]));
-  const tw = new Date(snap.t + 8 * 3600e3);
+  const areaByHm = new Map((areaRows || []).map((r) => [r.hm, r.load]));
+  const tw = new Date(snap.t + (8 - 24 * dayOffset) * 3600e3);
   const ymd = tw.toISOString().slice(0, 10);
   const midnight = Date.UTC(tw.getUTCFullYear(), tw.getUTCMonth(), tw.getUTCDate()) - 8 * 3600e3;
 
@@ -113,6 +112,17 @@ function reconstructDay(snap) {
   });
 }
 
+/** 昨天整天（台電「昨日燃料別曲線」；模擬模式用模擬曲線），給「回放 → 昨天」 */
+export function useYesterday(snapshot) {
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    if (!snapshot?.curves?.yesterday?.length) return;
+    const r = reconstructDay(snapshot, snapshot.curves.yesterday, null, 1);
+    if (r) setRows(r.map((x) => ({ ...x, source: snapshot.source, yesterday: true })));
+  }, [snapshot?.curves?.yesterday]); // eslint-disable-line react-hooks/exhaustive-deps
+  return rows;
+}
+
 export function useDayHistory(snapshot) {
   const [rows, setRows] = useState([]);
   useEffect(() => {
@@ -136,4 +146,34 @@ export function useDayHistory(snapshot) {
     setRows([...list]);
   }, [snapshot]);
   return rows;
+}
+
+/**
+ * 個人紀錄（這台裝置看過的最高值，存在 localStorage）
+ *  只記即時資料；模擬資料不算
+ */
+const REC_KEY = 'tgf-records';
+export function useRecords(snapshot) {
+  const [rec, setRec] = useState(() => { try { return JSON.parse(localStorage.getItem(REC_KEY) || '{}'); } catch { return {}; } });
+  useEffect(() => {
+    if (!snapshot || snapshot.source !== 'live' || snapshot.cached) return;
+    const vals = {
+      green: greenPct(snapshot.totals),
+      solar: snapshot.totals.solar || 0,
+      wind: snapshot.totals.wind || 0,
+      load: snapshot.supply?.load || snapshot.total || 0
+    };
+    setRec((old) => {
+      let changed = false;
+      const next = { ...old };
+      for (const [k, v] of Object.entries(vals)) {
+        if (v > 0 && (!old[k] || v > old[k].v)) { next[k] = { v: r1(v), t: snapshot.t }; changed = true; }
+      }
+      if (!next.since) { next.since = snapshot.t; changed = true; }
+      if (!changed) return old;
+      try { localStorage.setItem(REC_KEY, JSON.stringify(next)); } catch { /* 略 */ }
+      return next;
+    });
+  }, [snapshot]);
+  return rec;
 }

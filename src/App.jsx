@@ -3,7 +3,7 @@ import GridFlowMap from './components/GridFlowMap.jsx';
 import Hud from './components/Hud.jsx';
 import { useGridData } from './data/useGridData.js';
 import { useHighlights } from './data/useHighlights.js';
-import { useDayHistory } from './data/history.js';
+import { useDayHistory, useYesterday, useRecords } from './data/history.js';
 import { useBadges } from './data/badges.js';
 import { useAnomalies } from './data/useAnomalies.js';
 import { useAir, useSun, nearestStation } from './data/useAir.js';
@@ -41,22 +41,25 @@ const SAVED_VIEW = WALLPAPER ? loadView() : null;
 export default function App() {
   const snapshot = useGridData();
   const rows = useDayHistory(snapshot);
+  const yRows = useYesterday(snapshot);
+  const records = useRecords(snapshot);
   const anomaly = useAnomalies(snapshot);
   const engine = useRef(null);
   const [stats, setStats] = useState(null);
   const [daylight, setDaylight] = useState(null);
-  const [replay, setReplay] = useState({ on: false, idx: 0, playing: false, speed: 300 });
+  const [replay, setReplay] = useState({ on: false, idx: 0, playing: false, speed: 300, day: 'today' });
+  const rRows = replay.day === 'yesterday' && yRows.length ? yRows : rows;
   const [ui, setUiState] = useState({ filter: 'all', panel: null, cruise: WALLPAPER && !SAVED_VIEW, shot: null, locked: true, fixedView: !!SAVED_VIEW });
   const lockTimer = useRef(null);
   const pickCancel = useRef(null);
   const setHomeRef = useRef(null);
 
   // 回放中顯示歷史快照，否則顯示即時快照
-  const shown = replay.on && rows.length ? rows[Math.min(rows.length - 1, Math.floor(replay.idx))] : snapshot;
+  const shown = (replay.on && rRows.length ? rRows[Math.max(0, Math.min(rRows.length - 1, Math.floor(replay.idx) || 0))] : null) || snapshot;
   const badges = useBadges(snapshot, rows, { replaying: replay.on });
   const highlights = useHighlights(snapshot, rows, stats, anomaly.list);
   const air = useAir();
-  useSun(); // 太陽能依各地即時日照分配（中繼站需設定 CWA_KEY）
+  const sun = useSun(); // 太陽能依各地即時日照分配（中繼站需設定 CWA_KEY）
   const { home, setHome } = useHome();
   setHomeRef.current = setHome;
   const advice = useMemo(
@@ -96,6 +99,7 @@ export default function App() {
     onUserMove: () => armAutoLock(),
     onPlantVisit: (id) => recordRef.current('plant', id),
     onAway: (away) => setUiState((s) => (s.away === away ? s : { ...s, away })),
+    onPlantSelect: (id) => setUiState((s) => ({ ...s, panel: 'plant', plantId: id })),
     onShot: (shot) => {
       if (shot) recordRef.current('shot', shot);
       setUiState((s) => ({ ...s, shot, cruise: shot ? true : WALLPAPER ? s.cruise : false }));
@@ -164,7 +168,7 @@ export default function App() {
       return;
     }
     if (patch.toggleReplay) {
-      setReplay((r) => (r.on ? { ...r, on: false, playing: false } : { ...r, on: true, idx: 0, playing: true }));
+      setReplay((r) => (r.on ? { ...r, on: false, playing: false } : { ...r, on: true, idx: 0, playing: true, day: 'today' }));
       setUiState((s) => ({ ...s, panel: MOBILE ? null : s.panel }));
       return;
     }
@@ -223,7 +227,10 @@ export default function App() {
         wallpaper={WALLPAPER}
         badges={badges}
         anomaly={anomaly}
-        rows={rows}
+        rows={rRows}
+        hasYesterday={yRows.length > 0}
+        records={records}
+        sun={sun}
         replay={replay}
         setReplay={setReplay}
         onReplayFinish={() => badges.record('replay')}
