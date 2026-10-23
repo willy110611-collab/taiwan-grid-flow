@@ -79,8 +79,11 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         <div className="mix-total">{fmtMw(total)} <small>MW · 全台發電</small></div>
         {loadMw ? <div className="mix-total">{fmtMw(load)} <small>MW · 全台用電</small></div> : null}
         <SupplyChip supply={snapshot?.supply} />
-        {!wallpaper && <HomeCard sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}
+        {!wallpaper && <HomeCard className="hc-desktop" sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}
       </section>
+
+      {/* 手機：「可以用電」小卡放在右下（時鐘對面），不壓在台灣上 */}
+      {!wallpaper && <HomeCard className="hc-mobile" sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}
 
       <ClockPanel snapshot={snapshot} daylight={daylight} replayT={replay?.on ? snapshot?.t : null} />
 
@@ -123,7 +126,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           <button className={replay?.on ? 'on' : ''} onClick={() => setUi({ toggleReplay: true })}>
             {Icon.replay}<span>回放</span>
           </button>
-          <button className={ui.panel === 'info' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'info' ? null : 'info' })}>
+          <button className={ui.panel === 'info' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'info' ? null : 'info', infoTab: null })}>
             {Icon.info}<span>資訊</span>
           </button>
           <button className="desktop-only" onClick={toggleFullscreen}>
@@ -145,6 +148,9 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
 
       <footer className="sourceline">
         資料：台灣電力公司{live ? '即時' : '（模擬）'} · 內政部 · Mapzen · 流向為模型推估 · 設計：{APP.designer}
+        {!wallpaper && APP.donate?.some((d) => d.url) && (
+          <> · <button className="donate-link" onClick={() => setUi({ panel: 'info', infoTab: 'about' })}>☕ 贊助</button></>
+        )}
       </footer>
 
       {wallpaper && (
@@ -171,7 +177,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       )}
 
       {ui.panel === 'highlights' && <HighlightsPanel hl={highlights} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'info' && <InfoPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'info' && <InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} onClose={() => setUi({ panel: null, infoTab: null })} />}
       {ui.panel === 'demand' && <DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'home' && <HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'air' && <AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} />}

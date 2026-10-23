@@ -16,7 +16,7 @@ const ADVICE_COLOR = { good: [110, 240, 160], ok: [255, 214, 92], bad: [255, 130
 /** 我的家的即時摘要（給卡片與面板共用） */
 export function homeSummary({ home, snapshot, air, rows, advice }) {
   if (!snapshot) return null;
-  const ciSeries0 = rows.map((r) => carbonIntensity(r.totals)).filter((x) => x != null);
+  const ciSeries0 = rows.map((r) => carbonIntensity(r.totals, snapshot.carbonFx)).filter((x) => x != null);
   if (!home.pos) return { station: null, wind: null, thermal: [], region: null, ci: advice?.ci, ciSeries: ciSeries0, unset: true };
   const station = nearestStation(air.stations, home.pos);
   const wind = nearestWind(air.stations, home.pos);
@@ -35,17 +35,17 @@ export function homeSummary({ home, snapshot, air, rows, advice }) {
     return { ...p, mw, d, downwind };
   }).filter((p) => p.mw > 50).sort((a, b) => a.d - b.d).slice(0, 3);
   const region = home.region && REGIONS[home.region] ? { ...REGIONS[home.region], ...snapshot.regions?.byKey?.[home.region] } : null;
-  const ciSeries = rows.map((r) => carbonIntensity(r.totals)).filter((x) => x != null);
+  const ciSeries = rows.map((r) => carbonIntensity(r.totals, snapshot.carbonFx)).filter((x) => x != null);
   return { station, wind, thermal, region, ci: advice?.ci, ciSeries };
 }
 
 /* ───────── 右上角小卡（點了打開「我的家」） ───────── */
-export function HomeCard({ sum, advice, onOpen }) {
+export function HomeCard({ sum, advice, onOpen, className = '' }) {
   if (!sum || !advice) return null;
   const c = rgb(ADVICE_COLOR[advice.level]);
   const st = sum.station;
   return (
-    <button className={`home-card ${sum.unset ? 'unset' : ''}`} onClick={onOpen}>
+    <button className={`home-card ${className} ${sum.unset ? 'unset' : ''}`} onClick={onOpen}>
       <span className="hc-advice"><i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />{advice.head}</span>
       <span className="hc-row">
         <b>{advice.ci?.toFixed(2) ?? '—'}</b><small>kg CO₂/度</small>
@@ -101,7 +101,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
           <input type="checkbox" checked={!!home.touUser} onChange={(e) => setHome({ touUser: e.target.checked })} />
           <span>我家有申請「時間電價」</span>
         </label>
-        <p className="fine">時段依台電簡易型二段式時間電價（夏月 6–9 月平日 09–24 時為尖峰；其他月份平日 06–11、14–24 時為尖峰；週末全日離峰）。國定假日未納入。</p>
+        <p className="fine">時段依台電簡易型二段式時間電價：平日夏月（6–9 月）09–24 時尖峰、其他月份 06–11、14–24 時尖峰；週六同時段為半尖峰；週日與國定假日全日離峰。</p>
       </section>
 
       {/* 2. 碳排 */}
@@ -109,7 +109,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
         <div className="hl-k">每度電的碳排 <em className="tag modeled">推估</em></div>
         <div className="big-num">{sum.ci?.toFixed(3) ?? '—'} <small>kg CO₂ / 度</small> <span className={cl.tone}>{cl.label}</span></div>
         <Sparkline values={sum.ciSeries} color="rgb(255,170,110)" />
-        <p className="fine">依各燃料即時發電量 × 典型燃燒排放係數推算。對照：能源署公告 {OFFICIAL_FACTOR.year} 年度電力排碳係數 {OFFICIAL_FACTOR.value} kg CO₂e/度（全年平均）。</p>
+        <p className="fine">依各機組即時發電量 × 機組型式的典型排放係數推算（超超臨界燃煤、亞臨界燃煤、新舊複循環燃氣分開計算）。對照：能源署公告 {OFFICIAL_FACTOR.year} 年度電力排碳係數 {OFFICIAL_FACTOR.value} kg CO₂e/度（全年平均）。</p>
       </section>
 
       {/* 3. 空氣 */}

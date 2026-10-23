@@ -26,12 +26,12 @@ const kw = (...cs) => cs.reduce((a, c) => a + SOLAR_COUNTY_KW[c], 0) / 1e6; // �
 export const PLANTS = [
   // ── 離岸風場：台電每 10 分鐘公布「每個風場」的即時淨發電量，各自一個光點（位置為風場約略中心）──
   //    放在最前面：機組名稱優先對應到這裡，不會被下面的區域節點吃掉
-  { id: 'ow_formosa1', name: '海洋竹南離岸風場', en: 'Formosa 1',           pos: [120.815, 24.715], match: /海洋竹南/, offshore: true },
-  { id: 'ow_formosa2', name: '海能離岸風場',     en: 'Formosa 2',           pos: [120.600, 24.550], match: /海能/, offshore: true },
+  { id: 'ow_formosa1', name: '海洋竹南離岸風場', en: 'Formosa 1',           pos: [120.816, 24.691], match: /海洋竹南/, offshore: true },
+  { id: 'ow_formosa2', name: '海能離岸風場',     en: 'Formosa 2',           pos: [120.776, 24.716], match: /海能/, offshore: true },
   { id: 'ow_zhongneng', name: '中能離岸風場',    en: 'Zhong Neng',          pos: [120.200, 24.290], match: /中能/, offshore: true },
   { id: 'ow_changfang', name: '彰芳西島離岸風場', en: 'Changfang & Xidao',  pos: [120.180, 24.165], match: /芳[一二]風/, offshore: true },
   { id: 'ow_gch12',    name: '沃旭大彰化東南 / 西南', en: 'Greater Changhua 1 & 2a', pos: [120.070, 24.170], match: /沃[一二]風/, offshore: true },
-  { id: 'ow_gch4',     name: '沃旭大彰化 2b / 4', en: 'Greater Changhua 2b & 4', pos: [120.020, 24.050], match: /沃[四南]風/, offshore: true },
+  { id: 'ow_gch4',     name: '沃旭大彰化 2b（沃南）/ 4', en: 'Greater Changhua 2b & 4', pos: [120.020, 24.050], match: /沃[四南]風/, offshore: true },
   { id: 'ow_tpc',      name: '台電離岸一 / 二期', en: 'TPC Offshore 1 & 2',  pos: [120.225, 23.985], match: /離岸[一二]期/, offshore: true },
   { id: 'ow_hailong',  name: '海龍離岸風場',     en: 'Hai Long',            pos: [119.930, 24.110], match: /龍[AB三]風/, offshore: true },
   { id: 'ow_yunneng',  name: '允能雲林離岸風場', en: 'Yunneng',             pos: [120.050, 23.800], match: /允湖|允西/, offshore: true },

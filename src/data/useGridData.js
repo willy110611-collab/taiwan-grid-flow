@@ -3,6 +3,7 @@ import { parseGenary } from './parseGenary.js';
 import { mockGenary, mockLoadPara, mockFuelCurveYesterday, mockForecast } from './mockGenary.js';
 import { parseGenLoadAreas, parseLoadAreasCurve, parseFuelCurve, parseLoadPara, parseForecast, supplyLevel } from './parseAux.js';
 import { computeRegions } from './regions.js';
+import { unitFactors } from './carbon.js';
 import { APP } from '../config/app.js';
 
 /**
@@ -79,7 +80,8 @@ export function buildSnapshot(base, { source, areas = null, para = null, curves 
     curves = curves || { yesterday: mockFuelCurveYesterday() };
     forecast = forecast || mockForecast().map((d) => ({ ...d, ...supplyLevel(d.rate, d.resv / 10) }));
   }
-  return { ...base, source, total, regions, supply, curves, forecast, diag, t: date.getTime() };
+  const carbonFx = source === 'live' ? unitFactors(base.units) : null;
+  return { ...base, source, total, regions, supply, curves, forecast, carbonFx, diag, t: date.getTime() };
 }
 
 export async function loadGridSnapshot({ forceSim = false, onFirst } = {}) {

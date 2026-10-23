@@ -787,7 +787,7 @@ function cemsText(c) {
 /** hover 標籤第 4 行：這個數字的可信度（仿軌島「即時 / 推估」標示） */
 function evidenceText(p, source) {
   if (source !== 'live') return `● ${EVIDENCE.simulated.label}資料`;
-  if (p.estimated) return '◐ 推估（台電未即時公布離島出力）';
+  if (p.estimated) return '◐ 推估（依季節與時段；台電未即時公布離島出力）';
   if (p.targetMw < 1) return `● ${EVIDENCE.live.label} · 停機`;
   const liveShare = p.liveMw / p.targetMw;
   if (liveShare > 0.95) return `● ${EVIDENCE.live.label}`;
@@ -829,7 +829,7 @@ export function fitPadding() {
   const box = (sel) => document.querySelector(sel)?.getBoundingClientRect();
   const visible = (r) => r && r.height > 0;
   const tops = ['.mix', '.brand'].map(box).filter(visible).map((r) => r.bottom);
-  const bottoms = ['.clock', '.filters', '.toolbar'].map(box).filter(visible).map((r) => r.top);
+  const bottoms = ['.clock', '.home-card.hc-mobile', '.filters', '.toolbar'].map(box).filter(visible).map((r) => r.top);
   const top = (tops.length ? Math.max(...tops) : 180) + 10;
   const bottom = h - (bottoms.length ? Math.min(...bottoms) : h - 200) + 10;
   return { top, bottom, left: 16, right: 16 };

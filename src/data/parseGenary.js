@@ -74,7 +74,7 @@ export function parseGenary(raw) {
     if (!p.island) continue;
     const reported = Object.values(byPlant[p.id]).reduce((a, b) => a + b, 0);
     if (reported < 1) {
-      byPlant[p.id] = { oil: p.est };
+      byPlant[p.id] = { oil: islandEstimate(p.est) };
       estimated[p.id] = true;
     }
   }
@@ -140,4 +140,17 @@ function num(v) {
   if (typeof v === 'number') return v;
   const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(\.\d+)?/);
   return m ? parseFloat(m[0]) : NaN;
+}
+
+/**
+ * 離島推估（台電未即時公布時）：以典型負載為基準，依季節與一天中的時段調整
+ *  夏季（6–9 月）用電較高、冬季較低；白天到傍晚高、深夜低
+ */
+export function islandEstimate(base, now = new Date()) {
+  const t = new Date(now.getTime() + 8 * 3600e3);
+  const m = t.getUTCMonth() + 1;
+  const h = t.getUTCHours() + t.getUTCMinutes() / 60;
+  const season = m >= 6 && m <= 9 ? 1.15 : m === 12 || m <= 2 ? 0.85 : 1.0;
+  const day = 0.78 + 0.32 * Math.max(0, Math.sin(((h - 6) / 18) * Math.PI)); // 06 點起上升、15 點最高、24 點回落
+  return Math.round(base * season * day * 10) / 10;
 }

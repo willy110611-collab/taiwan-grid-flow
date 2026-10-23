@@ -14,13 +14,40 @@ export const EMISSION = {
 };
 export const OFFICIAL_FACTOR = { year: 114, value: 0.467 };
 
-/** totals（MW）→ kg CO₂/kWh */
-export function carbonIntensity(totals) {
+/**
+ * 依機組型式的典型排放係數（kg CO₂/kWh，燃燒端；公開文獻常見值，非官方逐機組數據）
+ * 用台電 genary 的機組名稱判斷型式，算出「目前這一刻」燃煤、燃氣的加權係數
+ */
+const UNIT_FACTORS = [
+  { fuel: 'coal', re: /林口|大林/, v: 0.80 },        // 超超臨界燃煤
+  { fuel: 'coal', re: /和平|麥寮/, v: 0.88 },        // 民營燃煤
+  { fuel: 'coal', re: /台中|興達/, v: 0.92 },        // 亞臨界燃煤
+  { fuel: 'gas',  re: /大潭|通霄|台中CC|興達新|大林#[56]/, v: 0.37 }, // 新型複循環
+  { fuel: 'gas',  re: /海湖|國光|星彰|星元|嘉惠|豐德|新桃|長生|森霸/, v: 0.40 }, // 民營燃氣
+  { fuel: 'gas',  re: /興達CC|南部CC/, v: 0.42 }     // 較舊複循環
+];
+
+/** 機組清單 → { coal, gas } 當下加權係數（對不到型式的機組用 EMISSION 預設值） */
+export function unitFactors(units) {
+  const acc = { coal: [0, 0], gas: [0, 0] };
+  for (const u of units || []) {
+    if (!(u.mw > 0) || !acc[u.fuel]) continue;
+    const v = UNIT_FACTORS.find((x) => x.fuel === u.fuel && x.re.test(u.unit))?.v ?? EMISSION[u.fuel];
+    acc[u.fuel][0] += u.mw * v;
+    acc[u.fuel][1] += u.mw;
+  }
+  const out = {};
+  for (const [f, [co2, mw]] of Object.entries(acc)) if (mw > 0) out[f] = co2 / mw;
+  return out;
+}
+
+/** totals（MW）→ kg CO₂/kWh；fx 可覆蓋燃煤、燃氣的係數（來自 unitFactors） */
+export function carbonIntensity(totals, fx = null) {
   let mw = 0, co2 = 0;
   for (const [f, v] of Object.entries(totals || {})) {
     if (f === 'storage' || !(v > 0)) continue;
     mw += v;
-    co2 += v * (EMISSION[f] ?? 0.5);
+    co2 += v * (fx?.[f] ?? EMISSION[f] ?? 0.5);
   }
   return mw > 0 ? co2 / mw : null;
 }

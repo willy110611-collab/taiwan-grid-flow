@@ -92,8 +92,8 @@ const TABS = [
   ['about', '關於']
 ];
 
-export function InfoPanel({ snapshot, onClose }) {
-  const [tab, setTab] = useState('source');
+export function InfoPanel({ snapshot, onClose, initialTab }) {
+  const [tab, setTab] = useState(initialTab || 'source');
   const live = snapshot?.source === 'live';
   return (
     <Panel title="資訊" onClose={onClose}>
@@ -184,6 +184,16 @@ export function InfoPanel({ snapshot, onClose }) {
               <br />iPhone：Safari 開啟 → 分享 → 加入主畫面
             </dd>
           </dl>
+          {APP.donate?.some((d) => d.url) && (
+            <div className="donate">
+              <p>☕ 喜歡光脈搏的話，可以請無聊的人喝杯咖啡，支持伺服器與資料費用 🙏</p>
+              <div className="donate-btns">
+                {APP.donate.filter((d) => d.url).map((d) => (
+                  <a key={d.url} className="donate-btn" href={d.url} target="_blank" rel="noreferrer">{d.label}</a>
+                ))}
+              </div>
+            </div>
+          )}
           <p className="fine">
             本作品為個人獨立作品，與台灣電力公司無關，非官方服務。畫面中的流向與部分數值為推估或模擬，
             不能取代台電官方電力資訊。介面概念參考「軌島」，程式碼為獨立撰寫。
