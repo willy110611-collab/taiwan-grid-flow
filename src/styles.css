@@ -616,3 +616,41 @@ a:hover { text-decoration: underline; }
 .hl-list li.clickable:hover .hl-v { color: var(--ink); }
 .refresh-tip { animation: tgf-tip 5s forwards; pointer-events: none; }
 @keyframes tgf-tip { 0%, 80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+
+/* ── 店家用電 ── */
+.store-btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 6px; }
+.store-btns button {
+  padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-dim); font: inherit; font-size: 13px; cursor: pointer;
+}
+.store-btns button.primary { background: rgb(110, 240, 190); border-color: transparent; color: #06140e; font-weight: 600; }
+.store-name { margin-bottom: 4px; }
+.store-best b { color: var(--ink); font-size: 15px; font-weight: 500; }
+.store-best p { margin: 4px 0 8px; }
+.plan-bars { list-style: none; margin: 6px 0 0; padding: 0; }
+.plan-bars li { display: grid; grid-template-columns: 9.5em 1fr auto; align-items: center; gap: 8px; padding: 3px 0; font-size: 12px; }
+.plan-bars i { display: block; height: 8px; border-radius: 0 4px 4px 0; background: rgba(200, 215, 255, 0.25); }
+.plan-bars li.best i { background: rgb(110, 240, 190); }
+.plan-bars li.best span, .plan-bars li.best b { color: var(--ink); }
+.plan-bars b { font-weight: 500; color: var(--ink-dim); white-space: nowrap; }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button { border: 0; background: none; color: var(--ink-dim); font: inherit; font-size: 11.5px; padding: 4px 10px; cursor: pointer; }
+.seg button.on { background: rgba(200, 215, 255, 0.14); color: var(--ink); }
+.chart { margin-top: 8px; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .grid { stroke: rgba(200, 215, 255, 0.1); stroke-width: 1; }
+.chart .axis { fill: var(--ink-dim); font-size: 9px; font-family: var(--mono, monospace); }
+.chart g.dim rect:not([fill="transparent"]) { opacity: 0.45; }
+.chart g { cursor: pointer; }
+.chart .we-line { stroke: rgba(230, 236, 255, 0.75); stroke-width: 1.5; stroke-dasharray: 3 3; pointer-events: none; }
+.legend-row { list-style: none; display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 4px; padding: 0; font-size: 11px; color: var(--ink-dim); }
+.legend-row i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.legend-row i.line { height: 0; border-top: 1.5px dashed rgba(230, 236, 255, 0.75); border-radius: 0; vertical-align: 3px; }
+.chart-tip { min-height: 46px; margin-top: 6px; font-size: 11.5px; display: flex; flex-direction: column; gap: 2px; color: var(--ink-dim); }
+.chart-tip b { color: var(--ink); font-weight: 500; }
+.store-table { overflow-x: auto; margin-top: 8px; }
+.store-table table { border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+.store-table th, .store-table td { padding: 4px 6px; text-align: right; border-bottom: 1px solid var(--line); }
+.store-table th { color: var(--ink-dim); font-weight: 400; }
+.store-table td:first-child, .store-table th:first-child { text-align: left; }

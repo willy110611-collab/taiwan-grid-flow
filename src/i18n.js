@@ -75,6 +75,7 @@ const EN = {
   '歡迎來到': 'Welcome to', '開始': 'Start', '之後可以在「資訊 → 使用說明」再看一次。': 'See it again under Info → Guide.',
   '看現在': 'Now', '點光球': 'Tap a plant', '使用說明': 'Guide', '部分資料暫時讀不到': 'Some data unavailable', '等': '+', '項': 'more',
   '連不到台電資料，目前是模擬畫面': 'Cannot reach Taipower — showing simulation',
+  '店家': 'Shop', '店家用電': 'Shop energy',
   // 語言
   '中文': '中文', 'English': 'English'
 };

@@ -8,6 +8,7 @@ import { SupplyChip, DemandPanel, BadgePanel, BadgeToast, AlertBanner, ReplayBar
 import { twHM } from '../data/history.js';
 import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 import { PlantPanel } from './Plant.jsx';
+import { StorePanel } from './Store.jsx';
 import { useT, useLang } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
@@ -134,6 +135,9 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           <button className={ui.panel === 'home' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })}>
             {Icon.home}<span>{t('我的家')}</span>
           </button>
+          <button className={ui.panel === 'store' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'store' ? null : 'store' })}>
+            {Icon.store}<span>{t('店家')}</span>
+          </button>
           <button className={ui.panel === 'highlights' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'highlights' ? null : 'highlights' })}>
             {Icon.spark}<span>{t('亮點')}</span>
           </button>
@@ -202,6 +206,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'home' && <HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'air' && <AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'plant' && ui.plantId && <PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'store' && <StorePanel onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'badges' && <BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} />}
     </div>
   );
