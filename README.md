@@ -1,4 +1,4 @@
-# 台灣光脈搏 · Taiwan Grid Flow　v0.4
+# 台灣光脈動 · Taiwan Grid Flow
 
 把台電各機組的即時發電量，轉成在夜光地圖上流動的能量。設計者：無聊的人
 

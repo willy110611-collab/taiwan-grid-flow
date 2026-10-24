@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title 台灣光脈搏 Taiwan Grid Flow
+title 台灣光脈動 Taiwan Grid Flow
 setlocal
 set "SRC=%~dp0"
 set "RUN=%LOCALAPPDATA%\TaiwanGridFlow"
@@ -9,7 +9,7 @@ set "WP_URL=http://127.0.0.1:5180/?mode=wallpaper"
 
 echo.
 echo  ==========================================
-echo     台灣光脈搏  Taiwan Grid Flow  啟動器
+echo     台灣光脈動  Taiwan Grid Flow  啟動器
 echo  ==========================================
 echo.
 rem ---------- 檢查 Node.js（沒有就用 winget 自動安裝） ----------

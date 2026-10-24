@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title 台灣光脈搏 解除桌布
+title 台灣光脈動 解除桌布
 setlocal
 set "SRC=%~dp0"
 set "RUN=%LOCALAPPDATA%\TaiwanGridFlow"

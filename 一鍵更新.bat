@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title 台灣光脈搏 一鍵更新
+title 台灣光脈動 一鍵更新
 setlocal
 set "SRC=%~dp0"
 set "RUN=%LOCALAPPDATA%\TaiwanGridFlow"
@@ -27,7 +27,7 @@ if "%GIT%"=="" (
 )
 
 echo.
-echo ===== 台灣光脈搏 一鍵更新 =====
+echo ===== 台灣光脈動 一鍵更新 =====
 echo.
 
 rem ---- GitHub Pages 自動部署設定（從 tools 複製到 .github\workflows） ----
