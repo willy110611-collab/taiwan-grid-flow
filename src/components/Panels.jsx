@@ -110,7 +110,7 @@ export function HighlightsPanel({ hl, live, records, onPlant, onClose }) {
             <Sparkline values={hl.spark} />
           </div>
           {records && REC_ROWS.some(([k]) => records[k]) && (
-            <div className="hl-anom">
+            <div className="hl-rec">
               <div className="hl-k">{t('我的紀錄')}<small className="muted">　{t('這台裝置看過的最高值')}{records.since ? tx(`（${md(records.since).split(' ')[0]} 起）`, ` (since ${md(records.since).split(' ')[0]})`) : ''}</small></div>
               <ul className="hl-list">
                 {REC_ROWS.filter(([k]) => records[k]).map(([k, label, unit, cls]) => (
