@@ -499,7 +499,7 @@ export class GridFlowEngine {
     {
       layers.push(new PathLayer({
         id: 'fibers',
-        data: this.particles.fibers(),
+        data: this.particles.fibers().filter((d) => d.mw > 1), // 篩選掉的燃料不畫（widthMinPixels 會讓 0 寬的線仍留一條細線）
         getPath: (d) => d.path,
         getColor: (d) => [...d.color, 255],
         getWidth: (d) => (d.mw > 1 ? 0.4 + Math.sqrt(d.mw) * 0.035 : 0),
