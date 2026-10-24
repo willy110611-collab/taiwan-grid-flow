@@ -911,7 +911,7 @@ export class GridFlowEngine {
         .join(' · ');
       const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.mw)}|${fuelText}|${isEn()}|${this.source}|${!!this.cems?.[hp.id]}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
         { pos: hp.pos, text: isEn() ? hp.en : hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
-        { pos: hp.pos, text: isEn() ? '' : hp.en.toUpperCase(), size: 9, off: [22, 7], font: MONO, color: [150, 165, 195], weight: 300 },
+        { pos: hp.pos, text: isEn() ? hp.name : hp.en.toUpperCase(), size: 9, off: [22, 7], font: isEn() ? FONT : MONO, color: [150, 165, 195], weight: 300 },
         {
           pos: hp.pos,
           text: hp.targetMw > 1 ? `${Math.round(hp.mw).toLocaleString()} MW${fuelText ? '   ' + fuelText : ''}` : tx('— 停機 · 0 MW', '— offline · 0 MW'),
