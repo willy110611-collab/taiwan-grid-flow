@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈搏 — Cloudflare Worker 中繼站 v8
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.1
+//  v8.1：名稱改「台灣光脈動」；颱風停電暫停（/typhoon.json 直接回 503，不再等台電逾時）
 //  v8：/bundle.json 一次給網頁 7 份台電資料（每人每 10 分鐘 1 次請求，原本 7 次）並回報同時在線人數（Durable Object「Presence」）；
 //      台電讀不到時改給最後一份成功的資料（不讓大家同時失敗）；LINE 主動推播（供電／空品）預設只發給管理者 LINE_TO，好友不推（省免費額度）；台電資料問題連續 30 分鐘才通知；格式檢查不再把裝置容量「-」當錯誤
 //  v7：台電開放資料原檔轉送（/open/…，給 GitHub 建置用）、颱風停電（/typhoon.json）、
@@ -69,6 +70,8 @@ export default {
       if (TP_FILES.has(name)) return await cached(ctx, name, 120, () => upstream(TP + name, name));
       if (name === 'forecast.csv') return await cached(ctx, name, 3600, () => upstream(FORECAST, name));
       if (name.startsWith('open/')) return await openRoute(ctx, name.slice(5));
+      // v8.1：颱風停電暫停（台電 psvs1 不讓海外主機讀，原本要等約 24 秒才逾時）→ 直接回應；有新來源時拿掉這行
+      if (name === 'typhoon.json' || name === 'typhoon/county.json') return new Response(JSON.stringify({ error: '颱風停電資料暫停提供' }), { status: 503, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=3600' } });
       if (name === 'typhoon.json') return await cached(ctx, name, 300, () => typhoon());
       if (name === 'typhoon/county.json') { const gid = new URL(req.url).searchParams.get('gid'); if (!/^\d{1,3}$/.test(gid || '')) return new Response('bad gid', { status: 400, headers: CORS }); return await cached(ctx, `typhoon-${gid}`, 300, () => typhoonCounty(gid)); }
       if (name === 'aqi.json') return await cached(ctx, name, 600, () => aqi(env));
@@ -102,10 +105,10 @@ export default {
       const text = `⚡ 今日供電${sup.label}，尖峰預估備轉 ${sup.rate}%（${sup.hours}）。建議尖峰時段減少用電。`;
       if (users.length && !(await env.NOTIFY.get(`${today}:supply`))) {
         const to = users.filter((u) => u.supply !== false).map((u) => u.id);
-        if (await send(env, to, `台灣光脈搏 ${text}`)) await env.NOTIFY.put(`${today}:supply`, '1', { expirationTtl: 2 * 86400 });
+        if (await send(env, to, `台灣光脈動 ${text}`)) await env.NOTIFY.put(`${today}:supply`, '1', { expirationTtl: 2 * 86400 });
       }
       if (subs.length && !(await env.NOTIFY.get(`${today}:psupply`))) {
-        await pushAll(env, subs.filter((p) => p.alerts !== false), { title: '台灣光脈搏・供電提醒', body: text }); // v7：只訂停電提醒的不收
+        await pushAll(env, subs.filter((p) => p.alerts !== false), { title: '台灣光脈動・供電提醒', body: text }); // v7：只訂停電提醒的不收
         await env.NOTIFY.put(`${today}:psupply`, '1', { expirationTtl: 2 * 86400 });
       }
     }
@@ -122,7 +125,7 @@ export default {
       const targets = subs.filter((p) => p.site === site);
       const key = `${today}:paqi:${site}`;
       if (!targets.length || (await env.NOTIFY.get(key))) continue;
-      await pushAll(env, targets, { title: '台灣光脈搏・空品提醒', body: aqiText(x) });
+      await pushAll(env, targets, { title: '台灣光脈動・空品提醒', body: aqiText(x) });
       await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
     }
 
@@ -132,7 +135,7 @@ export default {
       const ids = users.filter((u) => u.site === site && u.aqi !== false).map((u) => u.id);
       const key = `${today}:aqi:${site}`;
       if (!ids.length || (await env.NOTIFY.get(key))) continue;
-      if (await send(env, ids, `台灣光脈搏 ${aqiText(x)}`)) await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
+      if (await send(env, ids, `台灣光脈動 ${aqiText(x)}`)) await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
     }
   }
 };
@@ -236,7 +239,7 @@ async function pushRoute(req, env, name) {
   const outage = { d3: !!body.o3, d1: !!body.o1 };
   const alerts = body.alerts !== false; // false＝只要停電提醒，不收空品／供電
   await env.NOTIFY.put(key, JSON.stringify({ sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, since: twDate() }));
-  if (body.test) await pushOne(env, sub, { title: '台灣光脈搏', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
+  if (body.test) await pushOne(env, sub, { title: '台灣光脈動', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
   return json({ ok: true, site, town, outage });
 }
 
@@ -305,7 +308,7 @@ async function verify(env, body, sig) {
   return btoa(String.fromCharCode(...new Uint8Array(mac))) === sig;
 }
 
-const HELP = `台灣光脈搏 提醒小幫手 ⚡
+const HELP = `台灣光脈動 提醒小幫手 ⚡
 
 📍 傳「測站名稱」登記你家附近的空品測站，例如：西屯、二林、忠明
 
@@ -505,9 +508,9 @@ async function watchdog(env) {
     }
     const flag = await env.NOTIFY.get(`watch:${k}`);
     if (hit && !flag) {
-      if (await send(env, [env.LINE_TO], `⚠ 台灣光脈搏 資料停更：${hit[1]}`)) await env.NOTIFY.put(`watch:${k}`, '1', { expirationTtl: 6 * 3600 });
+      if (await send(env, [env.LINE_TO], `⚠ 台灣光脈動 資料停更：${hit[1]}`)) await env.NOTIFY.put(`watch:${k}`, '1', { expirationTtl: 6 * 3600 });
     } else if (!hit && flag) {
-      await send(env, [env.LINE_TO], `✅ 台灣光脈搏：${{ grid: '台電機組資料', aqi: '環境部空品', format: '台電資料格式' }[k]}已恢復正常`);
+      await send(env, [env.LINE_TO], `✅ 台灣光脈動：${{ grid: '台電機組資料', aqi: '環境部空品', format: '台電資料格式' }[k]}已恢復正常`);
       await env.NOTIFY.delete(`watch:${k}`);
     }
   }
@@ -655,7 +658,7 @@ async function errorAlerts(env) {
     if (g.n < (severe ? 1 : 3)) continue;
     const flag = `erralert:${day}:${k}`;
     if (await env.NOTIFY.get(flag)) continue;
-    const ok = await send(env, [env.LINE_TO], `⚠ 台灣光脈搏 網站錯誤（今天 ${g.n} 次）\n版本 v${g.v}・${g.where}・${g.device}\n${g.msg}\n\n傳「錯誤紀錄」看最近 7 天`);
+    const ok = await send(env, [env.LINE_TO], `⚠ 台灣光脈動 網站錯誤（今天 ${g.n} 次）\n版本 v${g.v}・${g.where}・${g.device}\n${g.msg}\n\n傳「錯誤紀錄」看最近 7 天`);
     if (ok) await env.NOTIFY.put(flag, '1', { expirationTtl: 2 * 86400 });
   }
 }
@@ -681,8 +684,8 @@ async function errorSummary(env, days) {
  *  GitHub Actions 每小時用真實資料打開網站；失敗才呼叫 /alert?type=site
  *  只接受固定幾種類型、訊息內容寫死在這裡；同一類型 3 小時內只通知一次 */
 const ALERTS = {
-  site: '⚠ 台灣光脈搏 每小時檢查失敗：正式網站用真實資料打開時出錯，詳見 GitHub Actions「健康檢查」',
-  data: '⚠ 台灣光脈搏 每小時檢查：網站上的台電資料超過 1 小時沒更新，詳見 GitHub Actions「健康檢查」'
+  site: '⚠ 台灣光脈動 每小時檢查失敗：正式網站用真實資料打開時出錯，詳見 GitHub Actions「健康檢查」',
+  data: '⚠ 台灣光脈動 每小時檢查：網站上的台電資料超過 1 小時沒更新，詳見 GitHub Actions「健康檢查」'
 };
 async function alertRoute(url, env) {
   const type = url.searchParams.get('type');
@@ -783,7 +786,7 @@ async function outageDaily(env) {
       const times = [...new Set(hits.map((x) => x.time))].join('、');
       const roads = [...new Set(hits.map((x) => x.place.slice(town.length)).filter(Boolean))];
       const when = `${n === 1 ? '明天' : '3 天後'} ${date.slice(5).replace('-', '/')}（${WD[new Date(date + 'T12:00:00+08:00').getUTCDay()]}）${times}`;
-      await pushOne(env, p.sub, { title: '台灣光脈搏・計畫停電提醒', body: `${when}，${p.town}${roads.length ? ` ${roads.slice(0, 4).join('、')}${roads.length > 4 ? ` 等 ${roads.length} 處` : ''}` : ''}有計畫性停電（${hits[0].office}）。實際範圍以台電通知為準，可撥 1911 查詢。` });
+      await pushOne(env, p.sub, { title: '台灣光脈動・計畫停電提醒', body: `${when}，${p.town}${roads.length ? ` ${roads.slice(0, 4).join('、')}${roads.length > 4 ? ` 等 ${roads.length} 處` : ''}` : ''}有計畫性停電（${hits[0].office}）。實際範圍以台電通知為準，可撥 1911 查詢。` });
     }
   }
 }
