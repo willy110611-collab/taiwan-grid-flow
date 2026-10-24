@@ -1,3 +1,5 @@
+import { isEn } from '../i18n.js';
+
 // ─────────────────────────────────────────────────────────────
 //  地理靜態資料：發電節點（Source）、都市負載點（Target）、西部骨幹
 //  座標格式 [lng, lat]
@@ -22,6 +24,9 @@ export const SOLAR_COUNTY_KW = {
   宜蘭縣: 232256, 花蓮縣: 239251, 台東縣: 111132
 };
 const kw = (...cs) => cs.reduce((a, c) => a + SOLAR_COUNTY_KW[c], 0) / 1e6; // → GW，當作分配權重
+
+/** 電廠顯示名稱：英文介面用 en */
+export const plantName = (p) => (isEn() && p?.en ? p.en : p?.name);
 
 export const PLANTS = [
   // ── 離岸風場：台電每 10 分鐘公布「每個風場」的即時淨發電量，各自一個光點（位置為風場約略中心）──
@@ -65,7 +70,7 @@ export const PLANTS = [
   { id: 'sol_nantou',   name: '南投太陽能群', en: 'Nantou Solar',    pos: [120.690, 23.880], share: { solar: kw('南投縣') }, solar: true },
   { id: 'sol_north',    name: '北北基竹太陽能群', en: 'North Solar', pos: [121.030, 24.820], share: { solar: kw('新北市', '台北市', '基隆市', '新竹縣', '新竹市') }, solar: true },
   { id: 'sol_east',     name: '宜花東太陽能群', en: 'East Solar',    pos: [121.580, 23.950], share: { solar: kw('宜蘭縣', '花蓮縣', '台東縣') }, solar: true },
-  { id: 'nanbu',    name: '南部 / 大林發電廠', en: 'Nanbu · Talin', pos: [120.330, 22.590], match: /南部|大林/ },
+  { id: 'nanbu',    name: '南部 / 大林發電廠', en: 'Nanbu · Talin', pos: [120.330, 22.590], match: /南部CC|大林/ }, // 「南部小水力」是彙總列，不屬於這座電廠
   { id: 'hoping',   name: '和平電廠',     en: 'Ho-Ping',    pos: [121.755, 24.300], match: /和平/ },
   { id: 'miaoli',   name: '苗栗風場', en: 'Miaoli Wind', pos: [120.780, 24.640], match: /苗栗|大鵬/, share: { wind: 0.20 } },
   { id: 'mingtan',  name: '明潭 / 大觀抽蓄', en: 'Sun Moon Lake Hydro', pos: [120.865, 23.835], match: /明潭|大觀|日月潭/, share: { hydro: 0.62 } },

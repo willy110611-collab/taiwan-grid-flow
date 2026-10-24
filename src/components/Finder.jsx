@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
-import { PLANTS } from '../config/geo.js';
+import { PLANTS, plantName } from '../config/geo.js';
 import { FUELS } from '../config/energy.js';
 import { t, tx, useT } from '../i18n.js';
 import { shareLink, viewLink } from '../share.js';
@@ -46,7 +46,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
       const kind = noteKind(u.note);
       if (!kind) continue;
       const key = u.plantId || `x:${u.sub || u.fuel}`;
-      const g = by.get(key) || { id: u.plantId, name: PLANTS.find((p) => p.id === u.plantId)?.name || u.sub || u.unit, list: [], cap: 0 };
+      const g = by.get(key) || { id: u.plantId, name: plantName(PLANTS.find((p) => p.id === u.plantId)) || u.sub || u.unit, list: [], cap: 0 };
       g.list.push({ ...u, kind });
       g.cap += u.capacity || 0;
       by.set(key, g);

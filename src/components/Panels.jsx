@@ -7,7 +7,7 @@ import { t, tx, tr, useT, isEn } from '../i18n.js';
 
 const srcLabel = (u = '') => (/workers\.dev/.test(u) ? tx(' · 中繼站', ' · relay') : /^\.\/data\//.test(u) ? tx(' · 網站備份', ' · site backup') : /taipower/.test(u) ? tx(' · 本機代理', ' · local proxy') : '');
 const agoLabel = (m) => (m < 1 ? tx('剛剛', 'just now') : m < 60 ? tx(`${m} 分鐘前`, `${m} min ago`) : m < 1440 ? tx(`${Math.floor(m / 60)} 小時前`, `${Math.floor(m / 60)} h ago`) : tx(`${Math.floor(m / 1440)} 天前`, `${Math.floor(m / 1440)} d ago`));
-import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
+import { PLANTS, SOLAR_COUNTY_KW, plantName } from '../config/geo.js';
 import { twHM } from '../data/history.js';
 import { setPowerPref } from '../power.js';
 import { SupplyHistory, RenewTab } from './OpenData.jsx';
@@ -16,6 +16,12 @@ import { NUCLEAR_SOURCES, NUCLEAR_VERIFIED } from '../config/nuclear.js';
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
 export function Panel({ title, onClose, children }) {
   useT();
+  // 鍵盤：Esc 關閉面板
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && !e.defaultPrevented) onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   title = t(title);
   return (
     <section className="panel" role="dialog" aria-label={title}>
@@ -48,9 +54,9 @@ export function HighlightsPanel({ hl, live, records, onPlant, onClose }) {
         <>
           <ul className="hl-list">
             {hl.topPlant && (
-              <li className="clickable" onClick={() => hl.topPlant.id && onPlant?.(hl.topPlant.id)} title={tx('看這座電廠的機組', 'See this plant’s units')}>
+              <li className="clickable" role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && hl.topPlant.id && onPlant?.(hl.topPlant.id)} onClick={() => hl.topPlant.id && onPlant?.(hl.topPlant.id)} title={tx('看這座電廠的機組', 'See this plant’s units')}>
                 <span className="hl-k">{t('目前出力最大')}</span>
-                <span className="hl-v">{hl.topPlant.name} <small className="muted">›</small></span>
+                <span className="hl-v">{plantName(PLANTS.find((p) => p.id === hl.topPlant.id)) || hl.topPlant.name} <small className="muted">›</small></span>
                 <span className="hl-n">{fmtMw(hl.topPlant.mw)} <small>MW</small></span>
               </li>
             )}
@@ -75,7 +81,13 @@ export function HighlightsPanel({ hl, live, records, onPlant, onClose }) {
               <span className="hl-v">{hl.loadPeak.hm}</span>
               <span className="hl-n">{fmtMw(hl.loadPeak.load)} <small>MW</small></span>
             </li>
-            {hl.southToNorth != null && (
+            {hl.northIn != null ? (
+              <li>
+                <span className="hl-k">{hl.northIn > 0 ? t('南電北送') : tx('北部送出', 'North exporting')} <em className="tag live">{t('台電即時')}</em></span>
+                <span className="hl-v">{hl.northIn > 0 ? t('中南部 → 北部') : tx('北部 → 中南東部', 'North → other regions')}</span>
+                <span className="hl-n">{fmtMw(Math.round(Math.abs(hl.northIn) / 10) * 10)} <small>MW</small></span>
+              </li>
+            ) : hl.southToNorth != null && (
               <li>
                 <span className="hl-k">{t('南電北送')} <em className="tag est">{t('模型推估')}</em></span>
                 <span className="hl-v">{t('中南部 → 北部')}</span>
@@ -253,14 +265,14 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
                 {[
                   ['環境部 AQI', air?.stations?.length > 0, air?.error, air?.asOf, air?.staleAt],
                   ['環境部 CEMS', air?.cems && Object.keys(air.cems).length > 0, air?.cemsError, air?.cemsAsOf],
-                  ['氣象署日射量', !!sun?.factors, sun?.error, sun?.asOf]
+                  ['氣象署日射量', !!sun?.factors || !!sun?.night, sun?.error, sun?.asOf]
                 ].map(([name, ok, err, asOf, staleAt]) => {
                   const ago = ok ? minutesAgo(asOf) : null;
                   return (
                     <li key={name} className={ok ? (staleAt ? 'stale' : 'ok') : 'fail'}>
                       <span className={`dot ${ok ? 'live' : 'sim'}`} />
                       <b>{t(name)}</b>
-                      <small>{ok ? `${staleAt ? tx('環境部暫時故障，顯示備份', 'MOENV down — showing backup') : t('正常')}${ago != null ? ` · ${agoLabel(ago)}` : ''}` : tr(err) || t('讀取中…')}</small>
+                      <small>{ok && name === '氣象署日射量' && sun?.night ? tx('正常 · 夜間沒有日照', 'OK · no sunlight at night') : ok ? `${staleAt ? tx('環境部暫時故障，顯示備份', 'MOENV down — showing backup') : t('正常')}${ago != null ? ` · ${agoLabel(ago)}` : ''}` : tr(err) || t('讀取中…')}</small>
                     </li>
                   );
                 })}

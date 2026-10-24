@@ -146,7 +146,7 @@ export function useBadges(snapshot, rows, { replaying = false } = {}) {
 
   // 電網徽章：只在真實即時資料、且不在回放時檢查
   useEffect(() => {
-    if (!snapshot || replaying || snapshot.source !== 'live') return;
+    if (!snapshot || replaying || snapshot.source !== 'live' || snapshot.cached) return; // 快取的舊資料不頒電網徽章
     award({ snap: snapshot, rows, progress });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, rows]);

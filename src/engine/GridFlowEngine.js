@@ -163,7 +163,7 @@ export class GridFlowEngine {
     this.map.addControl(this.overlay);
 
     // 放空巡航：桌布模式場景停留 3–5 分鐘；App 模式 60–90 秒
-    this.cruise = new Cruise(this.map, { dwell: wallpaper ? [180, 300] : [60, 90], onShot });
+    this.cruise = new Cruise(this.map, { dwell: wallpaper ? [180, 300] : [60, 90], onShot, isDay: () => (this.lastDay?.elev ?? 10) > 3 });
     if (wallpaper && !initialView) setTimeout(() => this.cruise.start(), 5000);
     else {
       // 使用者一碰地圖就停止巡航，把鏡頭還給使用者

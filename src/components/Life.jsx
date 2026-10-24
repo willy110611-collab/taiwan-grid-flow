@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { APP } from '../config/app.js';
 import { Panel } from './Panels.jsx';
 import { Sparkline, fmtMw, rgb, minutesAgo } from './widgets.jsx';
-import { PLANTS, REGIONS } from '../config/geo.js';
+import { PLANTS, REGIONS, plantName } from '../config/geo.js';
 import { THERMAL } from '../config/energy.js';
 import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js';
 import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
@@ -160,7 +160,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
             <ul className="near-plants">
               {sum.thermal.map((p) => (
                 <li key={p.id}>
-                  <span>{p.name}</span>
+                  <span>{plantName(p)}</span>
                   <span className="muted">{p.d.toFixed(0)} km · {t('火力')} {fmtMw(p.mw)} MW</span>
                   {p.downwind && <em className="tag est">{tx('你在下風側', 'You are downwind')}</em>}
                 </li>
@@ -361,7 +361,7 @@ export function AirPanel({ air, snapshot, home, onClose }) {
             const mw = snapshot?.plants.find((x) => x.id === p.id)?.mw || 0;
             return (
               <li key={p.id}>
-                <div><b>{p.name}</b><span className="muted">　{tx('出力', 'Output')} {fmtMw(mw)} MW{c.time ? tx(` · ${c.time.slice(11, 16)} 量測`, ` · measured ${c.time.slice(11, 16)}`) : ''}</span>{!c.running && c.stopped ? <em className="tag est">{tx('煙道停機', 'Stacks off')}</em> : null}</div>
+                <div><b>{plantName(p)}</b><span className="muted">　{tx('出力', 'Output')} {fmtMw(mw)} MW{c.time ? tx(` · ${c.time.slice(11, 16)} 量測`, ` · measured ${c.time.slice(11, 16)}`) : ''}</span>{!c.running && c.stopped ? <em className="tag est">{tx('煙道停機', 'Stacks off')}</em> : null}</div>
                 <div className="cems-items">
                   {Object.entries(c.items).map(([k, it]) => {
                     const u = it.unit ? <small> {it.unit}</small> : null;

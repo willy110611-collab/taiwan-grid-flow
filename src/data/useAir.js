@@ -141,6 +141,12 @@ export function useSun() {
         const latest = stations.map(day).filter(Boolean).sort().pop();
         const tooOld = latest && Date.now() - new Date(latest + 'T00:00:00+08:00').getTime() > 3 * 86400e3;
         const ok = stations.filter((x) => x.value > 0 && (!latest || day(x) === latest));
+        // 夜裡日射量全是 0：不是故障，只是沒有太陽（係數回到只依裝置容量）
+        if (!tooOld && ok.length < 5 && stations.some((x) => day(x) === latest) && stations.every((x) => !(x.value > 0))) {
+          setSolarSun(null);
+          if (alive) setSun({ factors: null, error: null, night: true });
+          return;
+        }
         if (ok.length < 5 || tooOld) throw new Error('日射量資料不足或過舊');
         const sorted = ok.map((x) => x.value).sort((a, b) => a - b);
         const median = sorted[Math.floor(sorted.length / 2)];

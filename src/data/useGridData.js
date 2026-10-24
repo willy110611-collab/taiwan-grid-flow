@@ -28,7 +28,7 @@ const ageMin = (ts) => {
 function checkedGenary(text) {
   const g = parseGenary(text);
   if (!g) throw new Error('格式不符');
-  const total = Object.entries(g.totals || {}).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
+  const total = Object.entries(g.totals || {}).reduce((a, [, v]) => a + v, 0);
   if (!(g.units?.length >= 40)) throw new Error(`資料不合理：只有 ${g.units?.length || 0} 部機組`);
   if (total < 8000 || total > 60000) throw new Error(`資料不合理：全台發電 ${Math.round(total)} MW`);
   const age = ageMin(g.timestamp);
@@ -123,7 +123,7 @@ function fromBundle(pre, key) {
 }
 const withOnline = (pre, snap) => (Number.isFinite(pre?.online) ? { ...snap, online: pre.online } : snap);
 
-const totalOf = (totals) => Object.entries(totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
+const totalOf = (totals) => Object.entries(totals).reduce((a, [, v]) => a + v, 0);
 
 /** 由 genary 結果 + 輔助資料組成完整快照 */
 export function buildSnapshot(base, { source, areas = null, para = null, curves = null, forecast = null, diag = [], date = new Date() }) {
@@ -190,7 +190,7 @@ function saveCached(snap) {
   try {
     const { diag, ...rest } = snap; // eslint-disable-line no-unused-vars
     localStorage.setItem(CACHE_KEY, JSON.stringify(rest));
-    const all = Object.entries(snap.totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0) || 1;
+    const all = Object.entries(snap.totals).reduce((a, [, v]) => a + v, 0) || 1;
     const green = ['solar', 'wind', 'hydro', 'otherRe'].reduce((a, f) => a + (snap.totals[f] || 0), 0);
     const hm = new Date(snap.t + 8 * 3600e3).toISOString().slice(11, 16);
     localStorage.setItem('tgf-last-brief', JSON.stringify({ t: snap.t, hm, green: ((green / all) * 100).toFixed(1), total: Math.round(all).toLocaleString() }));

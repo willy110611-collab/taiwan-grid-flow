@@ -57,7 +57,7 @@ export function parseFuelCurve(text) {
       if (!f || !Number.isFinite(vals[i])) return;
       totals[f] = (totals[f] || 0) + Math.max(0, vals[i] * W);
     });
-    const sum = Object.entries(totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
+    const sum = Object.entries(totals).reduce((a, [, v]) => a + v, 0);
     if (sum < 10000 || sum > 60000) continue;
     out.push({ hm: normHM(r[0]), totals });
   }

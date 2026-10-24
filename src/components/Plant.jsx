@@ -1,7 +1,7 @@
 import { Panel } from './Panels.jsx';
 import { useState } from 'react';
 import { fmtMw, rgb, Sparkline, Icon } from './widgets.jsx';
-import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
+import { PLANTS, SOLAR_COUNTY_KW, plantName } from '../config/geo.js';
 import { FUELS } from '../config/energy.js';
 import { nearestWind } from '../data/useAir.js';
 import { solarSun } from '../data/parseGenary.js';
@@ -32,7 +32,8 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
   const cfg = PLANTS.find((p) => p.id === id);
   if (!cfg) return null;
   // E2：今天 00:00 到現在的出力（回放用的歷史紀錄；打開 App 之前的時段依燃料曲線推估）
-  const series = (rows || []).map((r) => ({ t: r.t, mw: r.plants?.find((p) => p.id === id)?.mw ?? 0, est: !!r.reconstructed }));
+  // hm 用台電資料時間（timestamp），不是抓取時間
+  const series = (rows || []).map((r) => ({ t: r.t, hm: String(r.timestamp || '').match(/\d{1,2}:\d{2}$/)?.[0] || twHM(r.t), mw: r.plants?.find((p) => p.id === id)?.mw ?? 0, est: !!r.reconstructed }));
   const peak = series.reduce((a, x) => (x.mw > (a?.mw ?? -1) ? x : a), null);
   const low = series.reduce((a, x) => (x.mw < (a?.mw ?? Infinity) ? x : a), null);
   const share = async () => {
@@ -49,7 +50,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
   const cems = air?.cems?.[id];
 
   return (
-    <Panel title={cfg.name} onClose={onClose}>
+    <Panel title={plantName(cfg)} onClose={onClose}>
       <div className="plant-head">
         <div><b>{fmtMw(mw)}</b> <small>MW</small></div>
         <span className="muted">{cfg.en}</span>
@@ -66,8 +67,8 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
         <div className="plant-spark">
           <Sparkline values={series.map((x) => x.mw)} color={rgb(FUELS[mix[0]?.[0]]?.color || [110, 240, 190])} w={300} h={40} />
           <p className="fine">
-            {tx('今日', 'Today')} {twHM(series[0].t)}–{twHM(series[series.length - 1].t)}{'　'}
-            {tx('最高', 'High')} <b>{fmtMw(peak.mw)}</b> MW（{twHM(peak.t)}）{'　'}{tx('最低', 'Low')} {fmtMw(low.mw)} MW（{twHM(low.t)}）
+            {tx('今日', 'Today')} {series[0].hm}–{series[series.length - 1].hm}{'　'}
+            {tx('最高', 'High')} <b>{fmtMw(peak.mw)}</b> MW（{peak.hm}）{'　'}{tx('最低', 'Low')} {fmtMw(low.mw)} MW（{low.hm}）
             {series.some((x) => x.est) ? tx('　＊打開 App 前的時段依燃料曲線推估', '　* hours before you opened the app are estimated from fuel curves') : ''}
           </p>
         </div>
@@ -128,7 +129,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
 
       {cems && Object.keys(cems.items || {}).length > 0 && (
         <div className="life-sec">
-          <div className="hl-k">{t('煙道即時監測（環境部 CEMS）')}</div>
+          <div className="hl-k">{t('煙道即時監測（環境部 CEMS）')}{cems.time ? <span className="muted">　{tx(`${cems.time.slice(11, 16)} 量測`, `measured ${cems.time.slice(11, 16)}`)}</span> : null}</div>
           <p className="fine">
             {Object.entries(cems.items).map(([k, it]) => `${t(k)} ${Math.round(it.max * 10) / 10}${it.std ? ` / ${it.std}` : ''} ${it.unit || ''}`).join(' · ')}
           </p>

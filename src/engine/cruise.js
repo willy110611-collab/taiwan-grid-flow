@@ -10,7 +10,7 @@ export const SHOTS = [
   { name: '北部負載中心', center: [121.22, 24.98], zoom: 8.9, pitch: 52, bearing: -24 },
   { name: '中部火力走廊', center: [120.55, 24.2], zoom: 8.7, pitch: 56, bearing: 18 },
   { name: '西部能量動脈', center: [120.5, 23.75], zoom: 7.75, pitch: 58, bearing: -32 },
-  { name: '嘉南光電星海', center: [120.2, 23.25], zoom: 8.9, pitch: 50, bearing: 12 },
+  { name: '嘉南光電星海', center: [120.2, 23.25], zoom: 8.9, pitch: 50, bearing: 12, day: true }, // 只在白天（晚上太陽能是 0）
   { name: '南部電源基地', center: [120.32, 22.75], zoom: 8.8, pitch: 52, bearing: -18 },
   { name: '彰濱離岸風場', center: [120.38, 24.08], zoom: 9.3, pitch: 55, bearing: 30 },
   { name: '離島微光', center: [119.4, 24.6], zoom: 6.7, pitch: 35, bearing: -10 }
@@ -22,7 +22,8 @@ export class Cruise {
    * @param opts.dwell  [最短, 最長] 每個場景停留秒數
    * @param opts.onShot (name|null) => void   場景切換時通知 HUD
    */
-  constructor(map, { dwell = [60, 90], onShot } = {}) {
+  constructor(map, { dwell = [60, 90], onShot, isDay = () => true } = {}) {
+    this.isDay = isDay;
     this.map = map;
     this.dwell = dwell;
     this.onShot = onShot;
@@ -53,8 +54,9 @@ export class Cruise {
 
   next() {
     if (!this.active) return;
-    const shot = SHOTS[this.idx % SHOTS.length];
+    let shot = SHOTS[this.idx % SHOTS.length];
     this.idx += 1 + Math.floor(Math.random() * 2); // 偶爾跳過一個，避免順序太規律
+    if (shot.day && !this.isDay()) { shot = SHOTS[this.idx % SHOTS.length]; this.idx += 1; }
     this.onShot?.(shot.name);
 
     const cam = this.camera(shot);

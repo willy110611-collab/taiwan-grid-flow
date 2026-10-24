@@ -31,7 +31,7 @@ export function DemandPanel({ snapshot, onClose }) {
       {!regions ? <p className="muted">{t('資料讀取中…')}</p> : (
         <>
           <p className="fine">
-            <em className={`tag ${ev}`}>{EVIDENCE[ev].label}</em>
+            <em className={`tag ${ev}`}>{t(EVIDENCE[ev].label)}</em>
             {ev === 'live' ? tx(`台電各區即時發電／用電${regions.time ? `（${regions.time.slice(-5)}）` : ''}`, `Taipower live generation/demand by region${regions.time ? ` (${regions.time.slice(-5)})` : ''}`) : tx('依典型區域比例推估', 'Estimated from typical regional shares')}
           </p>
           <ul className="region-bars">
@@ -41,7 +41,7 @@ export function DemandPanel({ snapshot, onClose }) {
               return (
                 <li key={k}>
                   <div className="rb-head">
-                    <b>{r.name}</b>
+                    <b>{tx(r.name, { N: 'North', C: 'Central', S: 'South', E: 'East' }[k])}</b>
                     <span className={absorb ? 'warm' : 'cool'}>
                       {tx('自給', 'Self-supply')} {Math.round(r.ratio * 100)}% · {absorb ? tx('吸能', 'importing') : tx('供能', 'exporting')}
                     </span>

@@ -17,7 +17,7 @@ export const twHM = (t) => new Date(t + 8 * 3600e3).toISOString().slice(11, 16);
 const r1 = (v) => Math.round(v * 10) / 10;
 
 export function greenPct(totals) {
-  const all = Object.entries(totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0) || 1;
+  const all = Object.entries(totals).reduce((a, [, v]) => a + v, 0) || 1;
   return (Object.entries(totals).filter(([f]) => FUELS[f]?.green).reduce((a, [, v]) => a + v, 0) / all) * 100;
 }
 
@@ -102,7 +102,7 @@ function reconstructDay(snap, fuel = snap.curves?.fuel, areaRows = snap.curves?.
       const total = Object.values(mix).reduce((a, b) => a + b, 0);
       return { id: p.id, mw: total, liveMw: 0, mix };
     });
-    const total = Object.entries(row.totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
+    const total = Object.entries(row.totals).reduce((a, [, v]) => a + v, 0);
     const load = areaByHm.get(row.hm);
     return compact({
       t, timestamp: `${ymd} ${row.hm}`, source: 'live', total, totals: row.totals, plants,

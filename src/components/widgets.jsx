@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { isEn } from '../i18n.js';
 
 /** 數字緩動：值改變時以 ease-out 平滑滾動 */
 export function useTween(value, ms = 1600) {
@@ -55,8 +56,11 @@ export const fmtTime = (d, sec = true) =>
   new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}), hour12: false
   }).format(d);
-export const fmtDate = (d) =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).format(d);
+export const fmtDate = (d) => {
+  if (isEn()) return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).format(d);
+  const p = Object.fromEntries(new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'narrow' }).formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}（${p.weekday}）`;
+};
 export const fmtMw = (mw) => `${Math.round(mw).toLocaleString()}`;
 export const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
@@ -144,7 +148,10 @@ export function Sparkline({ values, color = 'rgb(110,240,190)', w = 220, h = 36 
 /** 資料時間 → 幾分鐘前（台灣時間；可吃「2026-10-24 09:10」「09:10」「ISO」「2026/10/24 09:00」） */
 export function minutesAgo(asOf, now = Date.now()) {
   if (!asOf) return null;
-  const s = String(asOf).trim().replace(/\//g, '-');
+  let s = String(asOf).trim().replace(/\//g, '-');
+  // 台電 loadpara 的民國日期「115.10.25(日)02:50」→ 2026-10-25 02:50
+  const roc = s.match(/^(\d{2,3})\.(\d{1,2})\.(\d{1,2})\D*?(\d{1,2}:\d{2})/);
+  if (roc) s = `${+roc[1] + 1911}-${roc[2].padStart(2, '0')}-${roc[3].padStart(2, '0')} ${roc[4].padStart(5, '0')}`;
   let t;
   if (/^\d{1,2}:\d{2}$/.test(s)) {
     const tw = new Date(now + 8 * 3600e3);

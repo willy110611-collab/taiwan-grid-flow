@@ -44,10 +44,9 @@ export function parseGenary(raw) {
     let fuel = classifyFuel(row[0]) || currentFuel;
     if (!fuel) continue;
     currentFuel = fuel;
-    // 台電把抽蓄水力（明潭、大觀二）歸在「儲能」；發電時當作水力顯示，儲能負載（抽水 / 充電）則略過
-    if (fuel === 'storage' && /抽蓄/.test(String(row[1])) && !/負載|Load/i.test(String(row[0]))) fuel = 'hydro';
+    // 台電把抽蓄水力（明潭、大觀二）與電池都歸在「儲能」，不算再生能源；這裡照台電分類（抽蓄放水仍畫在明潭節點上）
 
-    const unit = cleanText(row[2] ?? row[1] ?? '');
+    const unit = cleanText(row[2] ?? row[1] ?? '').replace(/\s*\(註\s*\d+\)/g, ''); // 台電頁面的註腳編號對使用者沒有意義
     if (!unit || /小計|合計|總計|subtotal|total/i.test(unit)) continue;
 
     const capacity = num(row[3]);
@@ -56,7 +55,7 @@ export function parseGenary(raw) {
 
     const isLoad = /負載|Load/i.test(String(row[0]));
     const matched = PLANTS.find((p) => p.match && p.match.test(unit));
-    units.push({ fuel, unit, capacity, mw, note: cleanText(row[6] ?? ''), plantId: matched?.id || null, load: isLoad, sub: cleanText(row[1] ?? '') });
+    units.push({ fuel, unit, capacity, mw, note: cleanText(row[6] ?? ''), plantId: matched?.id || null, load: isLoad, sub: cleanText(row[1] ?? '').replace(/\s*\(註\s*\d+\)/g, '') });
     // 儲能充電（抽蓄抽水、電池充電）：負值，另外統計給「反向流」與 HUD
     if (isLoad && mw < 0) {
       if (/抽蓄/.test(String(row[1]))) charging.pump += -mw; else charging.battery += -mw;
@@ -65,7 +64,7 @@ export function parseGenary(raw) {
     if (mw <= 0) continue; // 停機不發光
 
     totals[fuel] = (totals[fuel] || 0) + mw;
-    if (fuel === 'storage') continue; // 電池儲能放電：只計入總量，不畫在地圖節點上
+    if (fuel === 'storage' && !matched) continue; // 電池放電：計入總量，沒有位置不畫節點
 
     const plant = matched;
     if (plant) {
@@ -142,7 +141,7 @@ function findTimestamp(obj) {
 }
 
 const stripBom = (s) => s.replace(/^﻿/, '');
-const cleanText = (s) => String(s).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+const cleanText = (s) => String(s).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
 /** "498.3(90.6%)" → 498.3；"N/A" / "-" → NaN */
 function num(v) {
   if (typeof v === 'number') return v;

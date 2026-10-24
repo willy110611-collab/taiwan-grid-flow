@@ -12,14 +12,14 @@ export const FUELS = {
   cogen:   { label: '汽電共生', en: 'Co-Gen', color: [214, 146, 92],  green: false },
   oil:     { label: '燃油',   en: 'Oil',     color: [196, 86, 70],   green: false },
   nuclear: { label: '核能',   en: 'Nuclear', color: [214, 228, 255], green: false }, // 冰白
-  storage: { label: '儲能',   en: 'Storage', color: [255, 255, 255], green: false }
+  storage: { label: '儲能',   en: 'Storage', color: [255, 150, 205], green: false } // 粉紅：抽蓄放水、電池放電（台電歸「儲能」，不算再生能源）
 };
 
 /** 火力（熱機組）— 用於右上角「火力佔比」 */
 export const THERMAL = new Set(['gas', 'coal', 'cogen', 'oil']);
 
 /** 圖例顯示順序 */
-export const LEGEND_ORDER = ['solar', 'wind', 'hydro', 'gas', 'coal', 'nuclear'];
+export const LEGEND_ORDER = ['solar', 'wind', 'hydro', 'gas', 'coal', 'nuclear', 'storage'];
 
 /**
  * 台電 genary 第一欄是一段 HTML，例如 "<A NAME='coal'></A><b>燃煤(Coal)</b>"

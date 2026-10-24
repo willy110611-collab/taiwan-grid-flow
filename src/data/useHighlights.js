@@ -20,6 +20,8 @@ export function useHighlights(snapshot, rows, stats, anomalies) {
       greenPeak: max('greenPct'),
       loadPeak: max('load'),
       southToNorth: stats?.southToNorthMw ?? null,
+      // 台電各區即時發電／用電：北部用電 − 北部發電 = 從外區送進北部的量（實測，優先於模型）
+      northIn: snapshot.regions?.evidence === 'live' && snapshot.regions.byKey?.N ? snapshot.regions.byKey.N.load - snapshot.regions.byKey.N.gen : null,
       spark: enriched.map((r) => r.greenPct),
       anomalies: anomalies || []
     };

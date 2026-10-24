@@ -28,7 +28,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const stats = useMemo(() => {
     if (!snapshot) return null;
     const totals = snapshot.totals;
-    const all = Object.entries(totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0) || 1;
+    const all = Object.entries(totals).reduce((a, [, v]) => a + v, 0) || 1;
     const green = Object.entries(totals).filter(([f]) => FUELS[f]?.green).reduce((a, [, v]) => a + v, 0);
     const thermal = Object.entries(totals).filter(([f]) => THERMAL.has(f)).reduce((a, [, v]) => a + v, 0);
     const bars = LEGEND_ORDER.concat(['cogen', 'otherRe', 'oil'])
@@ -77,7 +77,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       </header>
 
       {!wallpaper && (
-        <nav className="filters" aria-label="能源篩選">
+        <nav className="filters" aria-label={tx('能源篩選', 'Energy filter')}>
           {FILTERS.map((f) => (
             <button
               key={f.id}
@@ -253,7 +253,7 @@ function ClockPanel({ snapshot, daylight, replayT }) {
     <footer className="clock">
       <div className="clock-time">{fmtTime(now)}</div>
       <div className="clock-meta">
-        <span className="freq">{freq.toFixed(2)} Hz</span>
+        <span className="freq" title={tx('台電沒有公開即時頻率，這是模擬值', 'Taipower does not publish live frequency; this is simulated')}>{freq.toFixed(2)} Hz <small>{tx('模擬', 'sim')}</small></span>
         <span className="dot">·</span>
         <span>{fmtDate(now)}</span>
       </div>
