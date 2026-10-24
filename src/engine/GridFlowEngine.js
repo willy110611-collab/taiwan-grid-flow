@@ -662,12 +662,16 @@ export class GridFlowEngine {
         parameters: ADDITIVE
       }));
       // 數字太密會疊成一團：依螢幕位置挑，AQI 高的優先，彼此至少隔 26 像素（顏色光點仍全部畫）
-      const picked = [];
-      for (const s of [...st].sort((a, b) => b.aqi - a.aqi)) {
-        const q = this.map.project([s.lng, s.lat]);
-        if (picked.every((o) => (o.x - q.x) ** 2 + (o.y - q.y) ** 2 >= 26 * 26)) picked.push({ s, x: q.x, y: q.y });
-      }
-      const nums = picked.map((o) => o.s);
+      const c = this.map.getCenter();
+      const viewKey = `${st.length}|${st[0]?.time}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${this.map.getZoom().toFixed(2)}|${this.map.getBearing().toFixed(0)}|${this.map.getPitch().toFixed(0)}`;
+      const nums = this.memo('aqiNums', viewKey, () => {
+        const picked = [];
+        for (const s of [...st].sort((a, b) => b.aqi - a.aqi)) {
+          const q = this.map.project([s.lng, s.lat]);
+          if (picked.every((o) => (o.x - q.x) ** 2 + (o.y - q.y) ** 2 >= 26 * 26)) picked.push({ s, x: q.x, y: q.y });
+        }
+        return picked.map((o) => o.s);
+      });
       layers.push(new TextLayer({
         id: 'aqi-num',
         data: nums,
@@ -780,14 +784,14 @@ export class GridFlowEngine {
       }));
       // 核一、核二很近：核一的字放左邊、其他放右邊
       const left = (d) => d.id === 'chinshan';
-      const lines = sites.filter((d) => d.id !== this.hover.id).flatMap((d) => { // 被選取的那座已有電廠標籤，不重複
+      const lines = this.memo('nukeLines', `${en}|${this.hover.id}|${sites.map((d) => Math.round(d.targetMw)).join()}`, () => sites.filter((d) => d.id !== this.hover.id).flatMap((d) => { // 被選取的那座已有電廠標籤，不重複
         const n = NUCLEAR[d.id];
         const mw = d.targetMw > 1 ? ` · ${Math.round(d.targetMw)} MW` : '';
         return [
           { d, text: (en ? n.shortEn : n.short) + mw, size: 12, dy: -7, color: [214, 228, 255] },
           { d, text: en ? n.mapStatusEn || n.statusEn : n.mapStatus || n.status, size: 10, dy: 8, color: [160, 175, 205] }
         ];
-      });
+      }));
       layers.push(new TextLayer({
         id: 'nuke-labels',
         data: lines,
@@ -863,7 +867,7 @@ export class GridFlowEngine {
 
     // 用電視角：四大供電區的自給率標籤
     if (dm > 0.02 && this.regions && window.innerWidth >= 700) {
-      const rows = REGION_KEYS.map((k) => {
+      const regionData = this.memo('regionLabels', `${isEn()}|${REGION_KEYS.map((k) => `${Math.round(this.regions.byKey[k].load)},${Math.round(this.regions.byKey[k].gen)}`).join('|')}`, () => REGION_KEYS.map((k) => {
         const r = this.regions.byKey[k];
         const pct = Math.round(r.ratio * 100);
         return {
@@ -873,13 +877,13 @@ export class GridFlowEngine {
           sub: isEn() ? `gen ${Math.round(r.gen).toLocaleString()} MW · self-supply ${pct}% · ${r.ratio >= 1 ? 'exporting ↗' : 'importing ↙'}` : `發電 ${Math.round(r.gen).toLocaleString()} MW · 自給 ${pct}% · ${r.ratio >= 1 ? '供能 ↗' : '吸能 ↙'}`,
           color: r.ratio >= 1 ? [120, 210, 255] : [255, 160, 110]
         };
-      });
+      }).flatMap((r) => [
+        { pos: r.pos, anchor: r.anchor, text: r.head, size: 13, off: [0, -9], color: [235, 240, 255] },
+        { pos: r.pos, anchor: r.anchor, text: r.sub, size: 10.5, off: [0, 9], color: r.color }
+      ]));
       layers.push(new TextLayer({
         id: 'region-labels',
-        data: rows.flatMap((r) => [
-          { pos: r.pos, anchor: r.anchor, text: r.head, size: 13, off: [0, -9], color: [235, 240, 255] },
-          { pos: r.pos, anchor: r.anchor, text: r.sub, size: 10.5, off: [0, 9], color: r.color }
-        ]),
+        data: regionData,
         getPosition: (d) => d.pos,
         getText: (d) => d.text,
         getSize: (d) => d.size,
@@ -905,7 +909,7 @@ export class GridFlowEngine {
         .slice(0, 2)
         .map(([f, mw]) => `${(isEn() ? FUELS[f]?.en : FUELS[f]?.label) ?? f} ${Math.round((mw / (hp.targetMw || 1)) * 100)}%`)
         .join(' · ');
-      const label = [
+      const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.mw)}|${fuelText}|${isEn()}|${this.source}|${!!this.cems?.[hp.id]}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
         { pos: hp.pos, text: isEn() ? hp.en : hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
         { pos: hp.pos, text: isEn() ? '' : hp.en.toUpperCase(), size: 9, off: [22, 7], font: MONO, color: [150, 165, 195], weight: 300 },
         {
@@ -917,7 +921,7 @@ export class GridFlowEngine {
         ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 9.5, off: [22, 54], font: FONT, color: [225, 190, 160], weight: 300 }] : []),
         // 滑鼠裝置：提示可以點開電廠卡（手機點一下就直接開，不需要提示）
         ...(CAN_HOVER ? [{ pos: hp.pos, text: tx('點一下看各機組 ›', 'Click for units ›'), size: 9.5, off: [22, this.cems?.[hp.id] ? 69 : 54], font: FONT, color: [110, 240, 190], weight: 300 }] : [])
-      ];
+      ]);
       layers.push(new TextLayer({
         id: 'hover-label',
         data: label,
@@ -939,6 +943,15 @@ export class GridFlowEngine {
     }
 
     return layers;
+  }
+
+  /** 小快取：key 沒變就回傳上次的結果（讓每幀重建的圖層拿到同一個 data 陣列，deck.gl 就不用重新排版文字） */
+  memo(name, key, fn) {
+    const c = (this.memoCache ||= {})[name];
+    if (c && c.key === key) return c.val;
+    const val = fn();
+    this.memoCache[name] = { key, val };
+    return val;
   }
 
   setHover(id) {
