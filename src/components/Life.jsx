@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { APP } from '../config/app.js';
 import { Panel } from './Panels.jsx';
-import { Sparkline, fmtMw, rgb } from './widgets.jsx';
+import { Sparkline, fmtMw, rgb, minutesAgo } from './widgets.jsx';
 import { PLANTS, REGIONS } from '../config/geo.js';
 import { THERMAL } from '../config/energy.js';
 import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js';
@@ -16,6 +16,16 @@ const DIRS_EN = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', '
 export const windText = (deg) => (deg == null ? '—' : isEn() ? `${DIRS_EN[Math.round(deg / 22.5) % 16]} wind` : `${DIRS[Math.round(deg / 22.5) % 16]}風`);
 const R_EN = { NORTH: 'Northern', CENTRAL: 'Central', SOUTH: 'Southern', EAST: 'Eastern' };
 const rName = (r) => (isEn() ? R_EN[r.en] || r.en : r.name);
+/** 空品讀不到的原因：環境部故障 vs 中繼站沒設定金鑰 */
+const airErrText = (err) => (/金鑰|MOENV_KEY/.test(err || '')
+  ? tx('空品資料尚未接上：', 'Air data not connected: ') + tr(err)
+  : tx('環境部空品服務暫時故障，稍後會自動恢復。', 'The MOENV air-quality service is temporarily down; it will recover automatically.'));
+/** 中繼站給的是備份資料 → 標示資料時間 */
+function StaleNote({ air }) {
+  if (!air?.staleAt && !(minutesAgo(air?.asOf) > 120)) return null;
+  const hm = String(air.asOf || air.staleAt || '').replace('T', ' ').slice(11, 16);
+  return <p className="fine warm">{tx(`環境部暫時無法提供最新資料，顯示 ${hm} 的資料。`, `MOENV is not providing new data right now; showing data from ${hm}.`)}</p>;
+}
 const ADVICE_COLOR = { good: [110, 240, 160], ok: [255, 214, 92], bad: [255, 130, 90] };
 
 /** 我的家的即時摘要（給卡片與面板共用） */
@@ -124,7 +134,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
       <section className="life-sec">
         <div className="hl-k">{tx('空氣品質', 'Air quality')}　<span className="muted">{tx('環境部（每小時）', 'MOENV (hourly)')}</span></div>
         {air.error ? (
-          <p className="fine warm">{tx('空品資料尚未接上：', 'Air data not connected: ')}{tr(air.error)}</p>
+          <p className="fine warm">{airErrText(air.error)}</p>
         ) : sum.unset ? (
           <p className="fine">{tx('設定「我的家」地點後顯示。', 'Shown after you set a Home location.')}</p>
         ) : st ? (
@@ -135,6 +145,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
               <span>{t(aqiLevel(st.aqi).label)}</span>
               <span className="muted">PM2.5 {st.pm25 ?? '—'} μg/m³ · {st.site}{tx('測站', ' station')}（{st.d.toFixed(0)} km）</span>
             </div>
+            <StaleNote air={air} />
             {sum.wind && <p className="fine">{tx('風向：', 'Wind: ')}{windText(sum.wind.dir)}{tx('，', ', ')}{sum.wind.speed} m/s（{sum.wind.site}）</p>}
             <ul className="near-plants">
               {sum.thermal.map((p) => (
@@ -312,8 +323,8 @@ export function AirPanel({ air, snapshot, home, onClose }) {
     <Panel title="空品" onClose={onClose}>
       {air.error ? (
         <div className="doc">
-          <p className="warm">{tx('空品資料尚未接上：', 'Air data not connected: ')}{tr(air.error)}</p>
-          <p className="fine">{tx('需要到環境部資料開放平台免費申請 API 金鑰，貼到 Cloudflare 中繼站的 MOENV_KEY（說明在 README）。', 'Get a free API key from the MOENV open-data platform and set it as MOENV_KEY on the Cloudflare relay (see README).')}</p>
+          <p className="warm">{airErrText(air.error)}</p>
+          {/金鑰|MOENV_KEY/.test(air.error) && <p className="fine">{tx('需要到環境部資料開放平台免費申請 API 金鑰，貼到 Cloudflare 中繼站的 MOENV_KEY（說明在 README）。', 'Get a free API key from the MOENV open-data platform and set it as MOENV_KEY on the Cloudflare relay (see README).')}</p>}
         </div>
       ) : (
         <>
@@ -322,6 +333,7 @@ export function AirPanel({ air, snapshot, home, onClose }) {
               <li key={v}><i style={{ background: rgb(aqiLevel(v).color) }} />{t(aqiLevel(v).label)}</li>
             ))}
           </ul>
+          <StaleNote air={air} />
           {st && <p className="fine">{tx('離你最近：', 'Nearest: ')}{st.site} AQI {st.aqi}（{t(aqiLevel(st.aqi).label)}），PM2.5 {st.pm25} μg/m³</p>}
           <p className="fine">{tx('地圖上的淡色扇形＝火力電廠依最近測站風向的「下風方向」示意，長度隨火力出力與風速變化。', 'Faint fans on the map show the downwind direction of thermal plants based on the nearest station’s wind; their length scales with thermal output and wind speed.')}</p>
         </>

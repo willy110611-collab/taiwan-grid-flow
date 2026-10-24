@@ -5,3 +5,6 @@ public/data/
 *.local
 # 個人筆記，不上傳
 gemini/
+# Claude 的預覽截圖、交接筆記（只放本機，不上傳）
+Claude outputs/
+台灣光脈搏_交接封包.md

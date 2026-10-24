@@ -22,14 +22,25 @@ export function useAir() {
   useEffect(() => {
     let alive = true;
     const tick = async () => {
+      if (document.hidden && !first) return; // 省電：背景不抓，切回前景時補抓
+      first = false;
       const next = { stations: [], cems: {}, error: null, cemsError: null, loading: false };
-      try { next.stations = (await getJson('aqi.json')).stations || []; } catch (e) { next.error = e.message; }
-      try { next.cems = groupCems((await getJson('cems.json')).records || []); } catch (e) { next.cemsError = e.message; }
+      try {
+        const j = await getJson('aqi.json');
+        next.stations = j.stations || [];
+        // 中繼站 v5：環境部故障時改給最後一次成功的資料（stale）
+        if (j.stale) next.staleAt = j.savedAt || null;
+        next.asOf = next.stations.map((x) => x.time).filter(Boolean).sort().pop() || null;
+      } catch (e) { next.error = e.message; }
+      try { next.cems = groupCems((await getJson('cems.json')).records || []); next.cemsAsOf = Object.values(next.cems).map((c) => c.time).filter(Boolean).sort().pop() || null; } catch (e) { next.cemsError = e.message; }
       if (alive) setAir(next);
     };
+    let first = true;
     tick();
     const id = setInterval(tick, REFRESH);
-    return () => { alive = false; clearInterval(id); };
+    const onVis = () => { if (!document.hidden) tick(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
   }, []);
   return air;
 }
@@ -140,7 +151,7 @@ export function useSun() {
           if (best && best.d < 90) factors[p.id] = Math.max(0.3, Math.min(1.8, best.v / median));
         }
         setSolarSun(factors);
-        if (alive) setSun({ factors, error: null });
+        if (alive) setSun({ factors, error: null, asOf: stations.map((x) => x.time).filter(Boolean).sort().pop() || null });
       } catch (e) {
         setSolarSun(null);
         if (alive) setSun({ factors: null, error: e.message });

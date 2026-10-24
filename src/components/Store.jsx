@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Panel } from './Panels.jsx';
-import { parseMeterCsv, aggregate, summarize, loadStore, saveStore, sampleCsv, periodOf, PLAN_NAMES, RATES } from '../data/store.js';
+import { parseMeterCsv, aggregate, summarize, loadStore, saveStore, sampleCsv, periodOf, suggestKw, PLAN_NAMES, LV_NAMES, RATES } from '../data/store.js';
 import { tx, useT } from '../i18n.js';
 
 /**
@@ -14,6 +14,7 @@ const LABEL_EN = { peak: 'Peak', half: 'Mid-peak', off: 'Off-peak' };
 const LABEL = new Proxy({}, { get: (_, k) => tx(LABEL_ZH[k], LABEL_EN[k]) });
 const PLAN_EN = { biz: 'Commercial standard (tiered)', two: 'Simple TOU (2-period)', three: 'Simple TOU (3-period)' };
 const PN = (k) => tx(PLAN_NAMES[k], PLAN_EN[k]);
+const LV_EN = { lv1: 'Low-voltage power (flat)', lv2: 'Low-voltage power TOU (2-period)', lv3: 'Low-voltage power TOU (3-period)' };
 const PN_SHORT = (k) => tx(PLAN_NAMES[k].replace('簡易型時間電價', '時間電價'), PLAN_EN[k].replace('Simple ', ''));
 const KWH = () => tx('度', 'kWh');
 const NT = () => tx('元', 'NT$');
@@ -22,7 +23,14 @@ const ym = (k) => `${Number(k.slice(5))}月`;
 
 export function StorePanel({ onClose }) {
   useT();
-  const [store, setStore] = useState(loadStore);
+  const [store, setStore] = useState(() => {
+    const s = loadStore();
+    // 舊版存下的範例資料沒有週六／需量欄位 → 重新產生
+    if (s?.source === 'sample' && !Object.values(s.months || {})[0]?.lv2) {
+      try { return { ...s, months: aggregate(parseMeterCsv(sampleCsv())) }; } catch { return s; }
+    }
+    return s;
+  });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
@@ -32,7 +40,7 @@ export function StorePanel({ onClose }) {
       const parsed = parseMeterCsv(text);
       const months = aggregate(parsed);
       const keep = source === 'sample' ? {} : (store?.source === 'sample' ? {} : store?.months || {});
-      const next = { name: store?.source === 'sample' ? '' : store?.name || '', source, interval: parsed.interval, months: { ...keep, ...months }, at: Date.now() };
+      const next = { name: store?.source === 'sample' ? '' : store?.name || '', source, interval: parsed.interval, months: { ...keep, ...months }, at: Date.now(), bimonthly: store?.bimonthly || null, kw: source === 'sample' ? 0 : store?.kw || 0 };
       saveStore(next);
       setStore(next);
       setErr('');
@@ -61,6 +69,7 @@ export function StorePanel({ onClose }) {
     e.target.value = '';
   };
   const setName = (name) => { const n = { ...store, name }; saveStore(n); setStore(n); };
+  const setOpt = (patch) => { const n = { ...store, ...patch }; saveStore(n); setStore(n); };
   const clear = () => { saveStore(null); setStore(null); };
 
   const picker = (
@@ -94,15 +103,16 @@ export function StorePanel({ onClose }) {
       </Panel>
     );
   }
-  return <StoreReport store={store} setName={setName} onReimport={() => fileRef.current?.click()} onSample={() => importText(sampleCsv(), 'sample')} clear={clear} err={err} picker={picker} onClose={onClose} />;
+  return <StoreReport store={store} setName={setName} setOpt={setOpt} onReimport={() => fileRef.current?.click()} onSample={() => importText(sampleCsv(), 'sample')} clear={clear} err={err} picker={picker} onClose={onClose} />;
 }
 
-function StoreReport({ store, setName, onReimport, onSample, clear, err, picker, onClose }) {
+function StoreReport({ store, setName, setOpt, onReimport, onSample, clear, err, picker, onClose }) {
   useT();
   const [shift, setShift] = useState(20);
   const [plan, setPlan] = useState('two');
   const [table, setTable] = useState(false);
-  const s = useMemo(() => summarize(store.months, shift / 100), [store.months, shift]);
+  const kwHint = useMemo(() => suggestKw(store.months), [store.months]);
+  const s = useMemo(() => summarize(store.months, shift / 100, { bimonthly: store.bimonthly, kw: store.kw || 0 }), [store.months, shift, store.bimonthly, store.kw]);
   const bestTou = s.totals.two <= s.totals.three ? 'two' : 'three';
   const save = s.totals.biz - s.totals[s.best];
   const per = s.months ? save / s.months : 0;
@@ -115,7 +125,7 @@ function StoreReport({ store, setName, onReimport, onSample, clear, err, picker,
       <input className="loc-search store-name" value={store.name || ''} onChange={(e) => setName(e.target.value)} placeholder={tx('店名（選填）', 'Shop name (optional)')} />
       <p className="fine">
         {store.source === 'sample' ? <b className="warm">{tx('範例資料（虛構的小吃店）', 'Sample data (a fictional eatery)')}</b> : store.source}
-        　{first && `${first.replace('-', '/')} – ${last.replace('-', '/')}`}　{tx(`共 ${s.rows.length} 個月`, `${s.rows.length} months`)}{s.onlyPartial ? tx('（都不是完整月份，金額僅供參考）', ' (no complete months — amounts are indicative only)') : s.rows.length > s.months ? tx(`，完整 ${s.months} 個月列入比較`, `, ${s.months} complete months compared`) : ''}
+        {'　'}{first && `${first.replace('-', '/')} – ${last.replace('-', '/')}`}{'　'}{tx(`共 ${s.rows.length} 個月`, `${s.rows.length} months`)}{s.onlyPartial ? tx('（都不是完整月份，金額僅供參考）', ' (no complete months — amounts are indicative only)') : s.rows.length > s.months ? tx(`，完整 ${s.months} 個月列入比較`, `, ${s.months} complete months compared`) : ''}
       </p>
 
       {/* 1. 結論 */}
@@ -153,6 +163,44 @@ function StoreReport({ store, setName, onReimport, onSample, clear, err, picker,
           {tx(`（${s.months} 個月 ${money(extra)} 元）。`, ` (NT$${money(extra)} over ${s.months} months).`)}
         </p>
         <p className="fine">{tx('例如：備料、洗碗機、製冰、熱水、電動車或機車充電改在平日早上 9 點前（夏月）／6 點前與 11–14 點（非夏月），或週末做。冷藏與營業照明通常移不動。', 'For example, do prep, dishwashing, ice-making, water heating or EV/scooter charging before 9 am on weekdays (summer) / before 6 am or 11–14 (other months), or at weekends. Refrigeration and shop lighting usually can’t move.')}</p>
+      </section>
+
+      {/* 2b. 帳單週期與低壓電力 */}
+      <section className="life-sec">
+        <div className="hl-k">{tx('帳單與契約', 'Billing & contract')}</div>
+        <div className="seg seg-wrap">
+          {[[null, tx('每月一期', 'Monthly')], ['odd', tx('兩月一期（1–2月…）', 'Bimonthly (Jan–Feb…)')], ['even', tx('兩月一期（2–3月…）', 'Bimonthly (Feb–Mar…)')]].map(([k, label]) => (
+            <button key={k || 'm'} className={(store.bimonthly || null) === k ? 'on' : ''} onClick={() => setOpt({ bimonthly: k })}>{label}</button>
+          ))}
+        </div>
+        <p className="fine">{tx('兩個月一期的帳單，營業用累進級距加倍、時間電價超過 4,000 度才加價；看帳單上的計費期間選擇。', 'For bimonthly bills, commercial tiers are doubled and the time-of-use surcharge starts above 4,000 kWh; pick the one matching your bill period.')}</p>
+        <label className="bill-row kw-row">
+          <span>{tx('低壓電力試算：經常契約', 'Low-voltage power: contract')}</span>
+          <input type="number" min="0" max="500" inputMode="numeric" value={store.kw || ''} placeholder={String(kwHint || '')} onChange={(e) => setOpt({ kw: Math.max(0, Number(e.target.value) || 0) })} />
+          <span>{tx('瓩', 'kW')}</span>
+          {kwHint > 0 && !store.kw && <button className="mini" onClick={() => setOpt({ kw: kwHint })}>{tx(`用 ${kwHint}`, `Use ${kwHint}`)}</button>}
+        </label>
+        <p className="fine">{tx(`你的最大 15 分鐘需量約 ${kwHint} 瓩。低壓電力要另外申請契約容量，基本電費依契約計收；用電大、白天集中的店家才可能划算。`, `Your peak 15-minute demand is about ${kwHint} kW. Low-voltage power needs a contract capacity and charges a demand fee per kW; it only pays off for large, daytime-heavy users.`)}</p>
+        {s.needReimport && <p className="fine warm">{tx('這份資料是舊版匯入的，請重新匯入 CSV 才能試算低壓電力。', 'This data was imported by an older version; re-import the CSV to calculate low-voltage power.')}</p>}
+        {s.lv && (
+          <ul className="plan-bars lv">
+            {['lv1', 'lv2', 'lv3'].map((k) => {
+              const max = Math.max(s.totals.biz, s.totals.two, s.totals.three, s.lv.lv1, s.lv.lv2, s.lv.lv3) || 1;
+              return (
+                <li key={k} className={s.lv[k] < s.totals[s.best] ? 'best' : ''}>
+                  <span>{tx(LV_NAMES[k], LV_EN[k])}</span>
+                  <i style={{ width: `${(s.lv[k] / max) * 100}%` }} />
+                  <b>{money(s.lv[k] / (s.months || 1))} <small>{tx('元/月', 'NT$/mo')}</small></b>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {s.lv && (
+          <p className="fine">{Math.min(s.lv.lv1, s.lv.lv2, s.lv.lv3) < s.totals[s.best]
+            ? tx(`低壓電力比「${PLAN_NAMES[s.best]}」每月約再省 ${money((s.totals[s.best] - Math.min(s.lv.lv1, s.lv.lv2, s.lv.lv3)) / (s.months || 1))} 元，可以洽台電評估。`, `Low-voltage power could save about NT$${money((s.totals[s.best] - Math.min(s.lv.lv1, s.lv.lv2, s.lv.lv3)) / (s.months || 1))} more a month than ${PLAN_EN[s.best]}; ask Taipower to evaluate.`)
+            : tx('以這個契約容量，低壓電力不會比較便宜，維持表燈電價即可。', 'At this contract capacity, low-voltage power is not cheaper; stay on the lighting tariff.')}</p>
+        )}
       </section>
 
       {/* 3. 每月尖離峰 */}

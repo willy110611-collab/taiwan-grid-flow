@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈搏 — Cloudflare Worker 中繼站 v4
+//  台灣光脈搏 — Cloudflare Worker 中繼站 v5
+//  v5：環境部 AQI 故障時改給最後一次成功的資料（存在 KV）；台電資料停更或空品備份太舊時 LINE 通知管理者（LINE_TO）
 //  貼到 Cloudflare：Workers & Pages → taiwan-grid-flow-data → Edit code → 全部取代 → Deploy
 //
 //  路徑                     來源（政府公開資料）
@@ -18,7 +19,7 @@
 //   LINE_TOKEN       Secret  LINE Channel access token
 //   LINE_SECRET      Secret  LINE Channel secret（驗證 Webhook 真的來自 LINE）
 //   LINE_BASIC_ID    Text    官方帳號 ID，例如 @123abcde（網頁顯示加好友按鈕）
-//   LINE_TO          Text    （選用）管理者 userId，不用傳訊息就自動登記 HOME_SITE
+//   LINE_TO          Text    （選用）管理者 userId，不用傳訊息就自動登記 HOME_SITE；也接收「資料停更」通知
 //   HOME_SITE        Text    （選用）管理者的測站，預設「西屯」
 //   LINE_MONTHLY_CAP Text    （選用）每月主動推播上限則數，預設 200，避免超過免費額度
 //  另需：KV 綁定 NOTIFY、Triggers → Cron「*/10 * * * *」
@@ -67,6 +68,7 @@ export default {
   //  ・LINE 當月用量超過上限 80%：只推供電，空品改由 App 通知與「現在」查詢
   async scheduled(event, env, ctx) {
     if (!env.NOTIFY) return;
+    await watchdog(env); // 資料停更檢查（全天，不受 07–22 限制）
     const hour = new Date(Date.now() + 8 * 3600e3).getUTCHours();
     if (hour < SEND_FROM || hour >= SEND_TO) return;
     const today = twDate();
@@ -416,8 +418,18 @@ async function moenv(env, id, params = '') {
 }
 
 // AQI：只留下畫面需要的欄位
+//  v5：成功時存一份到 KV；環境部故障時改給這份備份（stale: true、savedAt），網頁標示「顯示 HH:MM 的資料」
 async function aqi(env) {
-  const rows = await moenv(env, 'aqx_p_432');
+  let rows;
+  try {
+    rows = await moenv(env, 'aqx_p_432');
+    if (!rows.length) throw new Error('環境部：沒有資料');
+  } catch (e) {
+    const last = env.NOTIFY ? await env.NOTIFY.get('aqi:last', 'json') : null;
+    if (!last?.stations?.length) throw e;
+    if (env.NOTIFY && !(await env.NOTIFY.get('aqi:failSince'))) await env.NOTIFY.put('aqi:failSince', String(Date.now()), { expirationTtl: 3 * 86400 });
+    return new Response(JSON.stringify({ ...last, stale: true, reason: e.message }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+  }
   const n = (v) => (v === '' || v == null || v === '-' ? null : Number(v));
   const stations = rows.map((r) => ({
     site: r.sitename, county: r.county, aqi: n(r.aqi), status: r.status, pollutant: r.pollutant,
@@ -425,7 +437,42 @@ async function aqi(env) {
     windSpeed: n(r.wind_speed), windDir: n(r.wind_direc),
     lng: n(r.longitude), lat: n(r.latitude), time: r.publishtime
   })).filter((s) => s.lng && s.lat);
+  if (env.NOTIFY && stations.length) {
+    const newest = stations.map((x) => x.time).filter(Boolean).sort().pop() || '';
+    const prev = await env.NOTIFY.get('aqi:lastTime');
+    if (newest !== prev) {
+      await env.NOTIFY.put('aqi:last', JSON.stringify({ stations, savedAt: new Date().toISOString() }));
+      await env.NOTIFY.put('aqi:lastTime', newest);
+    }
+    await env.NOTIFY.delete('aqi:failSince');
+  }
   return new Response(JSON.stringify({ stations }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+}
+
+/* ───────── 資料停更檢查（v5）─────────
+ *  台電機組資料超過 40 分鐘沒更新、或環境部空品故障超過 3 小時 → LINE 通知管理者（LINE_TO）
+ *  同一件事 6 小時內只通知一次；恢復時再通知一次 */
+async function watchdog(env) {
+  if (!env.LINE_TOKEN || !env.LINE_TO) return;
+  const issues = [];
+  try {
+    const g = await (await fetch(`${TP}genary.json?_=${Date.now()}`, { headers: UA })).json();
+    const ts = String(g[''] || g.timestamp || '').replace(/\//g, '-');
+    const age = ts ? (Date.now() - new Date(ts.replace(' ', 'T') + '+08:00').getTime()) / 60e3 : Infinity;
+    if (!(age < 40)) issues.push(['grid', `台電機組資料${Number.isFinite(age) ? `已 ${Math.round(age)} 分鐘沒更新（最後 ${ts.slice(11, 16)}）` : '讀不到'}`]);
+  } catch (e) { issues.push(['grid', `台電機組資料讀不到（${e.message}）`]); }
+  const since = Number(await env.NOTIFY.get('aqi:failSince')) || 0;
+  if (since && Date.now() - since > 3 * 3600e3) issues.push(['aqi', `環境部空品已故障 ${Math.round((Date.now() - since) / 3600e3)} 小時，網頁顯示備份資料`]);
+  for (const k of ['grid', 'aqi']) {
+    const hit = issues.find((x) => x[0] === k);
+    const flag = await env.NOTIFY.get(`watch:${k}`);
+    if (hit && !flag) {
+      if (await send(env, [env.LINE_TO], `⚠ 台灣光脈搏 資料停更：${hit[1]}`)) await env.NOTIFY.put(`watch:${k}`, '1', { expirationTtl: 6 * 3600 });
+    } else if (!hit && flag) {
+      await send(env, [env.LINE_TO], `✅ 台灣光脈搏：${k === 'grid' ? '台電機組資料' : '環境部空品'}已恢復正常`);
+      await env.NOTIFY.delete(`watch:${k}`);
+    }
+  }
 }
 
 // 日射量：氣象署 O-A0091-001（署屬氣象站，MJ/m²）

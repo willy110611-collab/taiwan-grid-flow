@@ -262,12 +262,11 @@ a:hover { text-decoration: underline; }
 .badges li b { font-weight: 400; font-size: 11px; color: var(--ink-faint); letter-spacing: 0.08em; }
 .badges li.on b { color: var(--ink); }
 .badges li small { font-size: 9.5px; color: var(--ink-faint); font-family: var(--mono); }
-.badge-tip {
-  position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); width: 170px; z-index: 3;
-  padding: 8px 10px; border-radius: 10px; background: rgba(5, 8, 15, 0.96); border: 1px solid var(--line);
-  font-size: 11px; color: var(--ink-dim); white-space: pre-line; opacity: 0; pointer-events: none; transition: opacity 0.25s;
-}
-.badges li:hover .badge-tip, .badges li:active .badge-tip { opacity: 1; }
+.badges li { cursor: pointer; border-radius: 12px; padding: 4px 0; }
+.badges li.sel { background: rgba(200, 215, 255, 0.08); }
+.badge-detail { margin: 10px 0 2px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); font-size: 12px; color: var(--ink-dim); }
+.badge-detail b { color: var(--ink); font-weight: 500; font-size: 13px; }
+.badge-detail p { margin: 4px 0 0; line-height: 1.55; }
 .medal.on { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.12)); }
 .badge-toast {
   bottom: calc(100px + var(--safe-b)); left: 50%; transform: translateX(-50%);
@@ -498,7 +497,9 @@ a:hover { text-decoration: underline; }
   .is-wallpaper .sourceline { display: block; }
 
   .toolbar { left: var(--gutter); right: var(--gutter); transform: none; justify-content: space-around; bottom: calc(14px + var(--safe-b)); }
-  .toolbar button { flex: 1; padding: 8px 2px 6px; min-width: 0; letter-spacing: 0.1em; }
+  .toolbar button { flex: 1; padding: 8px 1px 6px; min-width: 0; letter-spacing: 0.06em; }
+  .toolbar button span { white-space: nowrap; overflow: hidden; text-overflow: clip; max-width: 100%; }
+  html[lang='en'] .toolbar button { letter-spacing: 0; font-size: 9.5px; }
   .filters { left: var(--gutter); right: var(--gutter); transform: none; justify-content: space-between; }
   .filters button { padding: 5px 6px; letter-spacing: 0.02em; gap: 4px; font-size: 11px; flex: 0 0 auto; }
   .clock-time { line-height: 1.1; }
@@ -655,3 +656,33 @@ a:hover { text-decoration: underline; }
 .store-table th, .store-table td { padding: 4px 6px; text-align: right; border-bottom: 1px solid var(--line); }
 .store-table th { color: var(--ink-dim); font-weight: 400; }
 .store-table td:first-child, .store-table th:first-child { text-align: left; }
+
+/* ── v0.7.0：電廠搜尋、今日異常、分享、帳單設定 ── */
+.finder-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.finder-list li + li { border-top: 1px solid var(--line); }
+.finder-list button {
+  width: 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; padding: 9px 2px; text-align: left;
+  background: none; border: 0; color: var(--ink-dim); font: inherit; font-size: 13px; cursor: pointer;
+}
+.finder-list button:disabled { cursor: default; }
+.finder-list button b { color: var(--ink); font-weight: 500; }
+.finder-list button small { color: var(--ink-faint); font-size: 11px; }
+.finder-list button > span { margin-left: auto; font-family: var(--mono); color: var(--ink); }
+.finder-list.issues button > span.issue-units { margin-left: 0; width: 100%; display: flex; flex-direction: column; gap: 3px; font-family: inherit; color: var(--ink-dim); }
+.finder-list .note { font-style: normal; font-size: 11.5px; padding-left: 8px; border-left: 2px solid var(--line); }
+.finder-list .note.warm { border-color: rgb(255, 150, 90); }
+.finder-list .note.gold { border-color: rgb(255, 210, 90); }
+.finder-list .note.cool { border-color: rgb(110, 200, 255); }
+.fuel-dot { width: 8px; height: 8px; border-radius: 50%; align-self: center; }
+.issue-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+.plant-spark { margin: 8px 0 4px; }
+.plant-spark .spark { width: 100%; height: 40px; }
+.store-btns button { display: inline-flex; align-items: center; gap: 6px; }
+.store-btns button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.seg-wrap { display: flex; flex-wrap: wrap; border-radius: 12px; margin: 6px 0 4px; }
+.seg-wrap button { flex: 1 1 auto; }
+.kw-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-dim); margin: 10px 0 2px; }
+.kw-row input { width: 72px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); color: var(--ink); font: inherit; font-size: 13px; }
+.mini { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); color: var(--ink-dim); font: inherit; font-size: 11.5px; cursor: pointer; }
+.plan-bars.lv li span { font-size: 12px; }
+.diag li.stale .dot { background: rgb(255, 205, 120); box-shadow: 0 0 6px rgb(255, 205, 120); }

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 const KEY = 'tgf-lang';
 let lang = (() => { try { return localStorage.getItem(KEY) || 'zh'; } catch { return 'zh'; } })();
 const subs = new Set();
+if (typeof document !== 'undefined') document.documentElement.lang = lang === 'en' ? 'en' : 'zh-Hant';
 
 export function setLang(l) {
   lang = l;
@@ -60,7 +61,7 @@ const EN = {
   // HUD
   '綠能': 'Green', '火力': 'Thermal', '核能': 'Nuclear', '全部': 'All', '用電': 'Demand', '空品': 'Air',
   'MW · 全台發電': 'MW · generation', 'MW · 全台用電': 'MW · demand',
-  '放空': 'Drift', '我的家': 'Home', '亮點': 'Highlights', '徽章': 'Badges', '回放': 'Replay', '資訊': 'Info', '全螢幕': 'Fullscreen', '全島': 'Overview',
+  '放空': 'Drift', '我的家': 'Home', '亮點': 'Peaks', '徽章': 'Badges', '回放': 'Replay', '資訊': 'Info', '全螢幕': 'Fullscreen', '全島': 'Overview',
   '放空巡航': 'Drift cruise', '日出': 'Sunrise', '日落': 'Sunset', '資料': 'Data',
   'LIVE · 台電即時': 'LIVE · Taipower', 'SIMULATED · 模擬資料': 'SIMULATED', '尖峰備轉': 'peak reserve', '模擬': 'sim', '更新中 · 上次': 'Updating · last',
   '供電充裕': 'Supply OK', '供電吃緊': 'Supply tight', '供電警戒': 'Supply alert', '限電警戒': 'Rationing alert', '限電準備': 'Rationing prep',
@@ -127,6 +128,7 @@ const EN = {
   'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈搏開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
   '強制模擬（網址帶 ?sim=1）': 'Forced simulation (?sim=1 in URL)',
   '日射量資料不足或過舊': 'Solar radiation data missing or stale',
+  '電廠': 'Plants',
   // 語言
   '中文': '中文', 'English': 'English'
 };

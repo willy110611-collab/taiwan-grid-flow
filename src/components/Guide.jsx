@@ -58,6 +58,7 @@ const TOUR_KEY = 'tgf-tour-v1';
 export const GUIDE = [
   ['🔆', '看現在', '光點是發電廠，越亮發電越多；光流從電廠流向城市。右上角是綠能／火力比例與全台發電、用電。', 'Glowing dots are power plants — brighter means more output; light flows from plants to cities. Top-right shows the green/thermal mix and total generation and demand.'],
   ['👆', '點光球', '點地圖上的電廠光球，看每部機組的即時出力、歲修或降載狀態。', 'Tap a plant on the map to see each unit’s live output, maintenance or reduced-load status.'],
+  ['🔍', '電廠', '搜尋電廠或機組並飛過去；也列出今天歲修、故障、降載的機組和出力前五名。', 'Search a plant or unit and fly to it; also lists units under maintenance, faults or derating today, and the top 5 plants.'],
   ['🏠', '我的家', '設定地點後：現在適不適合用電、附近空氣品質、下風側電廠、電費試算。', 'After setting a location: whether now is a good time to use power, nearby air quality, upwind plants, and a bill calculator.'],
   ['🏪', '店家', '匯入店家智慧電表的用電明細：每月尖峰／離峰圖表、哪種電價最省、把工作移到離峰能再省多少。', 'Import a shop’s smart-meter data: monthly peak/off-peak charts, which tariff is cheapest, and how much more you save by shifting work off-peak.'],
   ['✨', '亮點', '今天太陽能尖峰、綠能最高的時刻，以及你看過的最高紀錄。', 'Today’s solar peak and greenest moment, plus the highest records you have seen.'],

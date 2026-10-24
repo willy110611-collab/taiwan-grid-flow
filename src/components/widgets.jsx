@@ -101,6 +101,12 @@ export const Icon = {
   store: (
     <svg viewBox="0 0 24 24"><path d="M4 9.5 5.5 5h13L20 9.5" /><path d="M4 9.5c0 1.4 1.1 2.5 2.7 2.5S9.3 10.9 9.3 9.5c0 1.4 1.2 2.5 2.7 2.5s2.7-1.1 2.7-2.5c0 1.4 1.1 2.5 2.6 2.5S20 10.9 20 9.5" /><path d="M5.5 12v7.5h13V12M10 19.5v-4.5h4v4.5" /></svg>
   ),
+  search: (
+    <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" /><path d="m15 15 5 5" /></svg>
+  ),
+  share: (
+    <svg viewBox="0 0 24 24"><path d="M12 3.5v11M8 7.5l4-4 4 4" /><path d="M6 11.5H5v8h14v-8h-1" /></svg>
+  ),
   refresh: (
     <svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></svg>
   ),
@@ -127,4 +133,21 @@ export function Sparkline({ values, color = 'rgb(110,240,190)', w = 220, h = 36 
       <circle cx={last[0]} cy={last[1]} r="2.2" fill={color} />
     </svg>
   );
+}
+
+/** 資料時間 → 幾分鐘前（台灣時間；可吃「2026-10-24 09:10」「09:10」「ISO」「2026/10/24 09:00」） */
+export function minutesAgo(asOf, now = Date.now()) {
+  if (!asOf) return null;
+  const s = String(asOf).trim().replace(/\//g, '-');
+  let t;
+  if (/^\d{1,2}:\d{2}$/.test(s)) {
+    const tw = new Date(now + 8 * 3600e3);
+    const [h, m] = s.split(':').map(Number);
+    t = Date.UTC(tw.getUTCFullYear(), tw.getUTCMonth(), tw.getUTCDate(), h, m) - 8 * 3600e3;
+    if (t > now + 60e3) t -= 864e5; // 昨天的時間
+  } else if (/[T ]\d{1,2}:\d{2}/.test(s) && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) {
+    t = new Date(s.replace(' ', 'T') + '+08:00').getTime();
+  } else t = new Date(s).getTime();
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Math.round((now - t) / 60e3));
 }

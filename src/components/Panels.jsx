@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { GUIDE } from './Guide.jsx';
 import { APP } from '../config/app.js';
 import { EVIDENCE } from '../config/energy.js';
-import { Icon, Sparkline, fmtMw } from './widgets.jsx';
-import { t, tx, useT } from '../i18n.js';
+import { Icon, Sparkline, fmtMw, minutesAgo } from './widgets.jsx';
+import { t, tx, tr, useT } from '../i18n.js';
+
+const agoLabel = (m) => (m < 1 ? tx('剛剛', 'just now') : m < 60 ? tx(`${m} 分鐘前`, `${m} min ago`) : m < 1440 ? tx(`${Math.floor(m / 60)} 小時前`, `${Math.floor(m / 60)} h ago`) : tx(`${Math.floor(m / 1440)} 天前`, `${Math.floor(m / 1440)} d ago`));
 import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
 import { twHM } from '../data/history.js';
+import { setPowerPref } from '../power.js';
 
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
 export function Panel({ title, onClose, children }) {
@@ -122,7 +125,7 @@ const TABS = [
   ['about', '關於']
 ];
 
-export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
+export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'auto', powerSave = false }) {
   useT();
   const [tab, setTab] = useState(initialTab === 'diag' ? 'source' : initialTab || 'guide');
   // 從「部分資料讀不到」點進來 → 直接捲到連線診斷
@@ -154,7 +157,15 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
             <li>{tx('右上角「供電充裕／吃緊」：台電備轉容量率燈號。', '“Supply OK / tight” at top-right is Taipower’s operating-reserve signal.')}</li>
             <li>{tx('資料每 10 分鐘更新一次（台電公布頻率），左下角顯示資料時間。', 'Data refreshes every 10 minutes (Taipower’s publishing interval); the data time is shown at bottom-left.')}</li>
             <li>{tx('iPhone：Safari 開啟 → 分享 → 加入主畫面，就像 App 一樣。', 'iPhone: open in Safari → Share → Add to Home Screen to use it like an app.')}</li>
+            <li>{tx('「電廠」可以搜尋電廠或機組，也能看今天哪些機組在歲修、降載；電廠卡下方可以分享連結。', '“Plants” lets you search plants or units and see which are under maintenance today; share a link from the bottom of a plant card.')}</li>
           </ul>
+          <div className="hl-k" style={{ marginTop: 12 }}>{tx('省電模式', 'Power saving')}　<span className="muted">{powerSave ? tx('目前開啟', 'on now') : tx('目前關閉', 'off now')}</span></div>
+          <div className="seg seg-wrap">
+            {[['auto', tx('自動', 'Auto')], ['on', tx('開', 'On')], ['off', tx('關', 'Off')]].map(([k, label]) => (
+              <button key={k} className={power === k ? 'on' : ''} onClick={() => setPowerPref(k)}>{label}</button>
+            ))}
+          </div>
+          <p className="fine">{tx('省電時粒子減半、畫面每秒 20 張。「自動」會在電池低於 20% 且沒有充電、或手機開了節省數據時開啟。App 在背景時不會抓資料。', 'Power saving halves the particles and draws 20 frames per second. “Auto” turns on when the battery is below 20% and not charging, or Data Saver is on. No data is fetched while the app is in the background.')}</p>
         </div>
       )}
 
@@ -206,24 +217,30 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
             <>
               <div className="hl-k" style={{ marginTop: 14 }}>{t('連線診斷')}</div>
               <ul className="diag">
-                {snapshot.diag.map((d) => (
-                  <li key={d.name} className={d.ok ? 'ok' : 'fail'}>
-                    <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
-                    <b>{t(d.name)}</b>
-                    <small>{d.ok ? `${t('正常')}${d.detail ? ` · ${d.detail}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || tx('未嘗試', 'not tried')}</small>
-                  </li>
-                ))}
+                {snapshot.diag.map((d) => {
+                  const ago = d.ok ? minutesAgo(d.asOf) : null;
+                  return (
+                    <li key={d.name} className={d.ok ? (ago != null && ago > 40 && !/昨日|預測/.test(d.name) ? 'stale' : 'ok') : 'fail'}>
+                      <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
+                      <b>{t(d.name)}</b>
+                      <small>{d.ok ? `${t('正常')}${d.detail ? ` · ${d.detail}` : ''}${ago != null && !/昨日|預測/.test(d.name) ? ` · ${agoLabel(ago)}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || tx('未嘗試', 'not tried')}</small>
+                    </li>
+                  );
+                })}
                 {[
-                  ['環境部 AQI', air?.stations?.length > 0, air?.error],
-                  ['環境部 CEMS', air?.cems && Object.keys(air.cems).length > 0, air?.cemsError],
-                  ['氣象署日射量', !!sun?.factors, sun?.error]
-                ].map(([name, ok, err]) => (
-                  <li key={name} className={ok ? 'ok' : 'fail'}>
-                    <span className={`dot ${ok ? 'live' : 'sim'}`} />
-                    <b>{t(name)}</b>
-                    <small>{ok ? t('正常') : err || t('讀取中…')}</small>
-                  </li>
-                ))}
+                  ['環境部 AQI', air?.stations?.length > 0, air?.error, air?.asOf, air?.staleAt],
+                  ['環境部 CEMS', air?.cems && Object.keys(air.cems).length > 0, air?.cemsError, air?.cemsAsOf],
+                  ['氣象署日射量', !!sun?.factors, sun?.error, sun?.asOf]
+                ].map(([name, ok, err, asOf, staleAt]) => {
+                  const ago = ok ? minutesAgo(asOf) : null;
+                  return (
+                    <li key={name} className={ok ? (staleAt ? 'stale' : 'ok') : 'fail'}>
+                      <span className={`dot ${ok ? 'live' : 'sim'}`} />
+                      <b>{t(name)}</b>
+                      <small>{ok ? `${staleAt ? tx('環境部暫時故障，顯示備份', 'MOENV down — showing backup') : t('正常')}${ago != null ? ` · ${agoLabel(ago)}` : ''}` : tr(err) || t('讀取中…')}</small>
+                    </li>
+                  );
+                })}
               </ul>
               {!live && (
                 <p className="fine">

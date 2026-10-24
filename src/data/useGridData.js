@@ -63,7 +63,9 @@ async function fetchFile(key) {
         tries.push({ url, ok: true });
         // 曲線類資料：顯示筆數與時間範圍，方便確認是否完整
         const detail = Array.isArray(data) && data[0]?.hm ? `${data.length} 筆 ${data[0].hm}–${data[data.length - 1].hm}` : Array.isArray(data) ? `${data.length} 筆` : '';
-        return { data, diag: { name: f.name, ok: true, url, tries, detail } };
+        // 資料時間（給「連線診斷」顯示幾分鐘前）：機組表有 timestamp；今日曲線取最後一筆
+        const asOf = data.timestamp || (key === 'fuelCurve' || key === 'areaCurve' ? data[data.length - 1]?.hm : null) || data.time || null;
+        return { data, diag: { name: f.name, ok: true, url, tries, detail, asOf } };
       }
       tries.push({ url, ok: false, msg: '格式不符' });
     } catch (err) {
@@ -154,6 +156,12 @@ export function useGridData() {
     let alive = true;
     let gotFirst = false;
     const tick = async () => {
+      // 省電：App 在背景時不抓資料，切回前景立刻補抓
+      if (document.hidden && gotFirst) {
+        const back = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', back); tick(); } };
+        document.addEventListener('visibilitychange', back);
+        return;
+      }
       const snap = await loadGridSnapshot({
         forceSim,
         onFirst: (s) => { if (alive && !gotFirst) { gotFirst = true; setSnapshot((cur) => (cur && !cur.cached ? cur : s)); } }

@@ -9,6 +9,12 @@ import { HOLIDAYS } from './advice.js';
  * 時段（週一至週五；週六、週日及離峰日全日離峰）：
  *  二段式  夏月（6/1–9/30）09–24 尖峰；非夏月 06–11、14–24 尖峰
  *  三段式  夏月 16–22 尖峰、09–16 及 22–24 半尖峰；非夏月 06–11、14–24 半尖峰（無尖峰）
+ * 低壓電力（參考）：同一份《簡要電價表》第 6–7 頁，基本電費依「經常契約」容量（瓩）計收
+ *  非時間  經常契約 236.20／173.20 元/瓩/月；流動 4.08／3.87 元/度
+ *  二段式  按戶 262.50 元/月＋經常契約；尖峰 5.54／5.39、週六半尖峰 2.76／2.65、離峰 2.27／2.15
+ *  三段式  按戶 262.50 元/月＋經常契約；尖峰 8.12（夏月）、半尖峰 5.02／4.86、週六半尖峰 2.50／2.40、離峰 2.23／2.12
+ *  週六：二段式尖峰時段、三段式半尖峰時段改按「週六半尖峰」；週日與國定假日全日離峰
+ * 帳單兩個月一期：營業用累進級距加倍、每期超過 4,000 度才加價（依台電電價表附註）
  * 資料只存在這台裝置（localStorage），不會上傳。
  */
 export const RATES = {
@@ -16,8 +22,14 @@ export const RATES = {
   biz: [[330, 2.71, 2.28], [700, 3.76, 3.10], [1500, 4.46, 3.61], [3000, 7.08, 5.56], [Infinity, 7.43, 5.83]],
   two: { base: 75, peak: [5.16, 4.93], off: [2.06, 1.99] },
   three: { base: 75, peak: [7.13, null], half: [4.69, 4.48], off: [2.06, 1.99] },
-  over2000: 1.04
+  over2000: 1.04,
+  lv: {
+    flat: { contract: [236.2, 173.2], kwh: [4.08, 3.87] },
+    two: { base: 262.5, contract: [236.2, 173.2], peak: [5.54, 5.39], sat: [2.76, 2.65], off: [2.27, 2.15] },
+    three: { base: 262.5, contract: [236.2, 173.2], peak: [8.12, null], half: [5.02, 4.86], sat: [2.5, 2.4], off: [2.23, 2.12] }
+  }
 };
+export const LV_NAMES = { lv1: '低壓電力（非時間）', lv2: '低壓電力時間電價（二段式）', lv3: '低壓電力時間電價（三段式）' };
 export const PLAN_NAMES = { biz: '營業用一般電價', two: '簡易型時間電價（二段式）', three: '簡易型時間電價（三段式）' };
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -25,17 +37,20 @@ const pad = (n) => String(n).padStart(2, '0');
 /* ───────── 時段判斷（以「台灣當地時間」的年月日時分計算） ───────── */
 function dayInfo(y, m, d) {
   const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  const off = dow === 0 || dow === 6 || HOLIDAYS.has(`${y}-${pad(m)}-${pad(d)}`);
-  return { summer: m >= 6 && m <= 9, off };
+  const holiday = HOLIDAYS.has(`${y}-${pad(m)}-${pad(d)}`);
+  const off = dow === 0 || dow === 6 || holiday;
+  return { summer: m >= 6 && m <= 9, off, sat: dow === 6 && !holiday };
 }
 export function periodOf(y, m, d, h) {
-  const { summer, off } = dayInfo(y, m, d);
-  if (off) return { two: 'off', three: 'off', summer, dayOff: true };
+  const { summer, off, sat } = dayInfo(y, m, d);
   const two = summer ? (h >= 9 ? 'peak' : 'off') : ((h >= 6 && h < 11) || h >= 14 ? 'peak' : 'off');
   const three = summer
     ? (h >= 16 && h < 22 ? 'peak' : h >= 9 ? 'half' : 'off')
     : ((h >= 6 && h < 11) || h >= 14 ? 'half' : 'off');
-  return { two, three, summer, dayOff: false };
+  // 低壓電力：週六的尖峰／半尖峰時段改算「週六半尖峰」
+  const lvSat = sat && two === 'peak' ? 'sat' : 'off';
+  if (off) return { two: 'off', three: 'off', lv2: lvSat, lv3: lvSat, summer, dayOff: true };
+  return { two, three, lv2: two, lv3: three, summer, dayOff: false };
 }
 
 /* ───────── CSV 解析（盡量寬鬆：直式「時間,度數」或橫式「日期,96 個時段」都可以） ───────── */
@@ -152,8 +167,10 @@ export function aggregate({ points, interval }) {
     const key = `${y}-${pad(m)}`;
     const p = periodOf(y, m, d, h);
     const M = months[key] ||= { key, summer: p.summer, kwh: 0, two: { peak: 0, off: 0 }, three: { peak: 0, half: 0, off: 0 },
+      lv2: { peak: 0, sat: 0, off: 0 }, lv3: { peak: 0, half: 0, sat: 0, off: 0 }, maxKw: 0,
       wk: Array(24).fill(0), we: Array(24).fill(0), wkDays: 0, weDays: 0, days: 0 };
-    M.kwh += v; M.two[p.two] += v; M.three[p.three] += v;
+    M.kwh += v; M.two[p.two] += v; M.three[p.three] += v; M.lv2[p.lv2] += v; M.lv3[p.lv3] += v;
+    M.maxKw = Math.max(M.maxKw, (v * 60) / interval);
     (p.dayOff ? M.we : M.wk)[h] += v;
     const dk = `${key}-${pad(d)}`;
     if (!days[dk]) { days[dk] = 1; M.days++; p.dayOff ? M.weDays++ : M.wkDays++; }
@@ -166,46 +183,87 @@ export function aggregate({ points, interval }) {
     M.kwh = r2(M.kwh);
     for (const k of Object.keys(M.two)) M.two[k] = r2(M.two[k]);
     for (const k of Object.keys(M.three)) M.three[k] = r2(M.three[k]);
+    for (const k of Object.keys(M.lv2)) M.lv2[k] = r2(M.lv2[k]);
+    for (const k of Object.keys(M.lv3)) M.lv3[k] = r2(M.lv3[k]);
+    M.maxKw = r2(M.maxKw);
     M.wk = M.wk.map(r2); M.we = M.we.map(r2);
   }
   return months;
 }
 
 /* ───────── 電費試算 ───────── */
-function bizBill(kwh, summer) {
+/** 營業用累進電費；mult = 2 表示兩個月一期（級距加倍）；summerShare = 夏月度數比例（跨季的雙月帳單） */
+function bizBill(kwh, summerShare, mult = 1) {
   let rest = kwh, prev = 0, sum = 0;
   for (const [cap, s, o] of RATES.biz) {
-    const n = Math.max(0, Math.min(rest, cap - prev));
-    sum += n * (summer ? s : o); rest -= n; prev = cap;
+    const c = cap * mult;
+    const n = Math.max(0, Math.min(rest, c - prev));
+    sum += n * (s * summerShare + o * (1 - summerShare)); rest -= n; prev = c;
     if (rest <= 0) break;
   }
   return sum;
 }
 /** shift：把尖峰（三段式含半尖峰）用電的這個比例移到離峰，看可以再省多少 */
-export function bills(M, shift = 0) {
+export function bills(M, shift = 0, { kw = 0, overKwh } = {}) {
   const s = M.summer ? 0 : 1;
-  const over = Math.max(0, M.kwh - 2000) * RATES.over2000;
+  const over = (overKwh ?? Math.max(0, M.kwh - 2000)) * RATES.over2000;
   const mv2 = M.two.peak * shift;
   const two = RATES.two.base + (M.two.peak - mv2) * RATES.two.peak[s] + (M.two.off + mv2) * RATES.two.off[s] + over;
   const pk3 = M.three.peak * (1 - shift), hf3 = M.three.half * (1 - shift);
   const mv3 = M.three.peak + M.three.half - pk3 - hf3;
   const three = RATES.three.base + pk3 * (RATES.three.peak[s] ?? RATES.three.half[s]) + hf3 * RATES.three.half[s]
     + (M.three.off + mv3) * RATES.three.off[s] + over;
-  return { biz: Math.round(bizBill(M.kwh, M.summer)), two: Math.round(two), three: Math.round(three) };
+  const out = { biz: Math.round(bizBill(M.kwh, M.summer ? 1 : 0)), two: Math.round(two), three: Math.round(three) };
+  // 低壓電力（參考）：需要經常契約容量；舊的匯入資料沒有週六分項 → 不算
+  if (kw > 0 && M.lv2) {
+    const L = RATES.lv;
+    out.lv1 = Math.round(kw * L.flat.contract[s] + M.kwh * L.flat.kwh[s]);
+    const m2 = M.lv2.peak * shift;
+    out.lv2 = Math.round(L.two.base + kw * L.two.contract[s] + (M.lv2.peak - m2) * L.two.peak[s] + M.lv2.sat * L.two.sat[s] + (M.lv2.off + m2) * L.two.off[s]);
+    const p3 = M.lv3.peak * (1 - shift), h3 = M.lv3.half * (1 - shift), m3 = M.lv3.peak + M.lv3.half - p3 - h3;
+    out.lv3 = Math.round(L.three.base + kw * L.three.contract[s] + p3 * (L.three.peak[s] ?? L.three.half[s]) + h3 * L.three.half[s]
+      + M.lv3.sat * L.three.sat[s] + (M.lv3.off + m3) * L.three.off[s]);
+  }
+  return out;
 }
 
-export function summarize(months, shift = 0) {
-  const list = Object.values(months).sort((a, b) => a.key.localeCompare(b.key));
-  const rows = list.map((M) => ({ ...M, bill: bills(M, shift), bill0: bills(M, 0) }));
+/** 兩個月一期：把月份兩兩配對（startOdd = 1–2、3–4 月…；否則 2–3、4–5 月…），配對內的營業用級距與 4,000 度門檻合併計算，再依度數分回各月 */
+function pairBimonthly(rows, startOdd) {
+  const byKey = Object.fromEntries(rows.map((r) => [r.key, r]));
+  for (const r of rows) {
+    const [y, m] = r.key.split('-').map(Number);
+    const first = (m % 2 === 1) === startOdd;
+    const [py, pm] = first ? (m === 12 ? [y + 1, 1] : [y, m + 1]) : (m === 1 ? [y - 1, 12] : [y, m - 1]);
+    const mate = byKey[`${py}-${pad(pm)}`];
+    if (!mate) { r.pairOf = null; continue; }
+    r.pairOf = mate.key;
+    const kwh = r.kwh + mate.kwh || 1;
+    const summerShare = ((r.summer ? r.kwh : 0) + (mate.summer ? mate.kwh : 0)) / kwh;
+    r.pairBiz = bizBill(r.kwh + mate.kwh, summerShare, 2) * (r.kwh / kwh);
+    r.pairOver = Math.max(0, r.kwh + mate.kwh - 4000) * (r.kwh / kwh);
+  }
+}
+
+/** 建議的經常契約容量（瓩）：最大 15 分鐘需量，取整數 */
+export const suggestKw = (months) => Math.ceil(Math.max(0, ...Object.values(months).map((M) => M.maxKw || 0)));
+
+export function summarize(months, shift = 0, { bimonthly = null, kw = 0 } = {}) {
+  const list = Object.values(months).sort((a, b) => a.key.localeCompare(b.key)).map((M) => ({ ...M }));
+  if (bimonthly) pairBimonthly(list, bimonthly === 'odd');
+  const opt = (r) => ({ kw, overKwh: bimonthly && r.pairOf ? r.pairOver : undefined });
+  const fix = (r, b) => (bimonthly && r.pairOf ? { ...b, biz: Math.round(r.pairBiz) } : b);
+  const rows = list.map((M) => ({ ...M, bill: fix(M, bills(M, shift, opt(M))), bill0: fix(M, bills(M, 0, opt(M))) }));
   const full = rows.filter((r) => r.full);
   const base = full.length ? full : rows;
-  const tot = (k, src = 'bill') => base.reduce((a, r) => a + r[src][k], 0);
+  const tot = (k, src = 'bill') => base.reduce((a, r) => a + (r[src][k] ?? 0), 0);
   const totals = { biz: tot('biz', 'bill0'), two: tot('two', 'bill0'), three: tot('three', 'bill0') };
   const shifted = { two: tot('two'), three: tot('three') };
+  const hasLv = kw > 0 && base.every((r) => r.bill0.lv1 != null);
+  const lv = hasLv ? { lv1: tot('lv1', 'bill0'), lv2: tot('lv2', 'bill0'), lv3: tot('lv3', 'bill0'), lv2s: tot('lv2'), lv3s: tot('lv3') } : null;
   const best = Object.entries(totals).sort((a, b) => a[1] - b[1])[0][0];
   const kwh = base.reduce((a, r) => a + r.kwh, 0) || 1;
   return {
-    rows, totals, shifted, best, months: base.length, onlyPartial: !full.length,
+    rows, totals, shifted, best, lv, months: base.length, onlyPartial: !full.length, needReimport: kw > 0 && !hasLv,
     peakShare2: base.reduce((a, r) => a + r.two.peak, 0) / kwh,
     peakShare3: base.reduce((a, r) => a + r.three.peak + r.three.half, 0) / kwh
   };

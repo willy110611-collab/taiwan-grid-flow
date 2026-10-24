@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BADGES } from '../data/badges.js';
 import { REGION_KEYS } from '../config/geo.js';
 import { EVIDENCE } from '../config/energy.js';
@@ -94,6 +94,7 @@ export function Medal({ badge, earned, size = 64 }) {
 
 export function BadgePanel({ badges, live, onClose }) {
   useT();
+  const [sel, setSel] = useState(null);
   const { earned, progress } = badges;
   const count = BADGES.filter((b) => earned[b.id]).length;
   const groups = [['grid', tx('電網徽章', 'Grid badges'), tx('真實電網出現這個狀態的當下打開才拿得到', 'Earned only when the real grid is in that state while the app is open')], ['explore', tx('探索徽章', 'Explorer badges'), tx('使用光脈搏的各種方式', 'Ways to use the app')]];
@@ -107,17 +108,29 @@ export function BadgePanel({ badges, live, onClose }) {
             {BADGES.filter((b) => b.kind === kind).map((b) => {
               const e = earned[b.id];
               return (
-                <li key={b.id} className={e ? 'on' : ''}>
+                <li key={b.id} className={`${e ? 'on' : ''} ${sel === b.id ? 'sel' : ''}`} onClick={() => setSel(sel === b.id ? null : b.id)} onMouseEnter={() => setSel(b.id)}>
                   <Medal badge={b} earned={!!e} size={58} />
                   <b>{tx(b.name, b.nameEn)}</b>
                   <small>{e ? new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US')) : b.progress ? b.progress(progress) : t(b.rarity)}</small>
-                  <span className="badge-tip">{e ? tx(b.desc, b.descEn) : `${tx(b.desc, b.descEn)}\n${tx('提示：', 'Hint: ')}${tx(b.hint, b.hintEn)}`}</span>
                 </li>
               );
             })}
           </ul>
+          {(() => {
+            const b = BADGES.find((x) => x.id === sel && x.kind === kind);
+            if (!b) return null;
+            const e = earned[b.id];
+            return (
+              <div className="badge-detail" ref={(el) => el && el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}>
+                <b>{tx(b.name, b.nameEn)}</b>{e && <small>　{tx('已取得', 'Earned')} {new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US'))}</small>}
+                <p>{tx(b.desc, b.descEn)}</p>
+                {!e && <p className="muted">{tx('提示：', 'Hint: ')}{tx(b.hint, b.hintEn)}</p>}
+              </div>
+            );
+          })()}
         </section>
       ))}
+      {!sel && <p className="fine">{tx('點一下徽章看說明與取得提示。', 'Tap a badge for its description and hint.')}</p>}
       <p className="fine">{tx('徽章存在這台裝置的瀏覽器裡，清除瀏覽資料會一併清除。', 'Badges are stored in this device’s browser; clearing browsing data removes them.')}</p>
     </Panel>
   );

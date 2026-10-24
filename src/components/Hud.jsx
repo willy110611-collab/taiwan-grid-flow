@@ -9,6 +9,7 @@ import { twHM } from '../data/history.js';
 import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 import { PlantPanel } from './Plant.jsx';
 import { StorePanel } from './Store.jsx';
+import { FinderPanel } from './Finder.jsx';
 import { useT, useLang } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
@@ -19,7 +20,7 @@ import { useUpdate } from '../update.js';
  *  左下：時間 · 頻率 · 日出日落 下中：工具列（放空 / 亮點 / 資訊）  右下：圖例 + 來源
  *  桌布模式只保留品牌、佔比、時間、巡航場景名與一行來源。
  */
-export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpaper, badges, anomaly, rows, replay, setReplay, onReplayFinish, home, setHome, homeSum, advice, air, hasYesterday, sun, records }) {
+export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpaper, badges, anomaly, rows, replay, setReplay, onReplayFinish, home, setHome, homeSum, advice, air, hasYesterday, sun, records, powerSave, power, getView }) {
   const stats = useMemo(() => {
     if (!snapshot) return null;
     const totals = snapshot.totals;
@@ -132,6 +133,9 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           <button className={ui.cruise ? 'on' : ''} onClick={() => setUi({ toggleCruise: true })}>
             {Icon.cruise}<span>{t('放空')}</span>
           </button>
+          <button className={ui.panel === 'finder' || ui.panel === 'plant' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'finder' ? null : 'finder' })}>
+            {Icon.search}<span>{t('電廠')}</span>
+          </button>
           <button className={ui.panel === 'home' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })}>
             {Icon.home}<span>{t('我的家')}</span>
           </button>
@@ -201,11 +205,12 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {!wallpaper && !(upd.available && !upd.dismissed) && <Tour />}
 
       {ui.panel === 'highlights' && <HighlightsPanel hl={highlights} records={records} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'info' && <InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} onClose={() => setUi({ panel: null, infoTab: null })} />}
+      {ui.panel === 'info' && <InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} power={power} powerSave={powerSave} onClose={() => setUi({ panel: null, infoTab: null })} />}
       {ui.panel === 'demand' && <DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'home' && <HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'air' && <AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'plant' && ui.plantId && <PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'plant' && ui.plantId && <PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'finder' && <FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'store' && <StorePanel onClose={() => setUi({ panel: null })} />}
       {ui.panel === 'badges' && <BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} />}
     </div>

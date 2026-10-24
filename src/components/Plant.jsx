@@ -1,11 +1,14 @@
 import { Panel } from './Panels.jsx';
-import { fmtMw, rgb } from './widgets.jsx';
+import { useState } from 'react';
+import { fmtMw, rgb, Sparkline, Icon } from './widgets.jsx';
 import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
 import { FUELS } from '../config/energy.js';
 import { nearestWind } from '../data/useAir.js';
 import { solarSun } from '../data/parseGenary.js';
 import { windText } from './Life.jsx';
-import { useT, isEn } from '../i18n.js';
+import { useT, isEn, tx } from '../i18n.js';
+import { twHM } from '../data/history.js';
+import { shareLink, plantLink } from '../share.js';
 
 /** 機組備註 → 標籤顏色 */
 const NOTE_TONE = [
@@ -21,10 +24,19 @@ const NOTE_TONE = [
  *  ・抽蓄水力：抽水（儲能）中的電量
  *  ・沒有逐機組資料的節點（各縣市太陽能群等）：說明分配方式
  */
-export function PlantPanel({ id, snapshot, air, onClose }) {
+export function PlantPanel({ id, snapshot, air, rows, onClose }) {
   const t = useT();
+  const [msg, setMsg] = useState('');
   const cfg = PLANTS.find((p) => p.id === id);
   if (!cfg) return null;
+  // E2：今天 00:00 到現在的出力（回放用的歷史紀錄；打開 App 之前的時段依燃料曲線推估）
+  const series = (rows || []).map((r) => ({ t: r.t, mw: r.plants?.find((p) => p.id === id)?.mw ?? 0, est: !!r.reconstructed }));
+  const peak = series.reduce((a, x) => (x.mw > (a?.mw ?? -1) ? x : a), null);
+  const low = series.reduce((a, x) => (x.mw < (a?.mw ?? Infinity) ? x : a), null);
+  const share = async () => {
+    const r = await shareLink(plantLink(id), `${cfg.name}｜台灣光脈搏`);
+    setMsg(r === 'copied' ? tx('已複製連結', 'Link copied') : r === 'failed' ? tx('無法分享，請手動複製網址', 'Could not share; copy the address manually') : '');
+  };
   const s = snapshot?.plants?.find((p) => p.id === id);
   const mw = s?.mw || 0;
   const units = (snapshot?.units || []).filter((u) => u.plantId === id && !u.load)
@@ -46,6 +58,16 @@ export function PlantPanel({ id, snapshot, air, onClose }) {
           {mix.map(([f, v]) => (
             <span key={f} style={{ flexGrow: v, background: rgb(FUELS[f]?.color || [200, 200, 200]) }} title={FUELS[f]?.label} />
           ))}
+        </div>
+      )}
+      {series.length >= 3 && peak?.mw > 0 && (
+        <div className="plant-spark">
+          <Sparkline values={series.map((x) => x.mw)} color={rgb(FUELS[mix[0]?.[0]]?.color || [110, 240, 190])} w={300} h={40} />
+          <p className="fine">
+            {tx('今日', 'Today')} {twHM(series[0].t)}–{twHM(series[series.length - 1].t)}{'　'}
+            {tx('最高', 'High')} <b>{fmtMw(peak.mw)}</b> MW（{twHM(peak.t)}）{'　'}{tx('最低', 'Low')} {fmtMw(low.mw)} MW（{twHM(low.t)}）
+            {series.some((x) => x.est) ? tx('　＊打開 App 前的時段依燃料曲線推估', '　* hours before you opened the app are estimated from fuel curves') : ''}
+          </p>
         </div>
       )}
       {mix.length > 0 && (
@@ -107,6 +129,10 @@ export function PlantPanel({ id, snapshot, air, onClose }) {
         </div>
       )}
       <p className="fine">{t('資料：台灣電力公司「今日電力資訊」各機組發電量，每 10 分鐘更新。')}</p>
+      <div className="store-btns">
+        <button onClick={share}>{Icon.share}<span>{tx('分享這座電廠', 'Share this plant')}</span></button>
+      </div>
+      {msg && <p className="fine green">{msg}</p>}
     </Panel>
   );
 }

@@ -10,6 +10,7 @@ import { useAir, useSun, nearestStation } from './data/useAir.js';
 import { useHome, useNotify, townName } from './data/useHome.js';
 import { usageAdvice } from './data/advice.js';
 import { homeSummary } from './components/Life.jsx';
+import { getPowerPref } from './power.js';
 
 /**
  * 網址參數
@@ -18,6 +19,8 @@ import { homeSummary } from './components/Life.jsx';
  *  ?density=2       粒子密度倍率
  *  ?fps=60          強制幀率
  *  ?demo=anomaly    展示機組異常橫幅
+ *  ?plant=taichung  分享連結：打開就飛到這座電廠並打開電廠卡
+ *  ?view=經度,緯度,縮放  分享連結：打開就是這個畫面
  */
 const params = new URLSearchParams(location.search);
 const WALLPAPER = params.get('mode') === 'wallpaper';
@@ -37,6 +40,14 @@ function saveView(v) {
   try { v ? localStorage.setItem(VIEW_KEY, JSON.stringify(v)) : localStorage.removeItem(VIEW_KEY); } catch { /* 無法儲存時只在本次有效 */ }
 }
 const SAVED_VIEW = WALLPAPER ? loadView() : null;
+// 分享連結帶的畫面位置
+const VIEW_PARAM = (() => {
+  const v = (params.get('view') || '').split(',').map(Number);
+  return v.length >= 3 && v.every(Number.isFinite) ? { center: [v[0], v[1]], zoom: v[2], pitch: v[3] || 0, bearing: v[4] || 0 } : null;
+})();
+const PLANT_PARAM = params.get('plant');
+
+
 
 export default function App() {
   const snapshot = useGridData();
@@ -95,11 +106,11 @@ export default function App() {
     mode: WALLPAPER ? 'wallpaper' : 'app',
     onStats: setStats,
     onDaylight: setDaylight,
-    initialView: SAVED_VIEW,
+    initialView: SAVED_VIEW || VIEW_PARAM,
     onUserMove: () => armAutoLock(),
     onPlantVisit: (id) => recordRef.current('plant', id),
     onAway: (away) => setUiState((s) => (s.away === away ? s : { ...s, away })),
-    onPlantSelect: (id) => setUiState((s) => ({ ...s, panel: 'plant', plantId: id })),
+    onPlantSelect: (id) => setUiState((s) => ({ ...s, panel: 'plant', plantId: id, fly: false })),
     onShot: (shot) => {
       if (shot) recordRef.current('shot', shot);
       setUiState((s) => ({ ...s, shot, cruise: shot ? true : WALLPAPER ? s.cruise : false }));
@@ -162,6 +173,19 @@ export default function App() {
       setUiState((s) => ({ ...s, cruise: !!on, away: !!on, panel: on && MOBILE ? null : s.panel }));
       return;
     }
+    if (patch.openPlant) {
+      // 搜尋、今日異常清單、分享連結：飛到電廠並打開電廠卡（手機先記住原本畫面，關卡片時回去）
+      const p = e?.plants.find((x) => x.id === patch.openPlant || x.name === patch.openPlant);
+      if (e && p) {
+        if (MOBILE) {
+          const m = e.map;
+          e.sheetSaved ||= { center: m.getCenter(), zoom: m.getZoom(), pitch: m.getPitch(), bearing: m.getBearing() };
+        }
+        e.focusPlant(p.pos, { padding: MOBILE ? { bottom: Math.round(innerHeight * 0.5), top: 140 } : { right: 420 } });
+      }
+      if (p) setUiState((s) => ({ ...s, panel: 'plant', plantId: p.id, fly: true, cruise: false }));
+      return;
+    }
     if (patch.resetView) {
       e?.resetView();
       setUiState((s) => ({ ...s, cruise: false, away: false }));
@@ -199,23 +223,52 @@ export default function App() {
   }, []);
 
   // 手機：底部抽屜打開時，把地圖移到抽屜上方看得到的區域；關閉時回到原本的視角
+  //  電廠卡：保持使用者目前的縮放，只平移讓電廠露出來（電廠本來就看得到就不動）
   useEffect(() => {
     const e = engine.current;
     if (!e || WALLPAPER || !MOBILE) return;
     if (!ui.panel) { e.restoreSheetView(); return; }
+    if (ui.panel === 'plant' && ui.fly) return; // 已經飛過去了
     const id = requestAnimationFrame(() => {
       const sheet = document.querySelector('.panel');
       const top = (document.querySelector('.mix .supply') || document.querySelector('.mix'))?.getBoundingClientRect().bottom ?? 120;
       if (!sheet) return;
       e.cruise.stop();
-      e.fitAboveSheet({ sheetPx: sheet.getBoundingClientRect().height, topPx: top + 8, focus: ui.panel === 'home' && home.pos ? home.pos : null });
+      const sheetPx = sheet.getBoundingClientRect().height;
+      const plant = ui.panel === 'plant' ? e.plants.find((p) => p.id === ui.plantId) : null;
+      if (plant) e.panAboveSheet({ sheetPx, topPx: top + 8, pos: plant.pos });
+      else e.fitAboveSheet({ sheetPx, topPx: top + 8, focus: ui.panel === 'home' && home.pos ? home.pos : null });
     });
     return () => cancelAnimationFrame(id);
-  }, [ui.panel, home.pos?.[0], home.pos?.[1]]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ui.panel, ui.plantId, home.pos?.[0], home.pos?.[1]]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 分享連結 ?plant=：資料到了、地圖準備好就飛過去
+  const plantOpened = useRef(false);
+  useEffect(() => {
+    if (!PLANT_PARAM || plantOpened.current || !snapshot || !engine.current) return;
+    plantOpened.current = true;
+    const id = setTimeout(() => setUi({ openPlant: PLANT_PARAM }), 600);
+    return () => clearTimeout(id);
+  }, [snapshot, setUi]);
+
+  // 省電模式
+  const [power, setPower] = useState(getPowerPref);
+  const [lowBattery, setLowBattery] = useState(false);
+  useEffect(() => {
+    const onPref = () => setPower(getPowerPref());
+    addEventListener('tgf-power', onPref);
+    let bat = null;
+    const upd = () => setLowBattery(!!bat && bat.level < 0.2 && !bat.charging);
+    navigator.getBattery?.().then((b) => { bat = b; upd(); b.addEventListener('levelchange', upd); b.addEventListener('chargingchange', upd); }).catch(() => {});
+    return () => { removeEventListener('tgf-power', onPref); bat?.removeEventListener('levelchange', upd); bat?.removeEventListener('chargingchange', upd); };
+  }, []);
+  const saveData = !!navigator.connection?.saveData;
+  const powerSave = power === 'on' || (power === 'auto' && (lowBattery || saveData));
+  useEffect(() => { engine.current?.setPowerSave(powerSave); }, [powerSave, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <main className={`app ${WALLPAPER ? 'wallpaper' : ''}`} style={daylight ? { '--sky': daylight.sky } : undefined}>
-      <GridFlowMap snapshot={shown} options={options} onReady={(e) => (engine.current = e)} />
+      <GridFlowMap snapshot={shown} options={options} onReady={(e) => { engine.current = e; if (params.has('debug')) window.tgf = e; }} />
       <div className="sky" style={{ opacity: daylight ? 0.25 + daylight.day * 0.35 + daylight.twilight * 0.4 : 0.3 }} />
       <div className="vignette" />
       <Hud
@@ -239,6 +292,9 @@ export default function App() {
         homeSum={homeSum}
         advice={advice}
         air={air}
+        powerSave={powerSave}
+        power={power}
+        getView={() => engine.current?.getView()}
       />
     </main>
   );

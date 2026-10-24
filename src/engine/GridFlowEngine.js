@@ -69,6 +69,8 @@ export class GridFlowEngine {
     this.regions = null;
     this.mode = mode;
     this.frameMs = 1000 / fps;
+    this.baseFrameMs = this.frameMs;
+    this.baseDensity = density;
     this.onStats = onStats;
     this.onDaylight = onDaylight;
     this.sprite = createGlowSprite();
@@ -171,6 +173,7 @@ export class GridFlowEngine {
 
   /** 新的電網快照進來：更新節點目標值、重算流向矩陣 */
   setSnapshot(snapshot) {
+    this.lastSnapshot = snapshot;
     this.source = snapshot.source;
     const byId = Object.fromEntries(snapshot.plants.map((p) => [p.id, p]));
     for (const p of this.plants) {
@@ -293,6 +296,42 @@ export class GridFlowEngine {
     } else {
       m.fitBounds(TAIWAN_BOUNDS, { padding, pitch: 0, bearing: 0, duration: 1100 });
     }
+  }
+
+  /**
+   * 手機底部抽屜打開「電廠卡」：保持目前的縮放、傾斜與角度，只平移讓電廠落在抽屜上方
+   *  電廠本來就在看得到的地方 → 完全不動；關閉抽屜時 restoreSheetView 回到原畫面
+   */
+  panAboveSheet({ sheetPx, topPx, pos }) {
+    const m = this.map;
+    this.sheetSaved ||= { center: m.getCenter(), zoom: m.getZoom(), pitch: m.getPitch(), bearing: m.getBearing() };
+    const H = m.getContainer().clientHeight, W = m.getContainer().clientWidth;
+    const pt = m.project(pos);
+    const margin = 36;
+    const visible = pt.y > topPx + margin && pt.y < H - sheetPx - margin && pt.x > margin && pt.x < W - margin;
+    if (visible) return;
+    m.setMaxBounds(null);
+    m.easeTo({ center: pos, padding: { top: topPx, bottom: sheetPx, left: 12, right: 12 }, duration: 700 });
+  }
+
+  /** 搜尋或分享連結選到電廠：飛過去（至少拉近到看得清楚的距離），right/bottom 留給面板 */
+  focusPlant(pos, { padding = {}, minZoom = 8.6 } = {}) {
+    const m = this.map;
+    this.cruise.stop();
+    this.userMoved = true;
+    this.onAway?.(true);
+    m.setMaxBounds(null);
+    m.easeTo({ center: pos, zoom: Math.max(m.getZoom(), minZoom), padding: { top: 0, bottom: 0, left: 0, right: 0, ...padding }, duration: 1200 });
+    m.once('moveend', () => m.setMaxBounds(MAX_BOUNDS));
+  }
+
+  /** 省電：降低幀率與粒子量（電池低、使用者開啟省電模式） */
+  setPowerSave(on) {
+    if (this.powerSave === on) return;
+    this.powerSave = on;
+    this.frameMs = on ? Math.max(this.baseFrameMs, 1000 / 20) : this.baseFrameMs;
+    this.particles.density = this.baseDensity * (on ? 0.5 : 1);
+    if (this.lastSnapshot) this.setSnapshot(this.lastSnapshot);
   }
 
   /** 抽屜關閉：回到原本的視角 */
