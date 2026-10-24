@@ -472,6 +472,7 @@ a:hover { text-decoration: underline; }
 .tag.warm { color: rgb(255, 150, 110); }
 .units { list-style: none; margin: 6px 0 0; padding: 0; }
 .units li { display: grid; grid-template-columns: minmax(84px, 1.2fr) 1fr auto; align-items: center; gap: 4px 10px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.nw { white-space: nowrap; }
 .nuke-list { list-style: none; margin: 8px 0 4px; padding: 0; }
 .nuke-list li { border-top: 1px solid var(--line); }
 .nuke-list button { display: flex; width: 100%; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 0; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; }

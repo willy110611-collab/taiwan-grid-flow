@@ -227,6 +227,11 @@ export default function App() {
     return () => removeEventListener('orientationchange', onResize);
   }, []);
 
+  // 從清單、搜尋打開電廠卡時，地圖上的電廠標籤也換成這一座（不要留著上一座的標籤）
+  useEffect(() => {
+    if (ui.panel === 'plant' && ui.plantId) engine.current?.setHover(ui.plantId);
+  }, [ui.panel, ui.plantId]);
+
   // 手機：底部抽屜打開時，把地圖移到抽屜上方看得到的區域；關閉時回到原本的視角
   //  電廠卡：保持使用者目前的縮放，只平移讓電廠露出來（電廠本來就看得到就不動）
   useEffect(() => {

@@ -66,7 +66,7 @@ export function NuclearStatus({ id }) {
       <div className="hl-k">{tx('核能機組現況', 'Nuclear units')}</div>
       <p className="fine">
         <em className="tag">{isEn() ? n.statusEn : n.status}</em>{' '}
-        {tx(`1 號機運轉執照 ${n.licenseEnd[0]} 屆期、2 號機 ${n.licenseEnd[1]} 屆期。`, `Unit 1 licence expired ${n.licenseEnd[0]}, unit 2 ${n.licenseEnd[1]}. `)}
+        {tx('1 號機運轉執照 ', 'Unit 1 licence expired ')}<span className="nw">{n.licenseEnd[0]}</span>{tx(' 屆期、2 號機 ', ', unit 2 ')}<span className="nw">{n.licenseEnd[1]}</span>{tx(' 屆期。', '. ')}
         {isEn() ? n.noteEn : n.note}
       </p>
       <p className="fine">

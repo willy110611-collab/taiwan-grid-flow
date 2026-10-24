@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FUELS } from '../config/energy.js';
-import { parseGenary } from './parseGenary.js';
+import { parseGenary, islandEstimate } from './parseGenary.js';
 import { mockGenary } from './mockGenary.js';
 import { buildSnapshot } from './useGridData.js';
 import { computeRegions } from './regions.js';
@@ -30,7 +30,7 @@ export function compact(s) {
     total: r1(s.total),
     totals: Object.fromEntries(Object.entries(s.totals).map(([k, v]) => [k, r1(v)])),
     plants: s.plants.map((p) => ({
-      id: p.id, mw: r1(p.mw), liveMw: r1(p.liveMw || 0),
+      id: p.id, mw: r1(p.mw), liveMw: r1(p.liveMw || 0), ...(p.estimated ? { estimated: true } : {}),
       mix: Object.fromEntries(Object.entries(p.mix).map(([k, v]) => [k, r1(v)]))
     })),
     regions: s.regions,
@@ -79,7 +79,7 @@ function reconstructDay(snap, fuel = snap.curves?.fuel, areaRows = snap.curves?.
   const weights = {};
   const fuels = new Set([...Object.keys(snap.totals), ...fuel.flatMap((r) => Object.keys(r.totals))]);
   for (const f of fuels) {
-    let w = snap.plants.map((p) => p.mix[f] || 0);
+    let w = snap.plants.map((p) => (p.estimated ? 0 : p.mix[f] || 0)); // 推估的離島不參與分配，下面另外推估
     let sum = w.reduce((a, b) => a + b, 0);
     let coverage = snap.totals[f] > 0 ? Math.min(1, sum / snap.totals[f]) : 1;
     if (!sum) {
@@ -94,6 +94,11 @@ function reconstructDay(snap, fuel = snap.curves?.fuel, areaRows = snap.curves?.
     const [h, m] = row.hm.split(':').map(Number);
     const t = midnight + (h * 60 + m) * 60000;
     const plants = snap.plants.map((p, i) => {
+      // 台電未即時公布的離島：回放時也用同一套推估（依季節與時段），不從全台燃油曲線分配
+      if (p.estimated) {
+        const est = PLANTS.find((x) => x.id === p.id)?.est;
+        if (est) { const mw = islandEstimate(est, new Date(t)); return { id: p.id, mw, liveMw: 0, mix: { oil: mw }, estimated: true }; }
+      }
       const mix = {};
       for (const [f, mw] of Object.entries(row.totals)) {
         const wf = weights[f];

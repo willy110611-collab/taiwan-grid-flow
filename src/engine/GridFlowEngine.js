@@ -318,10 +318,12 @@ export class GridFlowEngine {
     const H = m.getContainer().clientHeight, W = m.getContainer().clientWidth;
     const pt = m.project(pos);
     const margin = 36;
-    const visible = pt.y > topPx + margin && pt.y < H - sheetPx - margin && pt.x > margin && pt.x < W - margin;
-    if (visible) return;
+    // 只平移「剛好讓電廠露出來」的距離，不把它移到正中央（例如核三在最南端，置中會空出一大片海）
+    const dy = pt.y > H - sheetPx - margin ? pt.y - (H - sheetPx - margin * 2) : pt.y < topPx + margin ? pt.y - (topPx + margin * 2) : 0;
+    const dx = pt.x < margin ? pt.x - margin * 2 : pt.x > W - margin ? pt.x - (W - margin * 2) : 0;
+    if (!dx && !dy) return;
     m.setMaxBounds(null);
-    m.easeTo({ center: pos, padding: { top: topPx, bottom: sheetPx, left: 12, right: 12 }, duration: 700 });
+    m.panBy([dx, dy], { duration: 700 });
   }
 
   /** 搜尋或分享連結選到電廠：飛過去（至少拉近到看得清楚的距離），right/bottom 留給面板 */
