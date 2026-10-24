@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GUIDE } from './Guide.jsx';
 import { APP } from '../config/app.js';
 import { EVIDENCE } from '../config/energy.js';
@@ -22,9 +22,12 @@ export function Panel({ title, onClose, children }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+  // 鍵盤：打開時把焦點移進面板（Tab 從面板開始），不捲動頁面
+  const ref = useRef(null);
+  useEffect(() => { if (ref.current && !ref.current.contains(document.activeElement)) ref.current.focus({ preventScroll: true }); }, []);
   title = t(title);
   return (
-    <section className="panel" role="dialog" aria-label={title}>
+    <section className="panel" role="dialog" aria-label={title} tabIndex={-1} ref={ref}>
       <div className="panel-grip" onClick={onClose} />
       <header className="panel-head">
         <h2>{title}</h2>
