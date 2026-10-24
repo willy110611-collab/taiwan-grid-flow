@@ -32,7 +32,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: 檢查英文翻譯
-        run: npm run check
+        run: npm run check --if-present   # 舊版本（回到上一版時）沒有這個檢查就略過
 
       - name: 抓取台電「今日電力資訊」公開資料
         continue-on-error: true
@@ -64,8 +64,12 @@ jobs:
       - name: 冒煙測試（推送新版時）
         if: github.event_name != 'schedule'
         run: |
-          npx playwright install --with-deps chromium
-          npm run smoke
+          if [ -f scripts/smoke.mjs ]; then
+            npx playwright install --with-deps chromium
+            npm run smoke
+          else
+            echo "這個版本沒有冒煙測試，略過"
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
