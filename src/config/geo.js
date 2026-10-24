@@ -125,7 +125,7 @@ export const REGIONS = {
        counties: ['苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣'] },
   S: { name: '南部', en: 'SOUTH',   share: 0.295, label: [119.98, 22.82], anchor: 'end',
        counties: ['嘉義市', '嘉義縣', '臺南市', '高雄市', '屏東縣', '澎湖縣', '金門縣'] },
-  E: { name: '東部', en: 'EAST',    share: 0.02,  label: [121.62, 23.15], anchor: 'start',
+  E: { name: '東部', en: 'EAST',    share: 0.02,  label: [121.2, 22.98], anchor: 'start', // 放在台東外側偏西：避免被電腦版右側面板蓋住
        counties: ['花蓮縣', '臺東縣'] }
 };
 export const REGION_KEYS = ['N', 'C', 'S', 'E'];
