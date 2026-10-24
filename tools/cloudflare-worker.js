@@ -683,12 +683,21 @@ async function openRoute(ctx, file) {
  *  Country：各縣市 c0＝目前停電戶數、c1＝曾經停電戶數；typhoonVer：資料時間；title.json：事件名稱 */
 const PSVS = 'https://service.taipower.com.tw/psvs1/';
 const psvsGet = async (path) => {
-  const r = await fetch(`${PSVS}${path}${path.includes('?') ? '&' : '?'}_=${Date.now()}`, { headers: { ...UA, Referer: PSVS, Accept: 'application/json' } });
-  if (!r.ok) throw new Error(`台電停電資訊回應 ${r.status}`);
-  return JSON.parse((await r.text()).replace(/^\uFEFF/, ''));
+  // 先用一般瀏覽器標頭，再試不帶 Referer；各等 12 秒
+  const url = `${PSVS}${path}${path.includes('?') ? '&' : '?'}_=${Date.now()}`;
+  let last;
+  for (const headers of [{ ...UA, Referer: PSVS }, { 'User-Agent': UA['User-Agent'] }]) {
+    try {
+      const r = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+      if (!r.ok) throw new Error(`台電停電資訊回應 ${r.status}`);
+      return JSON.parse((await r.text()).replace(/^\uFEFF/, ''));
+    } catch (e) { last = e; }
+  }
+  throw new Error(`台電停電資訊讀不到（${last?.name === 'TimeoutError' ? '逾時' : last?.message}）`);
 };
 async function typhoon() {
-  const [title, ver, list] = await Promise.all([psvsGet('data/title.json').catch(() => ({})), psvsGet('nj_psvs_attr/RangeInfo/typhoonVer').catch(() => []), psvsGet('nj_psvs_attr/RangeInfo/Country')]);
+  const list = await psvsGet('nj_psvs_attr/RangeInfo/Country'); // 主要資料先抓，讀不到就直接回錯誤
+  const [title, ver] = await Promise.all([psvsGet('data/title.json').catch(() => ({})), psvsGet('nj_psvs_attr/RangeInfo/typhoonVer').catch(() => [])]);
   const dts = String((Array.isArray(ver) ? ver[0]?.dts : '') || ''); // 20261024.1400
   const m = dts.match(/^(\d{4})(\d{2})(\d{2})\.(\d{2})(\d{2})/);
   const counties = (Array.isArray(list) ? list : []).map((c) => ({ gid: c.gid, name: String(c.name || '').replace(/臺/g, '台'), now: Number(c.c0) || 0, ever: Number(c.c1) || 0 }))
@@ -698,7 +707,7 @@ async function typhoon() {
 }
 async function typhoonCounty(gid) {
   // rangeFG 會附帶邊界座標（很大）；只用文字比對取出 info 欄位：「貢寮區:604:340:3966:4137, …」＝名稱:fcid:gid:目前停電:曾經停電
-  const r = await fetch(`${PSVS}nj_psvs_attr/RangeInfo/rangeFG?gid=${gid}&fcid=603&_=${Date.now()}`, { headers: { ...UA, Referer: PSVS } });
+  const r = await fetch(`${PSVS}nj_psvs_attr/RangeInfo/rangeFG?gid=${gid}&fcid=603&_=${Date.now()}`, { headers: { ...UA, Referer: PSVS }, signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`台電停電資訊回應 ${r.status}`);
   const t = await r.text();
   const info = (t.match(/"info"\s*:\s*"([^"]*)"/) || [])[1] || '';
