@@ -93,12 +93,12 @@ export const PLANTS = [
  *  demand : 相對用電權重（大致依各區域負載比例；北部最大 → 自然產生南電北送）
  */
 export const LOADS = [
-  { id: 'xinyi',     name: '台北信義區',   en: 'Taipei · Xinyi',      pos: [121.567, 25.033], demand: 0.36, side: 'right' }, // side：用電視角的標籤放旁邊，避免和新竹重疊
-  { id: 'hsp',       name: '新竹科學園區', en: 'Hsinchu Science Park', pos: [121.000, 24.780], demand: 0.17, side: 'left' },
-  { id: 'xitun',     name: '台中西屯區',   en: 'Taichung · Xitun',    pos: [120.640, 24.180], demand: 0.17 },
-  { id: 'stsp',      name: '台南科學園區', en: 'Tainan Science Park', pos: [120.280, 23.105], demand: 0.13 },
-  { id: 'qianzhen',  name: '高雄前鎮區',   en: 'Kaohsiung · Qianzhen', pos: [120.310, 22.595], demand: 0.17 },
-  { id: 'hualien',   name: '花蓮市區',     en: 'Hualien City',        pos: [121.605, 23.985], demand: 0.02 },
+  { id: 'xinyi',     name: '台北信義區',   en: 'Taipei · Xinyi', enShort: 'Taipei',      pos: [121.567, 25.033], demand: 0.36, side: 'right' }, // side：用電視角的標籤放旁邊，避免和新竹重疊
+  { id: 'hsp',       name: '新竹科學園區', en: 'Hsinchu Science Park', enShort: 'Hsinchu', pos: [121.000, 24.780], demand: 0.17, side: 'left' },
+  { id: 'xitun',     name: '台中西屯區',   en: 'Taichung · Xitun', enShort: 'Taichung',    pos: [120.640, 24.180], demand: 0.17 },
+  { id: 'stsp',      name: '台南科學園區', en: 'Tainan Science Park', enShort: 'Tainan', pos: [120.280, 23.105], demand: 0.13 },
+  { id: 'qianzhen',  name: '高雄前鎮區',   en: 'Kaohsiung · Qianzhen', enShort: 'Kaohsiung', pos: [120.310, 22.595], demand: 0.17 },
+  { id: 'hualien',   name: '花蓮市區',     en: 'Hualien City', enShort: 'Hualien',        pos: [121.605, 23.985], demand: 0.02 },
   { id: 'magong',    name: '馬公市',       en: 'Magong',              pos: [119.566, 23.566], demand: 0, island: 'penghu' },
   { id: 'jincheng',  name: '金城鎮',       en: 'Jincheng',            pos: [118.318, 24.434], demand: 0, island: 'kinmen' },
   { id: 'nangan',    name: '南竿',         en: 'Nangan',              pos: [119.944, 26.160], demand: 0, island: 'matsu' },

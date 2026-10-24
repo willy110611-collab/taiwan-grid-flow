@@ -830,7 +830,7 @@ export class GridFlowEngine {
       // 手機的用電視角只標主要城市（離島與小負載點只留名字），避免數字擠成一團
       data: window.innerWidth < 700 && dm > 0.5 ? this.loads.filter((l) => !l.island && (l.demand || 0) >= 0.1) : this.loads,
       getPosition: (d) => d.pos,
-      getText: (d) => { const nm = isEn() ? d.en : d.name; return dm > 0.5 && Math.round(d.mw / 10) * 10 > 0 ? `${nm}\n${tx('約', '~')} ${(Math.round(d.mw / 10) * 10).toLocaleString()} MW` : nm; },
+      getText: (d) => { const nm = isEn() ? (window.innerWidth < 700 && d.enShort) || d.en : d.name; /* 手機英文用短名，避免互相重疊 */ return dm > 0.5 && Math.round(d.mw / 10) * 10 > 0 ? `${nm}\n${tx('約', '~')} ${(Math.round(d.mw / 10) * 10).toLocaleString()} MW` : nm; },
       getColor: [190 + 50 * dm, 205 + 30 * dm, 235, 70 + 150 * dm],
       getSize: 11 + dm,
       getPixelOffset: (d) => (dm > 0.5 && d.side ? [d.side === 'right' ? 14 : -14, -10] : [0, 16 + 4 * dm]),
@@ -855,7 +855,7 @@ export class GridFlowEngine {
         const c = [Math.min(...ow.map((p) => p.pos[0])) - 0.05, ow.reduce((a, p) => a + p.pos[1], 0) / ow.length];
         layers.push(new TextLayer({
           id: 'offshore-cluster',
-          data: [{ pos: c, text: `${tx('彰化外海風場群', 'Changhua offshore wind')}\n${owMw >= 1 ? `${Math.round(owMw).toLocaleString()} MW` : tx('目前風小', 'Light wind')}` }],
+          data: [{ pos: c, text: `${tx('彰化外海風場群', 'Offshore wind')}\n${owMw >= 1 ? `${Math.round(owMw).toLocaleString()} MW` : tx('目前風小', 'Light wind')}` }],
           getPosition: (d) => d.pos, getText: (d) => d.text,
           getColor: [150, 235, 255, 150], getSize: 10.5, getTextAnchor: 'end', getAlignmentBaseline: 'center',
           fontFamily: FONT, fontWeight: 300, lineHeight: 1.35, characterSet: 'auto',
