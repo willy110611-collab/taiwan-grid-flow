@@ -124,12 +124,14 @@ export default function App() {
   const lock = useCallback(() => {
     clearTimeout(lockTimer.current);
     const e = engine.current;
-    if (!e) return;
+    if (!e || !WALLPAPER) return;
     saveView(e.getView());
     e.setLocked(true);
     setUiState((s) => ({ ...s, locked: true, fixedView: true, cruise: false }));
   }, []);
   function armAutoLock() {
+    // 自動鎖定只給桌布模式；App／網頁版一旦鎖住就沒有按鈕能解開（曾造成「放大縮小、拖曳全部失效」）
+    if (!WALLPAPER) return;
     clearTimeout(lockTimer.current);
     lockTimer.current = setTimeout(lock, AUTO_LOCK_MS);
   }

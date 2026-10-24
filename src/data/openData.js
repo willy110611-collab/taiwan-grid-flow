@@ -72,17 +72,20 @@ export function useTyphoon(enabled = true) {
   const [st, setSt] = useState({ data: null, error: null });
   useEffect(() => {
     if (!enabled) return;
-    let alive = true;
+    let alive = true, latest = null;
     const tick = () => {
       if (document.hidden) return;
       fetch(`${APP.relayUrl}/typhoon.json`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
-        .then((data) => alive && setSt({ data, error: null })).catch((e) => alive && setSt((s) => ({ data: s.data, error: e.message })));
+        .then((data) => { latest = data; if (alive) setSt({ data, error: null }); }).catch((e) => alive && setSt((s) => ({ data: s.data, error: e.message })));
     };
     tick();
-    const id = setInterval(tick, 10 * 60e3);
+    // 沒有颱風停電時 30 分鐘看一次就好；有停電時每 10 分鐘更新
+    let id;
+    const loop = () => { id = setTimeout(() => { tick(); loop(); }, typhoonActive(latest) ? 10 * 60e3 : 30 * 60e3); };
+    loop();
     const onVis = () => { if (!document.hidden) tick(); };
     document.addEventListener('visibilitychange', onVis);
-    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
+    return () => { alive = false; clearTimeout(id); document.removeEventListener('visibilitychange', onVis); };
   }, [enabled]);
   return st;
 }

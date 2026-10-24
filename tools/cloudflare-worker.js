@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈搏 — Cloudflare Worker 中繼站 v7
+//  台灣光脈搏 — Cloudflare Worker 中繼站 v8
+//  v8：/bundle.json 一次給網頁 7 份台電資料（每人每 10 分鐘 1 次請求，原本 7 次）並回報同時在線人數（Durable Object「Presence」）；
+//      台電讀不到時改給最後一份成功的資料（不讓大家同時失敗）；LINE 主動推播（供電／空品）預設只發給管理者 LINE_TO，好友不推（省免費額度）；台電資料問題連續 30 分鐘才通知；格式檢查不再把裝置容量「-」當錯誤
 //  v7：台電開放資料原檔轉送（/open/…，給 GitHub 建置用）、颱風停電（/typhoon.json）、
 //      計畫停電每日存檔（KV outage:raw:日期）與「前 3 天／前 1 天」App 通知（依訂閱者的鄉鎮、路名）
 //  v6：網站錯誤回報與 30 天維修紀錄（POST /log）、台電資料格式改變偵測、每小時健康檢查失敗通知（/alert）
@@ -13,7 +15,8 @@
 //  /aqi.json                環境部 空氣品質指標 AQI（需 MOENV_KEY）
 //  /cems.json               環境部 固定污染源 CEMS 1 小時值，只保留電廠（需 MOENV_KEY）
 //  /sun.json                氣象署 署屬氣象站日射量 O-A0091-001（需 CWA_KEY）
-//  /config.json             給網頁：LINE 加好友連結
+//  /bundle.json?sid=        給網頁：台電 7 份資料一次給＋同時在線人數（sid＝每個分頁隨機產生，不含個資）
+//  /config.json             給網頁：LINE 加好友連結（v8：LINE_FRIENDS=1 才提供）
 //  /open/outage.zip 等      台電開放資料原檔（計畫停電、鄉鎮用電、過去供需、縣市再生能源），不解析、只轉送
 //  /typhoon.json            台電「天然災害停復電」各縣市目前停電／曾經停電戶數（免金鑰）
 //  /typhoon/county.json?gid= 同上，某縣市各鄉鎮市區
@@ -29,6 +32,8 @@
 //   LINE_TO          Text    （選用）管理者 userId，不用傳訊息就自動登記 HOME_SITE；也接收「資料停更」通知
 //   HOME_SITE        Text    （選用）管理者的測站，預設「西屯」
 //   LINE_MONTHLY_CAP Text    （選用）每月主動推播上限則數，預設 200，避免超過免費額度
+//   LINE_FRIENDS     Text    （選用）設成 1 才在網頁顯示加 LINE 好友、並對所有好友主動推播供電／空品（v8 預設只推管理者）
+//  v8 另需：Durable Object 綁定 PRESENCE → 類別 Presence（SQLite）
 //  另需：KV 綁定 NOTIFY、Triggers → Cron「*/10 * * * *」
 //
 //  好友用法：加好友 → 傳測站名稱（例如「西屯」）登記 → 空品不良或供電吃緊時收到通知
@@ -55,11 +60,12 @@ export default {
     if (name === 'alert') return alertRoute(new URL(req.url), env);
     try {
       if (name === 'config.json') {
-        const id = (env.LINE_BASIC_ID || '').trim();
+        const id = env.LINE_FRIENDS === '1' ? (env.LINE_BASIC_ID || '').trim() : ''; // v8：預設不給加好友連結
         const vapidPublic = env.NOTIFY ? (await vapidKeys(env)).pub : null;
         return new Response(JSON.stringify({ lineFriendUrl: id ? `https://line.me/R/ti/p/${encodeURIComponent(id.startsWith('@') ? id : '@' + id)}` : null, lineId: id || null, vapidPublic }), { headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
       }
       if (!name) return text(`OK · 機房 ${req.cf?.colo || '?'} · 環境部金鑰${env.MOENV_KEY ? '已設定' : '未設定'}`);
+      if (name === 'bundle.json') return await bundle(req, env, ctx);
       if (TP_FILES.has(name)) return await cached(ctx, name, 120, () => upstream(TP + name, name));
       if (name === 'forecast.csv') return await cached(ctx, name, 3600, () => upstream(FORECAST, name));
       if (name.startsWith('open/')) return await openRoute(ctx, name.slice(5));
@@ -85,7 +91,8 @@ export default {
     if (hour === 18) await outageDaily(env).catch(() => {}); // 計畫停電：存檔＋前 3 天／前 1 天提醒（台電 17 時更新）
     if (hour < SEND_FROM || hour >= SEND_TO) return;
     const today = twDate();
-    const users = env.LINE_TOKEN ? await listUsers(env) : [];
+    // v8：LINE 主動推播預設只發給管理者（LINE_TO）；好友傳訊息查詢（回覆）仍可用
+    const users = !env.LINE_TOKEN ? [] : env.LINE_FRIENDS === '1' ? await listUsers(env) : (await listUsers(env)).filter((u) => u.id === env.LINE_TO); // 預設只推給管理者
     const subs = await listPushSubs(env);
     if (!users.length && !subs.length) return;
 
@@ -475,7 +482,9 @@ async function watchdog(env) {
   if (!env.LINE_TOKEN || !env.LINE_TO) return;
   const issues = [];
   try {
-    const g = await (await fetch(`${TP}genary.json?_=${Date.now()}`, { headers: UA })).json();
+    // v8：偶發的連線錯誤（例如 Cloudflare 1016）先等 5 秒重試一次
+    const getG = async () => JSON.parse((await (await fetch(`${TP}genary.json?_=${Date.now()}`, { headers: UA })).text()).replace(/^\uFEFF/, ''));
+    const g = await getG().catch(async () => { await new Promise((r) => setTimeout(r, 5000)); return getG(); });
     const ts = String(g[''] || g.timestamp || '').replace(/\//g, '-');
     const age = ts ? (Date.now() - new Date(ts.replace(' ', 'T') + '+08:00').getTime()) / 60e3 : Infinity;
     if (!(age < 40)) issues.push(['grid', `台電機組資料${Number.isFinite(age) ? `已 ${Math.round(age)} 分鐘沒更新（最後 ${ts.slice(11, 16)}）` : '讀不到'}`]);
@@ -486,7 +495,14 @@ async function watchdog(env) {
   if (since && Date.now() - since > 3 * 3600e3) issues.push(['aqi', `環境部空品已故障 ${Math.round((Date.now() - since) / 3600e3)} 小時，網頁顯示備份資料`]);
   await errorAlerts(env);
   for (const k of ['grid', 'aqi', 'format']) {
-    const hit = issues.find((x) => x[0] === k);
+    let hit = issues.find((x) => x[0] === k);
+    // v8：台電／格式問題要連續 3 次（約 30 分鐘）都有才通知，避免一時連線不穩就發訊息
+    if (k !== 'aqi') {
+      const n = hit ? Number(await env.NOTIFY.get(`watchn:${k}`) || 0) + 1 : 0;
+      if (hit) await env.NOTIFY.put(`watchn:${k}`, String(n), { expirationTtl: 3600 });
+      else if (await env.NOTIFY.get(`watchn:${k}`)) await env.NOTIFY.delete(`watchn:${k}`);
+      if (hit && n < 3) hit = null;
+    }
     const flag = await env.NOTIFY.get(`watch:${k}`);
     if (hit && !flag) {
       if (await send(env, [env.LINE_TO], `⚠ 台灣光脈搏 資料停更：${hit[1]}`)) await env.NOTIFY.put(`watch:${k}`, '1', { expirationTtl: 6 * 3600 });
@@ -549,12 +565,24 @@ async function cems(env) {
 async function cached(ctx, name, ttl, make) {
   const cache = caches.default;
   const key = new Request(`https://cache.local/${name}`);
+  const staleKey = new Request(`https://cache.local/stale/${name}`);
   let res = await cache.match(key);
   if (!res) {
-    const fresh = await make();
+    let fresh;
+    try { fresh = await make(); } catch (e) {
+      // v8：來源讀不到 → 給最後一份成功的資料（6 小時內），標頭註明 X-Stale
+      const old = await cache.match(staleKey);
+      if (!old) throw e;
+      const out = new Response(old.body, old);
+      out.headers.set('X-Stale', '1');
+      for (const [k, v] of Object.entries(CORS)) out.headers.set(k, v);
+      return out;
+    }
     res = new Response(fresh.body, fresh);
     res.headers.set('Cache-Control', `public, max-age=${ttl}`);
-    ctx.waitUntil(cache.put(key, res.clone()));
+    const keep = res.clone();
+    keep.headers.set('Cache-Control', 'public, max-age=21600');
+    ctx.waitUntil(Promise.all([cache.put(key, res.clone()), cache.put(staleKey, keep)]));
   }
   const out = new Response(res.body, res);
   for (const [k, v] of Object.entries(CORS)) out.headers.set(k, v);
@@ -569,15 +597,17 @@ async function formatCheck() {
     const g = JSON.parse((await get('genary.json')).replace(/^\uFEFF/, ''));
     const rows = g.aaData;
     if (!Array.isArray(rows) || rows.length < 40) return `genary 只有 ${rows?.length ?? 0} 列`;
-    const bad = rows.filter((r) => !Array.isArray(r) || r.length < 7 || !Number.isFinite(parseFloat(String(r[3]).replace(/,/g, ''))));
-    if (bad.length > rows.length * 0.2) return `genary 有 ${bad.length} 列欄位不符`;
+    // v8：只看「淨發電量」（第 5 欄）；裝置容量寫「-」的機組（新機組、除役中）是正常的，不算格式不符
+    const units = rows.filter((r) => Array.isArray(r) && !/小計/.test(String(r[2])));
+    const bad = units.filter((r) => r.length < 7 || !Number.isFinite(parseFloat(String(r[4]).replace(/,/g, ''))));
+    if (bad.length > units.length * 0.2) return `genary 有 ${bad.length} 列發電量欄位不符`;
     const p = JSON.parse(await get('loadpara.json'));
     if (!p?.records?.some((r) => r.fore_peak_resv_rate != null)) return 'loadpara 找不到備轉容量率';
     const f = (await get('loadfueltype.csv')).trim().split(/\r?\n/);
     if (f.length < 2 || f[0].split(',').length < 12) return `loadfueltype 欄位 ${f[0]?.split(',').length ?? 0} 欄`;
     return null;
-  } catch (e) {
-    return `讀取或解析失敗：${String(e.message).slice(0, 60)}`;
+  } catch {
+    return null; // 讀不到是連線問題，由「台電機組資料讀不到」那則通知負責，不重複發
   }
 }
 
@@ -775,4 +805,46 @@ async function unzipFiles(u8) {
     p += 46 + fl + el + cl;
   }
   return out;
+}
+
+/* ───────── v8：一次給齊 7 份台電資料＋同時在線人數 ─────────
+ *  網頁每 10 分鐘只打 1 次（原本 7 次），中繼站免費額度可撐約 3 倍人數
+ *  每份檔案仍各自快取 2 分鐘（同一機房的人共用），讀不到就給最後一份成功的資料 */
+const BUNDLE = { genary: 'genary.json', areas: 'genloadareaperc.csv', para: 'loadpara.json', fuelCurve: 'loadfueltype.csv', areaCurve: 'loadareas.csv', yFuel: 'loadfueltype_1.csv', forecast: 'forecast.csv' };
+async function bundle(req, env, ctx) {
+  const sid = (new URL(req.url).searchParams.get('sid') || '').replace(/[^\w-]/g, '').slice(0, 40);
+  const files = {}, errors = {};
+  await Promise.all(Object.entries(BUNDLE).map(async ([k, f]) => {
+    try {
+      const r = f === 'forecast.csv' ? await cached(ctx, f, 3600, () => upstream(FORECAST, f)) : await cached(ctx, f, 120, () => upstream(TP + f, f));
+      files[k] = await r.text();
+      if (r.headers.get('X-Stale')) errors[k] = 'stale';
+    } catch (e) { errors[k] = e.message; }
+  }));
+  let online = null;
+  if (sid && env.PRESENCE) {
+    try {
+      const stub = env.PRESENCE.get(env.PRESENCE.idFromName('all'));
+      online = (await (await stub.fetch(`https://presence/hit?sid=${sid}`)).json()).online;
+    } catch { /* 在線人數讀不到不影響資料 */ }
+  }
+  return new Response(JSON.stringify({ t: Date.now(), online, files, errors }), { headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+
+/* ───────── v8：同時在線人數（Durable Object，全台只有一個實例）─────────
+ *  每個分頁開著時每 10 分鐘來報到一次（跟資料一起，不另外多打）；12 分鐘內報到過的算「在線」
+ *  只存隨機分頁代碼與時間，不存 IP 或任何個資 */
+const ONLINE_WINDOW = 12 * 60e3;
+export class Presence {
+  constructor(state) { this.state = state; this.seen = null; }
+  async fetch(req) {
+    const now = Date.now();
+    if (!this.seen) this.seen = new Map(await this.state.storage.list());
+    const sid = new URL(req.url).searchParams.get('sid');
+    if (sid) { this.seen.set(sid, now); await this.state.storage.put(sid, now); }
+    const old = [];
+    for (const [k, t] of this.seen) if (now - t > ONLINE_WINDOW) { this.seen.delete(k); old.push(k); }
+    for (let i = 0; i < old.length; i += 128) await this.state.storage.delete(old.slice(i, i + 128));
+    return new Response(JSON.stringify({ online: this.seen.size }), { headers: { 'Content-Type': 'application/json' } });
+  }
 }

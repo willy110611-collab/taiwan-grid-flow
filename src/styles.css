@@ -834,3 +834,18 @@ a:hover { text-decoration: underline; }
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button { flex: none; white-space: nowrap; }
 @media (max-width: 600px) { .tabs button { padding: 8px 7px; letter-spacing: 0.08em; } }
+
+/* 同時在線人數（左上小字） */
+.online-count { margin-top: 6px; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-faint); }
+.online-count::before { content: ''; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: rgba(110, 240, 190, 0.7); margin-right: 6px; vertical-align: 2px; }
+
+/* 徽章說明：插在被點的徽章那一列正下方（dense 讓同列後面的徽章補回原位） */
+.badges { grid-auto-flow: row dense; }
+.badges > li.badge-detail { grid-column: 1 / -1; display: block; text-align: left; cursor: default; margin: 0; padding: 10px 12px; border-radius: 12px; animation: rise 0.25s ease; }
+.badges li.sel .medal { filter: drop-shadow(0 0 10px rgba(110, 240, 190, 0.45)); }
+.badges li.badge-detail b { color: var(--ink); font-weight: 500; font-size: 13px; letter-spacing: 0; }
+.badges li.badge-detail small { font-size: 11px; }
+
+/* 只允許單指捲動，不讓整頁被雙指放大（地圖自己處理縮放）；按鈕取消雙擊放大的延遲 */
+html, body { touch-action: pan-x pan-y; }
+button, a, .badges li { touch-action: manipulation; }

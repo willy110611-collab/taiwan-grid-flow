@@ -27,7 +27,11 @@ Cloudflare 帳號 `4bd497adc004887645c3ff9cad913f31`，Worker 名稱 `taiwan-gri
 使用者在 Claude 內建瀏覽器登入 Cloudflare 後，從 dash.cloudflare.com 頁面：
 `PUT /api/v4/accounts/{帳號}/workers/scripts/taiwan-grid-flow-data/content`，FormData：`metadata`＝`{"main_module":"worker.js","keep_bindings":["secret_text","plain_text","kv_namespace"]}`、檔案 `worker.js`（`application/javascript+module`），標頭 `x-atok: window.bootstrap.atok`。程式碼用 raw.githubusercontent 指定 commit 取得並核對 SHA-256。
 
+## 中繼站 v8 第一次部署（多了 Durable Object）
+metadata 改用：`{"main_module":"worker.js","bindings":[{"type":"durable_object_namespace","name":"PRESENCE","class_name":"Presence"}],"migrations":{"new_tag":"v1","new_sqlite_classes":["Presence"]},"keep_bindings":["secret_text","plain_text","kv_namespace"]}`。之後再部署時 migrations 拿掉（已存在），bindings 照留。
+部署後測：`/bundle.json?sid=test` 應有 7 個 files 與 online 數字；`/config.json` 的 lineFriendUrl 應為 null（網頁不顯示加 LINE 好友；供電／空品 LINE 推播只發給管理者 LINE_TO；要開放給所有好友就在 Worker 變數加 `LINE_FRIENDS=1`）。
+
 ## 目前待辦
-- 中繼站 v7 修正版（台電「停電資訊」psvs1 加逾時與換標頭重試）已在 main，**尚未部署**：部署後測 `/typhoon.json`；若仍逾時，代表 psvs1 不讓海外主機讀，需另想辦法。
+- 中繼站 v8（含 v7 的 psvs1 逾時重試、bundle、在線人數、LINE 推播只給管理者、資料停更連續 30 分鐘才通知、格式檢查不再誤報）**尚未部署**：部署後測 `/bundle.json`、`/typhoon.json`；颱風若仍逾時，代表 psvs1 不讓海外主機讀，需另想辦法。
 - 「匯入我家用電 CSV」（智慧電表）— 使用者未決定。
 - 詳細待辦另見 claude.ai「APP」專案的《台灣光脈搏_待辦清單》。

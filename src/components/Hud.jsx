@@ -13,7 +13,7 @@ import { FinderPanel } from './Finder.jsx';
 import { AppliancePanel, TyphoonBanner, TyphoonPanel } from './OpenData.jsx';
 import { useTyphoon } from '../data/openData.js';
 import { Guard } from './Guard.jsx';
-import { useT, useLang } from '../i18n.js';
+import { useT, useLang, tx } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
 
@@ -67,6 +67,11 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           </button>
         )}
         {!wallpaper && <RefreshBtn />}
+        {!wallpaper && live && !replay?.on && Number.isFinite(snapshot?.online) && snapshot.online > 0 && (
+          <div className="online-count" title={tx('最近 12 分鐘有開著光脈搏的分頁數', 'Tabs with Taiwan Grid Flow open in the last 12 minutes')}>
+            {snapshot.online === 1 ? tx('目前只有你在線', 'Only you online') : tx(`${snapshot.online.toLocaleString()} 人同時在線`, `${snapshot.online.toLocaleString()} online now`)}
+          </div>
+        )}
         {!wallpaper && <DataIssue snapshot={snapshot} air={air} onOpen={() => setUi({ panel: 'info', infoTab: 'diag' })} />}
       </header>
 

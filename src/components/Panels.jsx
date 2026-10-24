@@ -219,7 +219,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
                 'Taipower tariff table (announced 2025-10-01, unchanged on 2026-04-01): residential and commercial tiered rates, simple two- and three-period time-of-use rates. Carbon uses the Energy Administration grid factor (0.467 kg/kWh) as a baseline, refined by unit type. Holidays follow the government office calendar (DGPA).')}
             </dd>
             <dt>{tx('中繼站', 'Relay')}</dt>
-            <dd>{tx('Cloudflare Workers：轉送台電、環境部、氣象署資料（解決跨網域、編碼與金鑰），並負責 LINE／網頁推播通知。', 'Cloudflare Workers: relays Taipower, MOENV and CWA data (handling CORS, encoding and API keys) and sends LINE / web push notifications.')}</dd>
+            <dd>{tx('Cloudflare Workers：轉送台電、環境部、氣象署資料（解決跨網域、編碼與金鑰），並負責 App 推播通知與同時在線人數。', 'Cloudflare Workers: relays Taipower, MOENV and CWA data (handling CORS, encoding and API keys), sends app push notifications and counts who is online.')}</dd>
             <dt>{tx('縣市界、海岸線', 'County borders & coastline')}</dt>
             <dd>{tx('內政部國土測繪中心開放資料（經 taiwan-atlas 整理）。', 'Ministry of the Interior NLSC open data (via taiwan-atlas).')}</dd>
             <dt>{tx('山脈陰影', 'Hillshade')}</dt>

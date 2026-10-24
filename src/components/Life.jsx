@@ -21,7 +21,9 @@ const rName = (r) => (isEn() ? R_EN[r.en] || r.en : r.name);
 /** 空品讀不到的原因：環境部故障 vs 中繼站沒設定金鑰 */
 const airErrText = (err) => (/金鑰|MOENV_KEY/.test(err || '')
   ? tx('空品資料尚未接上：', 'Air data not connected: ') + tr(err)
-  : tx('環境部空品服務暫時故障，稍後會自動恢復。', 'The MOENV air-quality service is temporarily down; it will recover automatically.'));
+  : /429|1027/.test(err || '')
+    ? tx('今天使用人數太多，中繼站免費額度用完，空品資料早上 8 點恢復（發電資料改用網站備份，照常顯示）。', 'Too many visitors today: the relay’s free quota is used up. Air data returns at 8 am Taiwan time (power data keeps working from the site backup).')
+    : tx('環境部空品服務暫時故障，稍後會自動恢復。', 'The MOENV air-quality service is temporarily down; it will recover automatically.'));
 /** 中繼站給的是備份資料 → 標示資料時間 */
 function StaleNote({ air }) {
   if (!air?.staleAt && !(minutesAgo(air?.asOf) > 120)) return null;

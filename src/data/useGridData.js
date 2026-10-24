@@ -102,6 +102,27 @@ async function fetchFile(key) {
   return { data: null, diag: { name: f.name, ok: false, tries } };
 }
 
+/* ───────── 中繼站 /bundle.json：一次給齊＋同時在線人數 ───────── */
+const SID = (() => { // 每個分頁一組隨機代碼（只用來算在線人數，不含個資）
+  try { let v = sessionStorage.getItem('tgf-sid'); if (!v) { v = Math.random().toString(36).slice(2, 12); sessionStorage.setItem('tgf-sid', v); } return v; } catch { return Math.random().toString(36).slice(2, 12); }
+})();
+async function fetchBundle() {
+  try { return JSON.parse(await fetchText(`${R}/bundle.json?sid=${SID}`, 9000)); } catch { return null; }
+}
+function fromBundle(pre, key) {
+  const text = pre?.files?.[key];
+  if (!text || pre.errors?.[key] && pre.errors[key] !== 'stale') return null;
+  try {
+    const data = FILES[key].parse(text);
+    if (!data) return null;
+    const url = `${R}/bundle.json`;
+    const asOf = data.timestamp || (key === 'fuelCurve' || key === 'areaCurve' ? data[data.length - 1]?.hm : null) || data.time || null;
+    const detail = Array.isArray(data) && data[0]?.hm ? `${data.length} 筆 ${data[0].hm}–${data[data.length - 1].hm}` : Array.isArray(data) ? `${data.length} 筆` : '';
+    return Promise.resolve({ data, diag: { name: FILES[key].name, ok: true, url, tries: [{ url, ok: true }], detail, asOf } });
+  } catch { return null; } // 不合理（例如機組數太少）→ 改走個別網址
+}
+const withOnline = (pre, snap) => (Number.isFinite(pre?.online) ? { ...snap, online: pre.online } : snap);
+
 const totalOf = (totals) => Object.entries(totals).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
 
 /** 由 genary 結果 + 輔助資料組成完整快照 */
@@ -123,7 +144,9 @@ export function buildSnapshot(base, { source, areas = null, para = null, curves 
 
 export async function loadGridSnapshot({ forceSim = false, onFirst } = {}) {
   if (!forceSim) {
-    const jobs = Object.keys(FILES).map(fetchFile);
+    // v0.8.1：先向中繼站一次拿齊 7 份（每人每 10 分鐘只打 1 次，人多也不會用完免費額度），哪份不行再個別補抓
+    const pre = await fetchBundle();
+    const jobs = Object.keys(FILES).map((k) => fromBundle(pre, k) || fetchFile(k));
     // 先用最關鍵的三個小檔畫出畫面，曲線、預報等稍後補上（不讓最慢的檔案拖住整個畫面）
     if (onFirst) {
       Promise.all(jobs.slice(0, 3)).then(([g, a, p]) => {
@@ -134,14 +157,14 @@ export async function loadGridSnapshot({ forceSim = false, onFirst } = {}) {
     const [genary, areas, para, fuelCurve, areaCurve, yFuel, forecast] = results;
     const diag = results.map((r) => r.diag);
     if (genary.data) {
-      return buildSnapshot(genary.data, {
+      return withOnline(pre, buildSnapshot(genary.data, {
         source: 'live',
         areas: areas.data,
         para: para.data,
         curves: { fuel: fuelCurve.data, areas: areaCurve.data, yesterday: yFuel.data },
         forecast: forecast.data,
         diag
-      });
+      }));
     }
     return { ...buildSnapshot(parseGenary(mockGenary()), { source: 'simulated' }), diag };
   }
@@ -208,8 +231,9 @@ export function useGridData() {
         setSnapshot(snap);
       }
       // 即時模式：對齊台電的 10 分鐘更新（整 10 分後 1 分鐘再抓）
+      // 再加 0–2 分鐘隨機延遲：大家不要同一秒湧進中繼站
       const wait = snap.source === 'live' || lastLive.current
-        ? Math.min(LIVE_REFRESH_MS, 10 * 60000 - (Date.now() % (10 * 60000)) + 60000)
+        ? Math.min(LIVE_REFRESH_MS, 10 * 60000 - (Date.now() % (10 * 60000)) + 60000 + Math.random() * 120000)
         : SIM_REFRESH_MS;
       timer.current = setTimeout(tick, wait);
     };
