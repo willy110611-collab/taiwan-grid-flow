@@ -12,7 +12,7 @@ import { ParticleSystem } from './ParticleSystem.js';
 import { createGlowSprite } from './glowSprite.js';
 import { Cruise } from './cruise.js';
 import { NUCLEAR, NUCLEAR_IDS } from '../config/nuclear.js';
-import { isEn } from '../i18n.js';
+import { isEn, tx } from '../i18n.js';
 import { solarSun } from '../data/parseGenary.js';
 import { daylightState, daylightPalette, applyDaylight } from './daylight.js';
 
@@ -703,7 +703,7 @@ export class GridFlowEngine {
         id: 'home-label',
         data: [this.home],
         getPosition: (d) => d.pos,
-        getText: (d) => `我的家 · ${d.name}`,
+        getText: (d) => `${tx('我的家', 'Home')} · ${d.name}`,
         getSize: 11,
         getPixelOffset: [0, -18],
         getColor: [150, 245, 205, 230],
@@ -824,7 +824,7 @@ export class GridFlowEngine {
       // 手機的用電視角只標主要城市（離島與小負載點只留名字），避免數字擠成一團
       data: window.innerWidth < 700 && dm > 0.5 ? this.loads.filter((l) => !l.island && (l.demand || 0) >= 0.1) : this.loads,
       getPosition: (d) => d.pos,
-      getText: (d) => (dm > 0.5 && Math.round(d.mw / 10) * 10 > 0 ? `${d.name}\n約 ${(Math.round(d.mw / 10) * 10).toLocaleString()} MW` : d.name),
+      getText: (d) => { const nm = isEn() ? d.en : d.name; return dm > 0.5 && Math.round(d.mw / 10) * 10 > 0 ? `${nm}\n${tx('約', '~')} ${(Math.round(d.mw / 10) * 10).toLocaleString()} MW` : nm; },
       getColor: [190 + 50 * dm, 205 + 30 * dm, 235, 70 + 150 * dm],
       getSize: 11 + dm,
       getPixelOffset: (d) => (dm > 0.5 && d.side ? [d.side === 'right' ? 14 : -14, -10] : [0, 16 + 4 * dm]),
@@ -837,7 +837,7 @@ export class GridFlowEngine {
       fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
       outlineWidth: 3 * dm,
       outlineColor: [3, 5, 10, 180],
-      updateTriggers: { getText: [dm > 0.5, Math.round(this.time)], getColor: dm, getSize: dm, getPixelOffset: dm, getTextAnchor: dm > 0.5, data: dm > 0.5 },
+      updateTriggers: { getText: [dm > 0.5, Math.round(this.time), isEn()], getColor: dm, getSize: dm, getPixelOffset: dm, getTextAnchor: dm > 0.5, data: dm > 0.5 },
       parameters: NO_DEPTH
     }));
 
@@ -849,12 +849,12 @@ export class GridFlowEngine {
         const c = [Math.min(...ow.map((p) => p.pos[0])) - 0.05, ow.reduce((a, p) => a + p.pos[1], 0) / ow.length];
         layers.push(new TextLayer({
           id: 'offshore-cluster',
-          data: [{ pos: c, text: `彰化外海風場群\n${owMw >= 1 ? `${Math.round(owMw).toLocaleString()} MW` : '目前風小'}` }],
+          data: [{ pos: c, text: `${tx('彰化外海風場群', 'Changhua offshore wind')}\n${owMw >= 1 ? `${Math.round(owMw).toLocaleString()} MW` : tx('目前風小', 'Light wind')}` }],
           getPosition: (d) => d.pos, getText: (d) => d.text,
           getColor: [150, 235, 255, 150], getSize: 10.5, getTextAnchor: 'end', getAlignmentBaseline: 'center',
           fontFamily: FONT, fontWeight: 300, lineHeight: 1.35, characterSet: 'auto',
           fontSettings: { sdf: true, fontSize: 48, buffer: 6 }, outlineWidth: 3, outlineColor: [3, 5, 10, 180],
-          updateTriggers: { getText: Math.round(owMw) }, parameters: NO_DEPTH
+          updateTriggers: { getText: [Math.round(owMw), isEn()] }, parameters: NO_DEPTH
         }));
       }
     }
@@ -867,8 +867,8 @@ export class GridFlowEngine {
         return {
           pos: REGIONS[k].label,
           anchor: REGIONS[k].anchor,
-          head: `${r.name}  用電 ${Math.round(r.load).toLocaleString()} MW`,
-          sub: `發電 ${Math.round(r.gen).toLocaleString()} MW · 自給 ${pct}% · ${r.ratio >= 1 ? '供能 ↗' : '吸能 ↙'}`,
+          head: isEn() ? `${REGIONS[k].en}  demand ${Math.round(r.load).toLocaleString()} MW` : `${r.name}  用電 ${Math.round(r.load).toLocaleString()} MW`,
+          sub: isEn() ? `gen ${Math.round(r.gen).toLocaleString()} MW · self-supply ${pct}% · ${r.ratio >= 1 ? 'exporting ↗' : 'importing ↙'}` : `發電 ${Math.round(r.gen).toLocaleString()} MW · 自給 ${pct}% · ${r.ratio >= 1 ? '供能 ↗' : '吸能 ↙'}`,
           color: r.ratio >= 1 ? [120, 210, 255] : [255, 160, 110]
         };
       });
@@ -889,7 +889,7 @@ export class GridFlowEngine {
         fontSettings: { sdf: true, fontSize: 56, buffer: 8 },
         outlineWidth: 4,
         outlineColor: [3, 5, 10, 220 * dm],
-        updateTriggers: { getColor: dm, getText: Math.round(this.time / 5) },
+        updateTriggers: { getColor: dm, getText: [Math.round(this.time / 5), isEn()] },
         parameters: NO_DEPTH
       }));
     }
@@ -901,20 +901,20 @@ export class GridFlowEngine {
         .filter(([, mw]) => mw > 0.5)
         .sort((x, y) => y[1] - x[1])
         .slice(0, 2)
-        .map(([f, mw]) => `${FUELS[f]?.label ?? f} ${Math.round((mw / (hp.targetMw || 1)) * 100)}%`)
+        .map(([f, mw]) => `${(isEn() ? FUELS[f]?.en : FUELS[f]?.label) ?? f} ${Math.round((mw / (hp.targetMw || 1)) * 100)}%`)
         .join(' · ');
       const label = [
-        { pos: hp.pos, text: hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
-        { pos: hp.pos, text: hp.en.toUpperCase(), size: 9, off: [22, 7], font: MONO, color: [150, 165, 195], weight: 300 },
+        { pos: hp.pos, text: isEn() ? hp.en : hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
+        { pos: hp.pos, text: isEn() ? '' : hp.en.toUpperCase(), size: 9, off: [22, 7], font: MONO, color: [150, 165, 195], weight: 300 },
         {
           pos: hp.pos,
-          text: hp.targetMw > 1 ? `${Math.round(hp.mw).toLocaleString()} MW${fuelText ? '   ' + fuelText : ''}` : '— 停機 · 0 MW',
+          text: hp.targetMw > 1 ? `${Math.round(hp.mw).toLocaleString()} MW${fuelText ? '   ' + fuelText : ''}` : tx('— 停機 · 0 MW', '— offline · 0 MW'),
           size: 12, off: [22, 23], font: MONO, color: hp.color, weight: 400
         },
         { pos: hp.pos, text: evidenceText(hp, this.source), size: 9.5, off: [22, 39], font: FONT, color: [150, 165, 195], weight: 300 },
         ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 9.5, off: [22, 54], font: FONT, color: [225, 190, 160], weight: 300 }] : []),
         // 滑鼠裝置：提示可以點開電廠卡（手機點一下就直接開，不需要提示）
-        ...(CAN_HOVER ? [{ pos: hp.pos, text: '點一下看各機組 ›', size: 9.5, off: [22, this.cems?.[hp.id] ? 69 : 54], font: FONT, color: [110, 240, 190], weight: 300 }] : [])
+        ...(CAN_HOVER ? [{ pos: hp.pos, text: tx('點一下看各機組 ›', 'Click for units ›'), size: 9.5, off: [22, this.cems?.[hp.id] ? 69 : 54], font: FONT, color: [110, 240, 190], weight: 300 }] : [])
       ];
       layers.push(new TextLayer({
         id: 'hover-label',
@@ -931,7 +931,7 @@ export class GridFlowEngine {
         fontSettings: { sdf: true, fontSize: 64, buffer: 8 },
         outlineWidth: 4,
         outlineColor: [3, 5, 10, 200 * a],
-        updateTriggers: { getColor: a, getPixelOffset: a, getText: Math.round(hp.mw) },
+        updateTriggers: { getColor: a, getPixelOffset: a, getText: [Math.round(hp.mw), isEn()] },
         parameters: NO_DEPTH
       }));
     }
@@ -978,7 +978,7 @@ function cemsText(c) {
     .slice(0, 3)
     .map((k) => {
       const it = c.items[k];
-      const short = { 硫氧化物: 'SOx', 氮氧化物: 'NOx', 粒狀物: '粒狀物', 不透光率: '不透光' }[k];
+      const short = { 硫氧化物: 'SOx', 氮氧化物: 'NOx', 粒狀物: tx('粒狀物', 'PM'), 不透光率: tx('不透光', 'Opacity') }[k];
       return `${short} ${Math.round(it.max * 10) / 10}${it.std ? `/${it.std}` : ''}`;
     });
   return parts.length ? `煙道 ${parts.join(' · ')}（CEMS 值/標準）` : '';
@@ -986,13 +986,13 @@ function cemsText(c) {
 
 /** hover 標籤第 4 行：這個數字的可信度（仿軌島「即時 / 推估」標示） */
 function evidenceText(p, source) {
-  if (source !== 'live') return `● ${EVIDENCE.simulated.label}資料`;
-  if (p.estimated) return '◐ 推估（依季節與時段；台電未即時公布離島出力）';
-  if (p.targetMw < 1) return `● ${EVIDENCE.live.label} · 停機`;
+  if (source !== 'live') return tx(`● ${EVIDENCE.simulated.label}資料`, '● Simulated data');
+  if (p.estimated) return tx('◐ 推估（依季節與時段；台電未即時公布離島出力）', '◐ Estimated (Taipower does not publish live island output)');
+  if (p.targetMw < 1) return tx(`● ${EVIDENCE.live.label} · 停機`, '● Taipower live · offline');
   const liveShare = p.liveMw / p.targetMw;
-  if (liveShare > 0.95) return `● ${EVIDENCE.live.label}`;
-  if (liveShare < 0.05) return p.solar ? `◐ 依台電各縣市裝置容量分配${solarSun() ? '＋即時日照' : ''}` : `◐ ${EVIDENCE.allocated.label}`;
-  return `● 即時 ${Math.round(liveShare * 100)}% ＋ ◐ 推估分配 ${Math.round((1 - liveShare) * 100)}%`;
+  if (liveShare > 0.95) return tx(`● ${EVIDENCE.live.label}`, '● Taipower live');
+  if (liveShare < 0.05) return p.solar ? tx(`◐ 依台電各縣市裝置容量分配${solarSun() ? '＋即時日照' : ''}`, `◐ Allocated by county capacity${solarSun() ? ' + live sunshine' : ''}`) : tx(`◐ ${EVIDENCE.allocated.label}`, '◐ Allocated');
+  return tx(`● 即時 ${Math.round(liveShare * 100)}% ＋ ◐ 推估分配 ${Math.round((1 - liveShare) * 100)}%`, `● Live ${Math.round(liveShare * 100)}% + ◐ allocated ${Math.round((1 - liveShare) * 100)}%`);
 }
 
 function makeSparkles(center, n) {

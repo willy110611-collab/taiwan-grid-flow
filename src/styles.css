@@ -149,12 +149,13 @@ a:hover { text-decoration: underline; }
 .sourceline {
   bottom: calc(22px + var(--safe-b)); right: var(--gutter);
   font-size: 9.5px; letter-spacing: 0.12em; color: var(--ink-faint);
+  text-shadow: 0 0 3px var(--bg), 0 0 8px var(--bg); /* 壓在地名上時仍讀得清楚 */
 }
 
 /* ── 面板（桌面：浮動卡片） ── */
 .panel {
   position: absolute; right: var(--gutter); bottom: calc(96px + var(--safe-b));
-  width: 360px; max-height: calc(100% - 200px); display: flex; flex-direction: column;
+  width: 360px; max-height: calc(100% - 96px - 250px); display: flex; flex-direction: column; /* 上緣留給右上的發電、用電、備轉 */
   background: var(--glass-strong); border: 1px solid var(--line); border-radius: 18px;
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -538,6 +539,9 @@ a:hover { text-decoration: underline; }
     display: block; position: absolute; right: var(--gutter); bottom: calc(124px + var(--safe-b)); margin: 0;
     padding: 6px 10px; pointer-events: auto; z-index: 3;
   }
+  /* 英文字串較長：縮小字距、限制寬度，不壓到左邊的時鐘列 */
+  html:lang(en) .home-card.hc-mobile { max-width: 46%; }
+  html:lang(en) .home-card.hc-mobile .hc-advice, html:lang(en) .home-card.hc-mobile .hc-set { letter-spacing: 0.04em; }
   .reset-view { bottom: calc(186px + var(--safe-b)) !important; }
   /* 抽屜打開時收起上方的篩選列與小卡，讓出看地圖的空間 */
   .hud:has(.panel) .filters, .hud:has(.panel) .home-card, .hud:has(.panel) .cruise-caption, .hud:has(.panel) .alert-banner { opacity: 0; pointer-events: none; }

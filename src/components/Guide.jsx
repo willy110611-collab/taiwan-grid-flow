@@ -12,7 +12,7 @@ export function UpdatePrompt() {
   return (
     <div className="upd-wrap" role="dialog" aria-label="有新版本">
       <div className="upd-card">
-        <div className="upd-title">✨ {t('有新版本')} <b>v{u.available.version}</b></div>
+        <div className="upd-title">{t('有新版本')} <b>v{u.available.version}</b></div>
         {u.available.notes?.length > 0 && (
           <ul className="upd-notes">{u.available.notes.slice(0, 4).map((n) => <li key={n}>{n}</li>)}</ul>
         )}

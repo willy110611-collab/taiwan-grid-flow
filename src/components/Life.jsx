@@ -225,7 +225,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
               setBusy(false);
             }}
           />
-          <span>📲 {tx('App 通知（免費、不限次數）', 'App notifications (free, unlimited)')}{home.push && home.pushSite ? tx(`：${home.pushSite}測站`, `: ${home.pushSite} station`) : ''}</span>
+          <span>{tx('App 通知（免費、不限次數）', 'App notifications (free, unlimited)')}{home.push && home.pushSite ? tx(`：${home.pushSite}測站`, `: ${home.pushSite} station`) : ''}</span>
         </label>
         {!home.push && pushSupport().ios && <p className="fine">{tx('iPhone：Safari「分享 → 加入主畫面」後，從主畫面打開光脈動再開啟這個開關。', 'iPhone: in Safari tap Share → Add to Home Screen, open the app from the Home Screen, then turn this on.')}</p>}
 
@@ -396,7 +396,7 @@ function BillCalc({ home, setHome }) {
   const [summer, setSummer] = useState(() => { const m = tw.getUTCMonth() + 1; return m >= 6 && m <= 9; });
   const r = billCompare(Math.max(0, kwh), peak / 100, summer);
   const diff = r.tiered - r.tou;
-  if (!open) return <button className="bill-open" onClick={() => setOpen(true)}>🧮 {t('試算：時間電價划算嗎？')}</button>;
+  if (!open) return <button className="bill-open" onClick={() => setOpen(true)}>{t('試算：時間電價划算嗎？')} ›</button>;
   return (
     <div className="bill">
       <div className="bill-row">
