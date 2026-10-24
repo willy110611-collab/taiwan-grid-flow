@@ -37,6 +37,9 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 「匯入我家用電 CSV」（智慧電表）— 使用者未決定。
 - 詳細待辦另見 claude.ai「APP」專案的《台灣光脈搏_待辦清單》。
 
+## 資料需定期更新
+- `src/config/nuclear.js`：核電廠現況（核安會、經濟部）。狀態有變（例如核三再運轉進度、核二送審）要更新，並改 `NUCLEAR_VERIFIED`。
+
 ## 備選清單（暫停中）
 - **颱風停電（D2）**：2026-10-24 停用（`src/config/app.js` 的 `typhoon: false`，網頁不請求也不顯示）。原因：台電 psvs1（`service.taipower.com.tw/psvs1/`）從 Cloudflare 中繼站讀會逾時（台灣連 Worker 也一樣 502）、從台灣瀏覽器直接讀被 CORS 擋（無 `Access-Control-Allow-Origin`）、GitHub Actions 是海外主機。每月排程會自動搜尋台電是否有新的公開來源（API、開放資料、CORS 開放），有就通知使用者。恢復方式：換資料來源 → 改中繼站 `typhoon()` → `typhoon: true`。中繼站程式碼仍保留 `/typhoon.json`。
 

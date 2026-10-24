@@ -3,7 +3,7 @@ import { GUIDE } from './Guide.jsx';
 import { APP } from '../config/app.js';
 import { EVIDENCE } from '../config/energy.js';
 import { Icon, Sparkline, fmtMw, minutesAgo } from './widgets.jsx';
-import { t, tx, tr, useT } from '../i18n.js';
+import { t, tx, tr, useT, isEn } from '../i18n.js';
 
 const srcLabel = (u = '') => (/workers\.dev/.test(u) ? tx(' · 中繼站', ' · relay') : /^\.\/data\//.test(u) ? tx(' · 網站備份', ' · site backup') : /taipower/.test(u) ? tx(' · 本機代理', ' · local proxy') : '');
 const agoLabel = (m) => (m < 1 ? tx('剛剛', 'just now') : m < 60 ? tx(`${m} 分鐘前`, `${m} min ago`) : m < 1440 ? tx(`${Math.floor(m / 60)} 小時前`, `${Math.floor(m / 60)} h ago`) : tx(`${Math.floor(m / 1440)} 天前`, `${Math.floor(m / 1440)} d ago`));
@@ -11,6 +11,7 @@ import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
 import { twHM } from '../data/history.js';
 import { setPowerPref } from '../power.js';
 import { SupplyHistory, RenewTab } from './OpenData.jsx';
+import { NUCLEAR_SOURCES, NUCLEAR_VERIFIED } from '../config/nuclear.js';
 
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
 export function Panel({ title, onClose, children }) {
@@ -201,6 +202,8 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dd>{tx('環境部「空氣品質指標 AQI」（每小時）；電廠煙道排放為環境部「固定污染源連續自動監測 CEMS」。', 'Ministry of Environment AQI (hourly); stack emissions from the Ministry of Environment’s continuous emission monitoring (CEMS).')}</dd>
             <dt>{tx('未來供電預測', 'Supply forecast')}</dt>
             <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
+            <dt>{tx('核電廠現況', 'Nuclear plant status')}</dt>
+            <dd>{NUCLEAR_SOURCES.map((s, i) => <span key={s.url}>{i ? '；' : ''}<a href={s.url} target="_blank" rel="noreferrer">{isEn() ? s.en : s.label}</a></span>)}{tx(`（整理於 ${NUCLEAR_VERIFIED}）。`, ` (as of ${NUCLEAR_VERIFIED}).`)}</dd>
             <dt>{tx('計畫性停電', 'Planned outages')}</dt>
             <dd><a href="https://data.gov.tw/dataset/26144" target="_blank" rel="noreferrer">{tx('台灣電力公司計畫性工作停電資料', 'Taipower planned work outages')}</a>{tx('（每天 17 時更新；中繼站每天存一份，累積歷史）。', ' (updated daily at 17:00; the relay keeps a daily copy to build history).')}</dd>
             {APP.typhoon && <>

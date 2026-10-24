@@ -11,6 +11,8 @@ import { solveFlows } from './flowModel.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { createGlowSprite } from './glowSprite.js';
 import { Cruise } from './cruise.js';
+import { NUCLEAR, NUCLEAR_IDS } from '../config/nuclear.js';
+import { isEn } from '../i18n.js';
 import { solarSun } from '../data/parseGenary.js';
 import { daylightState, daylightPalette, applyDaylight } from './daylight.js';
 
@@ -63,6 +65,8 @@ export class GridFlowEngine {
     this.demandMix = 0;
     this.airView = false;
     this.airMix = 0;
+    this.nukeView = false;
+    this.nukeMix = 0;
     this.stations = [];
     this.home = null;
     this.clockOverride = null;
@@ -195,7 +199,7 @@ export class GridFlowEngine {
       }
       const [rk, share] = LOAD_REGION[L.id] || ['N', 0];
       const rl = this.regions?.byKey?.[rk]?.load;
-      L.targetLoadMw = rl ? rl * share : L.demand * snapshot.total;
+      L.targetLoadMw = rl ? rl * share : LOADS[L.idx].demand * snapshot.total; // 用設定的比例（L.demand 下一行會被改成 MW）
       L.demand = L.targetLoadMw;
     }
     this.tension = snapshot.supply?.level ?? 0;
@@ -240,6 +244,12 @@ export class GridFlowEngine {
     const f = FILTERS.find((x) => x.id === id) || FILTERS[0];
     this.demandView = !!f.demand;
     this.airView = !!f.air;
+    const wasNuke = this.nukeView;
+    this.nukeView = f.id === 'nuclear';
+    // 電腦版：核三在全島視角最南端，常被底部工具列蓋住 → 切到核能時把全島放在工具列上方、右側面板左邊
+    if (this.nukeView && window.innerWidth >= 700 && !this.userMoved && !this.cruise.active && this.mode !== 'wallpaper') {
+      this.map.fitBounds(TAIWAN_BOUNDS, { padding: { top: 100, bottom: 190, left: 60, right: 440 }, pitch: this.map.getPitch(), bearing: this.map.getBearing(), duration: 1000 });
+    } else if (wasNuke && !this.nukeView && window.innerWidth >= 700) this.refitIfIdle(); // 離開核能：回到原本的全島視角
     FUEL_KEYS.forEach((k, i) => {
       // 用電視角：發電粒子全部保留但調暗，讓注意力回到「誰在吸能」
       this.fuelVisTarget[i] = f.demand ? 0.5 : f.air ? (THERMAL.has(k) ? 0.55 : 0.25) : !f.fuels || f.fuels.includes(k) ? 1 : 0;
@@ -429,6 +439,7 @@ export class GridFlowEngine {
     this.breathPhase += (dt * 2 * Math.PI) / TENSION[this.tension].period;
     this.demandMix += ((this.demandView ? 1 : 0) - this.demandMix) * (1 - Math.exp(-dt / 0.3));
     this.airMix += ((this.airView ? 1 : 0) - this.airMix) * (1 - Math.exp(-dt / 0.3));
+    this.nukeMix += ((this.nukeView ? 1 : 0) - this.nukeMix) * (1 - Math.exp(-dt / 0.3));
     if (Math.floor(this.time * 8) !== Math.floor((this.time - dt) * 8)) this.updateRegionHeat();
 
     // 能源篩選：各燃料可見度平滑淡入淡出（約 0.6 秒）
@@ -648,9 +659,16 @@ export class GridFlowEngine {
         updateTriggers: { getColor: am },
         parameters: ADDITIVE
       }));
+      // 數字太密會疊成一團：依螢幕位置挑，AQI 高的優先，彼此至少隔 26 像素（顏色光點仍全部畫）
+      const picked = [];
+      for (const s of [...st].sort((a, b) => b.aqi - a.aqi)) {
+        const q = this.map.project([s.lng, s.lat]);
+        if (picked.every((o) => (o.x - q.x) ** 2 + (o.y - q.y) ** 2 >= 26 * 26)) picked.push({ s, x: q.x, y: q.y });
+      }
+      const nums = picked.map((o) => o.s);
       layers.push(new TextLayer({
         id: 'aqi-num',
-        data: st,
+        data: nums,
         getPosition: (d) => [d.lng, d.lat],
         getText: (d) => String(d.aqi),
         getSize: 10,
@@ -738,6 +756,56 @@ export class GridFlowEngine {
       }));
     }
 
+    // ⑥-d 核能分類：三座核電廠（目前都停機，沒有光球）畫冰白圓圈與狀態，提示可以點
+    if (this.nukeMix > 0.01) {
+      const nm = this.nukeMix;
+      const en = isEn();
+      const sites = this.plants.filter((p) => NUCLEAR_IDS.includes(p.id));
+      layers.push(new ScatterplotLayer({
+        id: 'nuke-sites',
+        data: sites,
+        getPosition: (d) => d.pos,
+        getRadius: 8,
+        radiusUnits: 'pixels',
+        stroked: true,
+        filled: true,
+        lineWidthUnits: 'pixels',
+        getLineWidth: 1.5,
+        getLineColor: [214, 228, 255, 220 * nm],
+        getFillColor: [214, 228, 255, 40 * nm],
+        updateTriggers: { getLineColor: nm, getFillColor: nm },
+        parameters: NO_DEPTH
+      }));
+      // 核一、核二很近：核一的字放左邊、其他放右邊
+      const left = (d) => d.id === 'chinshan';
+      const lines = sites.filter((d) => d.id !== this.hover.id).flatMap((d) => { // 被選取的那座已有電廠標籤，不重複
+        const n = NUCLEAR[d.id];
+        const mw = d.targetMw > 1 ? ` · ${Math.round(d.targetMw)} MW` : '';
+        return [
+          { d, text: (en ? n.shortEn : n.short) + mw, size: 12, dy: -7, color: [214, 228, 255] },
+          { d, text: en ? n.mapStatusEn || n.statusEn : n.mapStatus || n.status, size: 10, dy: 8, color: [160, 175, 205] }
+        ];
+      });
+      layers.push(new TextLayer({
+        id: 'nuke-labels',
+        data: lines,
+        getPosition: (x) => x.d.pos,
+        getText: (x) => x.text,
+        getSize: (x) => x.size,
+        getColor: (x) => [...x.color, 255 * nm],
+        getPixelOffset: (x) => [left(x.d) ? -14 : 14, x.dy],
+        getTextAnchor: (x) => (left(x.d) ? 'end' : 'start'),
+        getAlignmentBaseline: 'center',
+        fontFamily: FONT,
+        characterSet: 'auto',
+        fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
+        outlineWidth: 3,
+        outlineColor: [3, 5, 10, 200 * nm],
+        updateTriggers: { getColor: nm, getText: [en, lines.map((x) => x.text).join()] },
+        parameters: NO_DEPTH
+      }));
+    }
+
     // ⑦ 互動拾取層（透明圓，專門負責 hover / tap）
     layers.push(new ScatterplotLayer({
       id: 'pick',
@@ -759,7 +827,8 @@ export class GridFlowEngine {
       getText: (d) => (dm > 0.5 && Math.round(d.mw / 10) * 10 > 0 ? `${d.name}\n約 ${(Math.round(d.mw / 10) * 10).toLocaleString()} MW` : d.name),
       getColor: [190 + 50 * dm, 205 + 30 * dm, 235, 70 + 150 * dm],
       getSize: 11 + dm,
-      getPixelOffset: [0, 16 + 4 * dm],
+      getPixelOffset: (d) => (dm > 0.5 && d.side ? [d.side === 'right' ? 14 : -14, -10] : [0, 16 + 4 * dm]),
+      getTextAnchor: (d) => (dm > 0.5 && d.side ? (d.side === 'right' ? 'start' : 'end') : 'middle'),
       getAlignmentBaseline: 'top',
       fontFamily: FONT,
       fontWeight: 300,
@@ -768,7 +837,7 @@ export class GridFlowEngine {
       fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
       outlineWidth: 3 * dm,
       outlineColor: [3, 5, 10, 180],
-      updateTriggers: { getText: [dm > 0.5, Math.round(this.time)], getColor: dm, getSize: dm, getPixelOffset: dm, data: dm > 0.5 },
+      updateTriggers: { getText: [dm > 0.5, Math.round(this.time)], getColor: dm, getSize: dm, getPixelOffset: dm, getTextAnchor: dm > 0.5, data: dm > 0.5 },
       parameters: NO_DEPTH
     }));
 

@@ -12,6 +12,7 @@ import { StorePanel } from './Store.jsx';
 import { FinderPanel } from './Finder.jsx';
 import { AppliancePanel, TyphoonBanner, TyphoonPanel } from './OpenData.jsx';
 import { useTyphoon } from '../data/openData.js';
+import { NuclearPanel } from './Nuclear.jsx';
 import { Guard } from './Guard.jsx';
 import { useT, useLang, tx } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
@@ -225,6 +226,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'info' && <Guard key={'g-info'} name="info" onClose={() => setUi({ panel: null })}><InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} power={power} powerSave={powerSave} onClose={() => setUi({ panel: null, infoTab: null })} /></Guard>}
       {ui.panel === 'demand' && <Guard key={'g-demand'} name="demand" onClose={() => setUi({ panel: null })}><DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'home' && <Guard key={'g-home'} name="home" onClose={() => setUi({ panel: null })}><HomePanel onPick={() => setUi({ pickHome: true })} onMarks={(m) => setUi({ outageMarks: m })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'nuclear' && <Guard key={'g-nuclear'} name="nuclear" onClose={() => setUi({ panel: null })}><NuclearPanel snapshot={snapshot} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'air' && <Guard key={'g-air'} name="air" onClose={() => setUi({ panel: null })}><AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'plant' && ui.plantId && <Guard key={'g-plant'} name="plant" onClose={() => setUi({ panel: null })}><PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'finder' && <Guard key={'g-finder'} name="finder" onClose={() => setUi({ panel: null })}><FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} /></Guard>}

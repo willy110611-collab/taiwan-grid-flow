@@ -9,6 +9,8 @@ import { windText } from './Life.jsx';
 import { useT, isEn, tx } from '../i18n.js';
 import { twHM } from '../data/history.js';
 import { shareLink, plantLink } from '../share.js';
+import { NuclearStatus } from './Nuclear.jsx';
+import { NUCLEAR } from '../config/nuclear.js';
 
 /** 機組備註 → 標籤顏色 */
 const NOTE_TONE = [
@@ -91,6 +93,8 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
         </div>
       )}
 
+      <NuclearStatus id={id} />
+
       <div className="life-sec">
         <div className="hl-k">{units.length ? `${t('台電即時機組')}（${units.length}）` : t('資料來源')}</div>
         {units.length ? (
@@ -108,6 +112,8 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
               );
             })}
           </ul>
+        ) : NUCLEAR[id] ? (
+          <p className="fine">{tx('台電即時資料中目前沒有這座電廠的機組。', 'Taipower’s live data currently lists no units for this plant.')}</p>
         ) : cfg.solar ? (
           <p className="fine">
             {t('台電即時資料中約 86% 的太陽能是一整行「其它購電太陽能」，沒有位置；這裡依台電「各縣市太陽光電裝置容量」')}（{SOLAR_COUNTY_KW.version}）{t('分配')}

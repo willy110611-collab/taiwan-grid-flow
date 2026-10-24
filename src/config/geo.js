@@ -41,6 +41,9 @@ export const PLANTS = [
   { id: 'taichung', name: '台中發電廠',   en: 'Taichung',   pos: [120.481, 24.213], match: /台中|中火/ },
   { id: 'hsinta',   name: '興達發電廠',   en: 'Hsinta',     pos: [120.198, 22.856], match: /興達/ },
   { id: 'maanshan', name: '第三核能發電廠', en: 'Maanshan', pos: [120.751, 21.958], match: /核三|馬鞍山/ },
+  // 核一、核二：已停機（台電即時資料只剩廠內備用燃油氣渦輪「核二Gas1/2」），放著讓「核能」分類可以點
+  { id: 'chinshan', name: '第一核能發電廠', en: 'Chinshan', pos: [121.586, 25.286], match: /核一/ },
+  { id: 'kuosheng', name: '第二核能發電廠', en: 'Kuosheng', pos: [121.662, 25.203], match: /核二|國聖/ },
   // 彰濱：彰濱光、崙尾光、星崙光（彰濱工業區崙尾區，台電即時逐案公布）＋陸域風電
   { id: 'changbin', name: '彰濱風電 / 光電', en: 'Changbin', pos: [120.400, 24.110],
     match: /彰濱|彰工|彰品|王功|星彰|崙尾|星崙/, share: { wind: 0.62 } },
@@ -81,8 +84,8 @@ export const PLANTS = [
  *  demand : 相對用電權重（大致依各區域負載比例；北部最大 → 自然產生南電北送）
  */
 export const LOADS = [
-  { id: 'xinyi',     name: '台北信義區',   en: 'Taipei · Xinyi',      pos: [121.567, 25.033], demand: 0.36 },
-  { id: 'hsp',       name: '新竹科學園區', en: 'Hsinchu Science Park', pos: [121.000, 24.780], demand: 0.17 },
+  { id: 'xinyi',     name: '台北信義區',   en: 'Taipei · Xinyi',      pos: [121.567, 25.033], demand: 0.36, side: 'right' }, // side：用電視角的標籤放旁邊，避免和新竹重疊
+  { id: 'hsp',       name: '新竹科學園區', en: 'Hsinchu Science Park', pos: [121.000, 24.780], demand: 0.17, side: 'left' },
   { id: 'xitun',     name: '台中西屯區',   en: 'Taichung · Xitun',    pos: [120.640, 24.180], demand: 0.17 },
   { id: 'stsp',      name: '台南科學園區', en: 'Tainan Science Park', pos: [120.280, 23.105], demand: 0.13 },
   { id: 'qianzhen',  name: '高雄前鎮區',   en: 'Kaohsiung · Qianzhen', pos: [120.310, 22.595], demand: 0.17 },

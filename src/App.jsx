@@ -203,10 +203,10 @@ export default function App() {
     }
     if (patch.filter) {
       e?.setFilter(patch.filter);
-      // 切到「用電」自動打開用電面板；切走時關掉
+      // 切到「用電／空品／核能」自動打開對應面板；切走時關掉
       setUiState((s) => ({
         ...s, ...patch,
-        panel: patch.filter === 'demand' || patch.filter === 'air' ? patch.filter : s.panel === 'demand' || s.panel === 'air' ? null : s.panel
+        panel: ['demand', 'air', 'nuclear'].includes(patch.filter) ? patch.filter : ['demand', 'air', 'nuclear'].includes(s.panel) ? null : s.panel
       }));
       return;
     }

@@ -461,6 +461,13 @@ a:hover { text-decoration: underline; }
 .tag.warm { color: rgb(255, 150, 110); }
 .units { list-style: none; margin: 6px 0 0; padding: 0; }
 .units li { display: grid; grid-template-columns: minmax(84px, 1.2fr) 1fr auto; align-items: center; gap: 4px 10px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.nuke-list { list-style: none; margin: 8px 0 4px; padding: 0; }
+.nuke-list li { border-top: 1px solid var(--line); }
+.nuke-list button { display: flex; width: 100%; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 0; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.nuke-list .nk-main { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.nuke-list .nk-main b { font-weight: 400; }
+.nuke-list .nk-main small { color: var(--muted, rgba(255, 255, 255, 0.5)); font-size: 11px; }
+.nuke-list .tag { flex: none; color: rgb(214, 228, 255); border-color: rgba(214, 228, 255, 0.35); }
 .units .u-name { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .units .u-bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
 .units .u-bar i { display: block; height: 100%; }
