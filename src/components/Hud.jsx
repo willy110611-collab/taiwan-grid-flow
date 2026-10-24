@@ -117,7 +117,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       )}
 
       {!wallpaper && (ui.cruise || ui.away) && (
-        <button className="reset-view" onClick={() => setUi({ resetView: true })} title="回到全島俯視圖">
+        <button className="reset-view" onClick={() => setUi({ resetView: true })} title={t('回到全島俯視圖')}>
           {Icon.globe}<span>{t('全島')}</span>
         </button>
       )}
@@ -170,7 +170,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       <footer className="sourceline">
         {lang === 'en' ? `Data: Taipower${live ? '' : ' (sim)'} · MOENV · CWA · MOI · Mapzen · flows are modeled · Design: ${APP.designer}` : <>資料：台灣電力公司{live ? '即時' : '（模擬）'} · 環境部 · 氣象署 · 內政部 · Mapzen · 流向為模型推估 · 設計：{APP.designer}</>}
         {!wallpaper && APP.donate?.some((d) => d.url) && (
-          <> · <button className="donate-link" onClick={() => setUi({ panel: 'info', infoTab: 'about' })}>☕ 贊助</button></>
+          <> · <button className="donate-link" onClick={() => setUi({ panel: 'info', infoTab: 'about' })}>☕ {t('贊助')}</button></>
         )}
       </footer>
 
@@ -179,19 +179,19 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           <button
             className={`lock-btn ${ui.locked ? '' : 'open'}`}
             onClick={() => setUi(ui.locked ? { unlock: true } : { lock: true })}
-            title={ui.locked ? '解鎖以調整畫面' : '鎖定並固定這個畫面'}
+            title={t(ui.locked ? '解鎖以調整畫面' : '鎖定並固定這個畫面')}
           >
             {ui.locked ? Icon.lock : Icon.unlock}
           </button>
           {!ui.locked && (
             <div className="adjust-banner">
-              <b>調整模式</b>
-              <span>拖曳移動 · 滾輪縮放 · 右鍵拖曳旋轉與傾斜</span>
+              <b>{t('調整模式')}</b>
+              <span>{t('拖曳移動 · 滾輪縮放 · 右鍵拖曳旋轉與傾斜')}</span>
               <div className="adjust-actions">
-                <button className="primary" onClick={() => setUi({ lock: true })}>{Icon.lock}固定這個畫面</button>
-                <button onClick={() => setUi({ resumeCruise: true })}>{Icon.cruise}恢復自動巡航</button>
+                <button className="primary" onClick={() => setUi({ lock: true })}>{Icon.lock}{t('固定這個畫面')}</button>
+                <button onClick={() => setUi({ resumeCruise: true })}>{Icon.cruise}{t('恢復自動巡航')}</button>
               </div>
-              <small>2 分鐘沒有操作會自動固定並鎖定</small>
+              <small>{t('2 分鐘沒有操作會自動固定並鎖定')}</small>
             </div>
           )}
         </>

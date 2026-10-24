@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 
 /**
  * 中／英切換（介面主要文字）
- *  t('中文') → 英文模式時查表，查不到就維持中文（長篇說明文字暫時只有中文）
+ *  t('中文') → 英文模式時查表，查不到就維持中文
+ *  tx('中文', 'English') → 長篇說明直接寫兩種語言
  *  語言存在這台裝置：localStorage 'tgf-lang'
  */
 const KEY = 'tgf-lang';
@@ -20,6 +21,27 @@ export const getLang = () => lang;
 export function t(zh) {
   if (lang !== 'en' || zh == null) return zh;
   return EN[zh] ?? zh;
+}
+
+export const tx = (zh, en) => (lang === 'en' ? en : zh);
+export const isEn = () => lang === 'en';
+
+/** 組合句（例如「離峰時段，電價較低」、錯誤訊息）：英文模式時先查整句，再逐段替換 */
+const PHRASES = [
+  [/今晚 24:00 起(離峰|尖峰)/g, (_, p) => (p === '離峰' ? 'off-peak from midnight' : 'peak from midnight')],
+  [/(\d{2}:\d{2}) 起離峰/g, 'off-peak from $1'], [/(\d{2}:\d{2}) 起尖峰/g, 'peak from $1'],
+  ['週末全日離峰', 'Weekend — off-peak all day'], ['國定假日全日離峰', 'Holiday — off-peak all day'],
+  ['尖峰時段', 'Peak hours'], ['離峰時段', 'Off-peak hours'], ['，電價較低', ', lower price'], ['，電價較高', ', higher price'],
+  ['碳排接近今日低點', 'Carbon near today’s low'], ['碳排接近今日高點', 'Carbon near today’s high'],
+  [/^供電(.+)$/, (_, x) => `Supply: ${EN['供電' + x] || x}`],
+  ['（', ' ('], ['）', ')'], ['，', ', ']
+];
+export function tr(zh) {
+  if (lang !== 'en' || zh == null) return zh;
+  if (EN[zh]) return EN[zh];
+  let s = String(zh);
+  for (const [a, b] of PHRASES) s = typeof a === 'string' ? s.split(a).join(b) : s.replace(a, b);
+  return s;
 }
 
 /** React：語言改變時重新繪製 */
@@ -76,6 +98,35 @@ const EN = {
   '看現在': 'Now', '點光球': 'Tap a plant', '使用說明': 'Guide', '部分資料暫時讀不到': 'Some data unavailable', '等': '+', '項': 'more',
   '連不到台電資料，目前是模擬畫面': 'Cannot reach Taipower — showing simulation',
   '店家': 'Shop', '店家用電': 'Shop energy',
+  // v0.6.2 補齊
+  '回到全島俯視圖': 'Back to island view', '贊助': 'Support', '調整模式': 'Adjust mode',
+  '拖曳移動 · 滾輪縮放 · 右鍵拖曳旋轉與傾斜': 'Drag to move · scroll to zoom · right-drag to rotate and tilt',
+  '固定這個畫面': 'Lock this view', '恢復自動巡航': 'Resume cruise', '2 分鐘沒有操作會自動固定並鎖定': 'Locks automatically after 2 minutes idle',
+  '解鎖以調整畫面': 'Unlock to adjust view', '鎖定並固定這個畫面': 'Lock this view', '讀取中…': 'Loading…',
+  '用電網多出來的電把水抽上山，晚上再放水發電。地圖上流進這裡的粒子就是這些電。': 'Surplus grid power pumps water uphill; it is released to generate at night. The particles flowing in here are that power.',
+  '台電即時資料中約 86% 的太陽能是一整行「其它購電太陽能」，沒有位置；這裡依台電「各縣市太陽光電裝置容量」': 'About 86% of solar in Taipower’s live data is a single “other purchased solar” row with no location; here it is allocated by Taipower’s installed PV capacity by county',
+  '分配': '', '並依氣象署即時日射量調整（目前係數': 'adjusted by CWA live solar radiation (factor',
+  '台電未即時公布這座離島電廠的出力，依典型負載、季節與時段推估。': 'Taipower does not publish this island plant’s live output; it is estimated from typical load, season and time of day.',
+  '台電以彙總列公布（例如陸域風力、小水力），依各節點比例分配。': 'Taipower publishes this as an aggregate row (e.g. onshore wind, small hydro), allocated across nodes by share.',
+  // 面板標題、等級
+  '空品': 'Air', '用電': 'Demand', '徽章簿': 'Badges', '店家用電': 'Shop energy',
+  '常見': 'Common', '少見': 'Uncommon', '稀有': 'Rare',
+  '偏低': 'Low', '普通': 'Moderate', '偏高': 'High',
+  '良好': 'Good', '對敏感族群不健康': 'Unhealthy for sensitive groups', '對所有族群不健康': 'Unhealthy', '非常不健康': 'Very unhealthy', '危害': 'Hazardous',
+  '台電即時': 'Taipower live', '推估分配': 'Allocated',
+  // 連線診斷
+  '各機組發電量': 'Unit output', '各區發電/用電': 'Regional gen/demand', '供電狀況': 'Supply status', '今日燃料別曲線': 'Today by fuel',
+  '今日區域用電曲線': 'Today by region', '昨日燃料別曲線': 'Yesterday by fuel', '未來供電預測': 'Supply forecast',
+  '環境部 AQI': 'MOENV AQI', '環境部 CEMS': 'MOENV CEMS', '氣象署日射量': 'CWA solar radiation',
+  // 錯誤訊息
+  '此瀏覽器不支援定位': 'This browser does not support location', '定位權限被拒絕': 'Location permission denied', '無法取得位置': 'Could not get your location',
+  '此瀏覽器不支援通知（iPhone 需先「加入主畫面」）': 'This browser does not support notifications (on iPhone, Add to Home Screen first)',
+  '通知權限未允許': 'Notification permission not granted', '中繼站尚未更新到 v4，暫時無法開啟': 'The relay is not on v4 yet, so this is unavailable',
+  '通知權限未允許（可到手機設定 → 通知 開啟）': 'Notification permission not granted (enable it in your phone’s Settings → Notifications)',
+  '此瀏覽器不支援 App 通知': 'This browser does not support app notifications',
+  'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈搏開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
+  '強制模擬（網址帶 ?sim=1）': 'Forced simulation (?sim=1 in URL)',
+  '日射量資料不足或過舊': 'Solar radiation data missing or stale',
   // 語言
   '中文': '中文', 'English': 'English'
 };

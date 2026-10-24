@@ -3,7 +3,7 @@ import { GUIDE } from './Guide.jsx';
 import { APP } from '../config/app.js';
 import { EVIDENCE } from '../config/energy.js';
 import { Icon, Sparkline, fmtMw } from './widgets.jsx';
-import { t, useT } from '../i18n.js';
+import { t, tx, useT } from '../i18n.js';
 import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
 import { twHM } from '../data/history.js';
 
@@ -16,7 +16,7 @@ export function Panel({ title, onClose, children }) {
       <div className="panel-grip" onClick={onClose} />
       <header className="panel-head">
         <h2>{title}</h2>
-        <button className="icon-btn" onClick={onClose} aria-label="關閉">{Icon.close}</button>
+        <button className="icon-btn" onClick={onClose} aria-label={tx('關閉', 'Close')}>{Icon.close}</button>
       </header>
       <div className="panel-body">{children}</div>
     </section>
@@ -42,7 +42,7 @@ export function HighlightsPanel({ hl, records, onPlant, onClose }) {
         <>
           <ul className="hl-list">
             {hl.topPlant && (
-              <li className="clickable" onClick={() => hl.topPlant.id && onPlant?.(hl.topPlant.id)} title="看這座電廠的機組">
+              <li className="clickable" onClick={() => hl.topPlant.id && onPlant?.(hl.topPlant.id)} title={tx('看這座電廠的機組', 'See this plant’s units')}>
                 <span className="hl-k">{t('目前出力最大')}</span>
                 <span className="hl-v">{hl.topPlant.name} <small className="muted">›</small></span>
                 <span className="hl-n">{fmtMw(hl.topPlant.mw)} <small>MW</small></span>
@@ -93,7 +93,7 @@ export function HighlightsPanel({ hl, records, onPlant, onClose }) {
           </div>
           {records && REC_ROWS.some(([k]) => records[k]) && (
             <div className="hl-anom">
-              <div className="hl-k">{t('我的紀錄')}<small className="muted">　{t('這台裝置看過的最高值')}{records.since ? `（${md(records.since).split(' ')[0]} 起）` : ''}</small></div>
+              <div className="hl-k">{t('我的紀錄')}<small className="muted">　{t('這台裝置看過的最高值')}{records.since ? tx(`（${md(records.since).split(' ')[0]} 起）`, ` (since ${md(records.since).split(' ')[0]})`) : ''}</small></div>
               <ul className="hl-list">
                 {REC_ROWS.filter(([k]) => records[k]).map(([k, label, unit, cls]) => (
                   <li key={k}>
@@ -106,7 +106,7 @@ export function HighlightsPanel({ hl, records, onPlant, onClose }) {
             </div>
           )}
           <p className="fine">
-            {hl.partial ? `今日紀錄從 ${hl.since} 開始（打開頁面後才開始累計）。` : t('統計範圍：今日 00:00 至現在。')}
+            {hl.partial ? tx(`今日紀錄從 ${hl.since} 開始（打開頁面後才開始累計）。`, `Today’s records start at ${hl.since} (counted only while the page is open).`) : t('統計範圍：今日 00:00 至現在。')}
           </p>
         </>
       )}
@@ -123,6 +123,7 @@ const TABS = [
 ];
 
 export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
+  useT();
   const [tab, setTab] = useState(initialTab === 'diag' ? 'source' : initialTab || 'guide');
   // 從「部分資料讀不到」點進來 → 直接捲到連線診斷
   useEffect(() => {
@@ -142,17 +143,17 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
       {tab === 'guide' && (
         <div className="doc">
           <ul className="guide-list">
-            {GUIDE.map(([ico, k, v]) => (
-              <li key={k}><span className="g-ico">{ico}</span><div><b>{t(k)}</b><p>{v}</p></div></li>
+            {GUIDE.map(([ico, k, v, en]) => (
+              <li key={k}><span className="g-ico">{ico}</span><div><b>{t(k)}</b><p>{tx(v, en)}</p></div></li>
             ))}
           </ul>
-          <div className="hl-k" style={{ marginTop: 12 }}>小技巧</div>
+          <div className="hl-k" style={{ marginTop: 12 }}>{tx('小技巧', 'Tips')}</div>
           <ul className="reasons">
-            <li>上方「綠能／火力／核能／用電／空品」可以只看某一種；「用電」看哪一區最吃電。</li>
-            <li>左上角 ⟳：檢查並更新到最新版（目前 v{APP.version}）。</li>
-            <li>右上角「供電充裕／吃緊」：台電備轉容量率燈號。</li>
-            <li>資料每 10 分鐘更新一次（台電公布頻率），左下角顯示資料時間。</li>
-            <li>iPhone：Safari 開啟 → 分享 → 加入主畫面，就像 App 一樣。</li>
+            <li>{tx('上方「綠能／火力／核能／用電／空品」可以只看某一種；「用電」看哪一區最吃電。', 'Use the filters at the top (Green / Thermal / Nuclear / Demand / Air) to show one kind only; “Demand” shows which region uses the most power.')}</li>
+            <li>{tx(`左上角 ⟳：檢查並更新到最新版（目前 v${APP.version}）。`, `⟳ at top-left checks for and installs the latest version (now v${APP.version}).`)}</li>
+            <li>{tx('右上角「供電充裕／吃緊」：台電備轉容量率燈號。', '“Supply OK / tight” at top-right is Taipower’s operating-reserve signal.')}</li>
+            <li>{tx('資料每 10 分鐘更新一次（台電公布頻率），左下角顯示資料時間。', 'Data refreshes every 10 minutes (Taipower’s publishing interval); the data time is shown at bottom-left.')}</li>
+            <li>{tx('iPhone：Safari 開啟 → 分享 → 加入主畫面，就像 App 一樣。', 'iPhone: open in Safari → Share → Add to Home Screen to use it like an app.')}</li>
           </ul>
         </div>
       )}
@@ -161,55 +162,55 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
         <div className="doc">
           <div className="status-row">
             <span className={`dot ${live ? 'live' : 'sim'}`} />
-            {live ? '目前顯示台電即時資料' : '目前顯示模擬資料（無法連到台電）'}
-            {snapshot?.timestamp && <span className="muted">　資料時間 {snapshot.timestamp}</span>}
+            {live ? tx('目前顯示台電即時資料', 'Showing live Taipower data') : tx('目前顯示模擬資料（無法連到台電）', 'Showing simulated data (cannot reach Taipower)')}
+            {snapshot?.timestamp && <span className="muted">　{tx('資料時間', 'Data time')} {snapshot.timestamp}</span>}
           </div>
           <dl>
-            <dt>各機組發電量</dt>
+            <dt>{tx('各機組發電量', 'Unit output')}</dt>
             <dd>
-              台灣電力公司「今日電力資訊」公開資料，每 10 分鐘更新：各機組發電量、各區發電／用電、
-              今日燃料別發電曲線、今日區域用電曲線、供電狀況（備轉容量率與燈號）。
-              <a href={APP.taipowerPage} target="_blank" rel="noreferrer">台電原始頁面 ↗</a>
+              {tx('台灣電力公司「今日電力資訊」公開資料，每 10 分鐘更新：各機組發電量、各區發電／用電、今日燃料別發電曲線、今日區域用電曲線、供電狀況（備轉容量率與燈號）。',
+                'Taipower “Today’s Power Information” open data, updated every 10 minutes: output of each unit, generation/demand by region, today’s generation by fuel, today’s regional demand curve, and supply status (operating reserve and signal).')}
+              <a href={APP.taipowerPage} target="_blank" rel="noreferrer">{tx('台電原始頁面 ↗', 'Taipower source page ↗')}</a>
             </dd>
-            <dt>電廠座標與機組對應</dt>
-            <dd>本專案整理（src/config/geo.js），以機組名稱比對到 {PLANTS.length} 個發電節點（含 9 座離岸風場、12 個縣市太陽能群）。離岸風場座標參考維基百科與開發商公開資料。</dd>
-            <dt>太陽能分配</dt>
+            <dt>{tx('電廠座標與機組對應', 'Plant locations & unit mapping')}</dt>
+            <dd>{tx(`本專案整理（src/config/geo.js），以機組名稱比對到 ${PLANTS.length} 個發電節點（含 9 座離岸風場、12 個縣市太陽能群）。離岸風場座標參考維基百科與開發商公開資料。`,
+              `Compiled by this project (src/config/geo.js): unit names are matched to ${PLANTS.length} generation nodes (including 9 offshore wind farms and 12 county solar clusters). Offshore wind locations follow Wikipedia and developers’ public data.`)}</dd>
+            <dt>{tx('太陽能分配', 'Solar allocation')}</dt>
             <dd>
-              台電「各縣市太陽光電裝置容量」（{SOLAR_COUNTY_KW.version}）＋ 交通部中央氣象署「日射量」O-A0091-001（每小時）。
-              台電即時資料約 86% 的太陽能沒有位置，依縣市容量 × 當地日照分配。
+              {tx(`台電「各縣市太陽光電裝置容量」（${SOLAR_COUNTY_KW.version}）＋ 交通部中央氣象署「日射量」O-A0091-001（每小時）。台電即時資料約 86% 的太陽能沒有位置，依縣市容量 × 當地日照分配。`,
+                `Taipower “Installed PV capacity by county” (${SOLAR_COUNTY_KW.version}) + Central Weather Administration solar radiation O-A0091-001 (hourly). About 86% of solar in Taipower’s live data has no location, so it is allocated by county capacity × local sunshine.`)}
             </dd>
-            <dt>空氣品質、風向風速</dt>
-            <dd>環境部「空氣品質指標 AQI」（每小時）；電廠煙道排放為環境部「固定污染源連續自動監測 CEMS」。</dd>
-            <dt>未來供電預測</dt>
-            <dd>台電「未來兩個月電力供需預測」（每 10 天一筆）。</dd>
-            <dt>電價與碳排</dt>
+            <dt>{tx('空氣品質、風向風速', 'Air quality & wind')}</dt>
+            <dd>{tx('環境部「空氣品質指標 AQI」（每小時）；電廠煙道排放為環境部「固定污染源連續自動監測 CEMS」。', 'Ministry of Environment AQI (hourly); stack emissions from the Ministry of Environment’s continuous emission monitoring (CEMS).')}</dd>
+            <dt>{tx('未來供電預測', 'Supply forecast')}</dt>
+            <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
+            <dt>{tx('電價與碳排', 'Tariffs & carbon')}</dt>
             <dd>
-              台電「電價表」（114/10/1 起）住宅非時間電價與簡易型二段式時間電價；
-              碳排以經濟部能源署公告電力排碳係數（0.467 kg/度）為基準，依機組類型細分。
-              假日依行政院人事行政總處「政府行政機關辦公日曆表」。
+              {tx('台電「電價表」（114/10/1 公告，115/4/1 凍漲沿用）：住宅與營業用非時間電價、簡易型二段式／三段式時間電價；碳排以經濟部能源署公告電力排碳係數（0.467 kg/度）為基準，依機組類型細分。假日依行政院人事行政總處「政府行政機關辦公日曆表」。',
+                'Taipower tariff table (announced 2025-10-01, unchanged on 2026-04-01): residential and commercial tiered rates, simple two- and three-period time-of-use rates. Carbon uses the Energy Administration grid factor (0.467 kg/kWh) as a baseline, refined by unit type. Holidays follow the government office calendar (DGPA).')}
             </dd>
-            <dt>中繼站</dt>
-            <dd>Cloudflare Workers：轉送台電、環境部、氣象署資料（解決跨網域、編碼與金鑰），並負責 LINE／網頁推播通知。</dd>
-            <dt>縣市界、海岸線</dt>
-            <dd>內政部國土測繪中心開放資料（經 taiwan-atlas 整理）。</dd>
-            <dt>山脈陰影</dt>
+            <dt>{tx('中繼站', 'Relay')}</dt>
+            <dd>{tx('Cloudflare Workers：轉送台電、環境部、氣象署資料（解決跨網域、編碼與金鑰），並負責 LINE／網頁推播通知。', 'Cloudflare Workers: relays Taipower, MOENV and CWA data (handling CORS, encoding and API keys) and sends LINE / web push notifications.')}</dd>
+            <dt>{tx('縣市界、海岸線', 'County borders & coastline')}</dt>
+            <dd>{tx('內政部國土測繪中心開放資料（經 taiwan-atlas 整理）。', 'Ministry of the Interior NLSC open data (via taiwan-atlas).')}</dd>
+            <dt>{tx('山脈陰影', 'Hillshade')}</dt>
             <dd>Mapzen Terrain Tiles / AWS Open Data。</dd>
-            <dt>日出日落、天色</dt>
-            <dd>依台灣經緯度以天文公式計算。</dd>
-            <dt>系統頻率</dt>
-            <dd>台電未公開即時頻率，畫面上的 60.00 Hz 為模擬值。</dd>
-            <dt>技術</dt>
+            <dt>{tx('日出日落、天色', 'Sunrise, sunset & sky')}</dt>
+            <dd>{tx('依台灣經緯度以天文公式計算。', 'Computed astronomically for Taiwan’s latitude and longitude.')}</dd>
+            <dt>{tx('系統頻率', 'Grid frequency')}</dt>
+            <dd>{tx('台電未公開即時頻率，畫面上的 60.00 Hz 為模擬值。', 'Taipower does not publish live frequency; the 60.00 Hz shown is simulated.')}</dd>
+            <dt>{tx('技術', 'Tech')}</dt>
             <dd>MapLibre GL JS、deck.gl、React。</dd>
           </dl>
           {snapshot?.diag?.length > 0 && (
             <>
-              <div className="hl-k" style={{ marginTop: 14 }}>連線診斷</div>
+              <div className="hl-k" style={{ marginTop: 14 }}>{t('連線診斷')}</div>
               <ul className="diag">
                 {snapshot.diag.map((d) => (
                   <li key={d.name} className={d.ok ? 'ok' : 'fail'}>
                     <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
-                    <b>{d.name}</b>
-                    <small>{d.ok ? `${t('正常')}${d.detail ? ` · ${d.detail}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || '未嘗試'}</small>
+                    <b>{t(d.name)}</b>
+                    <small>{d.ok ? `${t('正常')}${d.detail ? ` · ${d.detail}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || tx('未嘗試', 'not tried')}</small>
                   </li>
                 ))}
                 {[
@@ -219,14 +220,14 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
                 ].map(([name, ok, err]) => (
                   <li key={name} className={ok ? 'ok' : 'fail'}>
                     <span className={`dot ${ok ? 'live' : 'sim'}`} />
-                    <b>{name}</b>
-                    <small>{ok ? t('正常') : err || '讀取中…'}</small>
+                    <b>{t(name)}</b>
+                    <small>{ok ? t('正常') : err || t('讀取中…')}</small>
                   </li>
                 ))}
               </ul>
               {!live && (
                 <p className="fine">
-                  本機版請用「啟動.bat」或桌布伺服器開啟（直接開 HTML 檔無法連到台電）；手機版需等 GitHub Actions 抓到資料。
+                  {tx('本機版請用「啟動.bat」或桌布伺服器開啟（直接開 HTML 檔無法連到台電）；手機版需等 GitHub Actions 抓到資料。', 'On a PC, open it with 啟動.bat or the wallpaper server (opening the HTML file directly cannot reach Taipower); the mobile site needs GitHub Actions to fetch data first.')}
                 </p>
               )}
             </>
@@ -236,17 +237,17 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
 
       {tab === 'accuracy' && (
         <div className="doc">
-          <p>畫面上每個數字都依「證據強度」分級。把滑鼠移到（或點一下）電廠光球，標籤最下方會標示該數值的等級。</p>
+          <p>{tx('畫面上每個數字都依「證據強度」分級。把滑鼠移到（或點一下）電廠光球，標籤最下方會標示該數值的等級。', 'Every number on screen is graded by strength of evidence. Hover over (or tap) a plant to see the grade at the bottom of its label.')}</p>
           <ul className="evidence">
             {Object.entries(EVIDENCE).map(([k, v]) => (
               <li key={k}>
-                <em className={`tag ${k}`}>{v.label}</em>
-                <span>{v.desc}</span>
+                <em className={`tag ${k}`}>{t(v.label)}</em>
+                <span>{tx(v.desc, v.descEn)}</span>
               </li>
             ))}
           </ul>
           <p className="fine">
-            粒子數量與發電量成正比（每 100 MW 每秒 1 顆）；粒子的路線是示意，沿西部 345kV 走廊的大致走向，不代表實際輸電線位置。
+            {tx('粒子數量與發電量成正比（每 100 MW 每秒 1 顆）；粒子的路線是示意，沿西部 345kV 走廊的大致走向，不代表實際輸電線位置。', 'Particle count is proportional to output (1 particle per second per 100 MW). Routes are illustrative, roughly following the western 345 kV corridor, not actual line locations.')}
           </p>
         </div>
       )}
@@ -254,16 +255,16 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
       {tab === 'about' && (
         <div className="doc">
           <p className="about-title">{APP.name} <span>{APP.en}</span></p>
-          <p>把台電冷冰冰的發電數字，轉成在夜光地圖上流動的能量。發電廠是光源，都市是引力中心，能量沿著西部走廊往北流動。</p>
+          <p>{tx('把台電冷冰冰的發電數字，轉成在夜光地圖上流動的能量。發電廠是光源，都市是引力中心，能量沿著西部走廊往北流動。', 'Turning Taipower’s cold numbers into energy flowing across a night-light map. Power plants are light sources, cities are centers of gravity, and energy flows north along the western corridor.')}</p>
           <dl>
-            <dt>設計者</dt>
+            <dt>{tx('設計者', 'Designer')}</dt>
             <dd>{APP.designer}</dd>
-            <dt>版本</dt>
+            <dt>{tx('版本', 'Version')}</dt>
             <dd>v{APP.version}</dd>
-            <dt>手機版</dt>
+            <dt>{tx('手機版', 'Mobile')}</dt>
             <dd>
               <a href={APP.pagesUrl} target="_blank" rel="noreferrer">{APP.pagesUrl.replace('https://', '')}</a>
-              <br />iPhone：Safari 開啟 → 分享 → 加入主畫面
+              <br />{tx('iPhone：Safari 開啟 → 分享 → 加入主畫面', 'iPhone: Safari → Share → Add to Home Screen')}
             </dd>
           </dl>
           {APP.donate?.some((d) => d.url) && (
@@ -281,8 +282,8 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab }) {
             </div>
           )}
           <p className="fine">
-            本作品為個人獨立作品，與台灣電力公司無關，非官方服務。畫面中的流向與部分數值為推估或模擬，
-            不能取代台電官方電力資訊。介面概念參考「軌島」，程式碼為獨立撰寫。
+            {tx('本作品為個人獨立作品，與台灣電力公司無關，非官方服務。畫面中的流向與部分數值為推估或模擬，不能取代台電官方電力資訊。介面概念參考「軌島」，程式碼為獨立撰寫。',
+              'An independent personal project, not affiliated with Taipower and not an official service. Flows and some values are estimated or simulated and do not replace Taipower’s official information. The interface concept is inspired by 軌島 (Rail Island); the code is written independently.')}
           </p>
         </div>
       )}

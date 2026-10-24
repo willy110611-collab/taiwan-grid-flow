@@ -5,7 +5,7 @@ import { FUELS } from '../config/energy.js';
 import { nearestWind } from '../data/useAir.js';
 import { solarSun } from '../data/parseGenary.js';
 import { windText } from './Life.jsx';
-import { useT } from '../i18n.js';
+import { useT, isEn } from '../i18n.js';
 
 /** 機組備註 → 標籤顏色 */
 const NOTE_TONE = [
@@ -89,7 +89,7 @@ export function PlantPanel({ id, snapshot, air, onClose }) {
         ) : cfg.solar ? (
           <p className="fine">
             {t('台電即時資料中約 86% 的太陽能是一整行「其它購電太陽能」，沒有位置；這裡依台電「各縣市太陽光電裝置容量」')}（{SOLAR_COUNTY_KW.version}）{t('分配')}
-            {solarSun()?.[id] ? `，${t('並依氣象署即時日射量調整（目前係數')} ×${solarSun()[id].toFixed(2)}）` : '。'}
+            {solarSun()?.[id] ? (isEn() ? `, adjusted by CWA live solar radiation (factor ×${solarSun()[id].toFixed(2)}).` : `，並依氣象署即時日射量調整（目前係數 ×${solarSun()[id].toFixed(2)}）`) : (isEn() ? '.' : '。')}
           </p>
         ) : s?.estimated ? (
           <p className="fine">{t('台電未即時公布這座離島電廠的出力，依典型負載、季節與時段推估。')}</p>

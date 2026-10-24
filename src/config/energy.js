@@ -59,8 +59,8 @@ export const FILTERS = [
 
 /** 資料可信度分級（仿軌島「依證據區分即時與推估」） */
 export const EVIDENCE = {
-  live:      { label: '台電即時', desc: '機組名稱直接對應到此電廠，數值來自台電每 10 分鐘公布的淨發電量。' },
-  allocated: { label: '推估分配', desc: '台電以彙總列公布（例如全台太陽能、陸域風力），依各區裝置比例分配到節點。' },
-  modeled:   { label: '模型推估', desc: '輸電流向由重力模型計算，代表「大致往哪裡送」，不是實際線路潮流。' },
-  simulated: { label: '模擬',     desc: '無法取得台電資料時，依台灣時間的典型日負載曲線產生。' }
+  live:      { label: '台電即時', desc: '機組名稱直接對應到此電廠，數值來自台電每 10 分鐘公布的淨發電量。', descEn: 'Unit names map directly to this plant; values are Taipower’s net output published every 10 minutes.' },
+  allocated: { label: '推估分配', desc: '台電以彙總列公布（例如全台太陽能、陸域風力），依各區裝置比例分配到節點。', descEn: 'Taipower publishes aggregate rows (e.g. all solar, onshore wind); they are allocated to nodes by installed capacity per region.' },
+  modeled:   { label: '模型推估', desc: '輸電流向由重力模型計算，代表「大致往哪裡送」，不是實際線路潮流。', descEn: 'Transmission flows come from a gravity model — “roughly where power goes”, not actual line flows.' },
+  simulated: { label: '模擬',     desc: '無法取得台電資料時，依台灣時間的典型日負載曲線產生。', descEn: 'When Taipower data is unavailable, values follow a typical daily load curve for Taiwan time.' }
 };

@@ -5,14 +5,14 @@ import { EVIDENCE } from '../config/energy.js';
 import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
 import { twHM } from '../data/history.js';
-import { t, useT } from '../i18n.js';
+import { t, tx, useT } from '../i18n.js';
 
 /* ───────────── 供電燈號 ───────────── */
 export function SupplyChip({ supply }) {
   if (!supply) return null;
   const c = rgb(supply.color);
   return (
-    <div className="supply" title={supply.evidence === 'live' ? '台電公布：今日尖峰預估備轉容量率' : '模擬值'}>
+    <div className="supply" title={supply.evidence === 'live' ? tx('台電公布：今日尖峰預估備轉容量率', 'Taipower: forecast peak reserve margin today') : tx('模擬值', 'simulated')}>
       <i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />
       <span>{t(supply.label)}</span>
       <b>{supply.rate?.toFixed(1)}%</b>
@@ -28,11 +28,11 @@ export function DemandPanel({ snapshot, onClose }) {
   const ev = regions?.evidence === 'live' && snapshot.source === 'live' ? 'live' : snapshot?.source === 'live' ? 'modeled' : 'simulated';
   return (
     <Panel title="用電" onClose={onClose}>
-      {!regions ? <p className="muted">資料讀取中…</p> : (
+      {!regions ? <p className="muted">{t('資料讀取中…')}</p> : (
         <>
           <p className="fine">
             <em className={`tag ${ev}`}>{EVIDENCE[ev].label}</em>
-            {ev === 'live' ? `台電各區即時發電／用電${regions.time ? `（${regions.time.slice(-5)}）` : ''}` : '依典型區域比例推估'}
+            {ev === 'live' ? tx(`台電各區即時發電／用電${regions.time ? `（${regions.time.slice(-5)}）` : ''}`, `Taipower live generation/demand by region${regions.time ? ` (${regions.time.slice(-5)})` : ''}`) : tx('依典型區域比例推估', 'Estimated from typical regional shares')}
           </p>
           <ul className="region-bars">
             {REGION_KEYS.map((k) => {
@@ -43,23 +43,23 @@ export function DemandPanel({ snapshot, onClose }) {
                   <div className="rb-head">
                     <b>{r.name}</b>
                     <span className={absorb ? 'warm' : 'cool'}>
-                      自給 {Math.round(r.ratio * 100)}% · {absorb ? '吸能' : '供能'}
+                      {tx('自給', 'Self-supply')} {Math.round(r.ratio * 100)}% · {absorb ? tx('吸能', 'importing') : tx('供能', 'exporting')}
                     </span>
                   </div>
                   <div className="rb-bar"><span className="load" style={{ width: `${(r.load / max) * 100}%` }} /></div>
                   <div className="rb-bar"><span className="gen" style={{ width: `${(r.gen / max) * 100}%` }} /></div>
                   <div className="rb-nums">
-                    <span>用電 {fmtMw(r.load)} MW</span>
-                    <span>發電 {fmtMw(r.gen)} MW</span>
+                    <span>{tx('用電', 'Demand')} {fmtMw(r.load)} MW</span>
+                    <span>{tx('發電', 'Generation')} {fmtMw(r.gen)} MW</span>
                   </div>
                 </li>
               );
             })}
           </ul>
           <p className="fine">
-            地圖上的區域底色：<span className="warm">暖色</span> 表示用電大於發電，需要從外區送電進來（吸能）；
-            <span className="cool">冷色</span> 表示發電有剩，往外送（供能）。都市光暈越大代表用電越多。
-            {snapshot.supply?.peakHours && `今日用電尖峰預估 ${snapshot.supply.peakHours}。`}
+            {tx('地圖上的區域底色：', 'Region shading on the map: ')}<span className="warm">{tx('暖色', 'warm')}</span>{tx(' 表示用電大於發電，需要從外區送電進來（吸能）；', ' means demand exceeds generation, so power is imported; ')}
+            <span className="cool">{tx('冷色', 'cool')}</span>{tx(' 表示發電有剩，往外送（供能）。都市光暈越大代表用電越多。', ' means surplus generation is exported. Larger city glows mean higher demand.')}
+            {snapshot.supply?.peakHours && tx(`今日用電尖峰預估 ${snapshot.supply.peakHours}。`, ` Today’s demand peak is expected at ${snapshot.supply.peakHours}.`)}
           </p>
         </>
       )}
@@ -93,12 +93,13 @@ export function Medal({ badge, earned, size = 64 }) {
 }
 
 export function BadgePanel({ badges, live, onClose }) {
+  useT();
   const { earned, progress } = badges;
   const count = BADGES.filter((b) => earned[b.id]).length;
-  const groups = [['grid', '電網徽章', '真實電網出現這個狀態的當下打開才拿得到'], ['explore', '探索徽章', '使用光脈搏的各種方式']];
+  const groups = [['grid', tx('電網徽章', 'Grid badges'), tx('真實電網出現這個狀態的當下打開才拿得到', 'Earned only when the real grid is in that state while the app is open')], ['explore', tx('探索徽章', 'Explorer badges'), tx('使用光脈搏的各種方式', 'Ways to use the app')]];
   return (
-    <Panel title={`徽章簿 ${count} / ${BADGES.length}`} onClose={onClose}>
-      {!live && <p className="fine warm">目前是模擬資料，電網徽章暫停頒發（接上台電即時資料後才會取得）。</p>}
+    <Panel title={`${t('徽章簿')} ${count} / ${BADGES.length}`} onClose={onClose}>
+      {!live && <p className="fine warm">{tx('目前是模擬資料，電網徽章暫停頒發（接上台電即時資料後才會取得）。', 'Simulated data — grid badges are paused until live Taipower data is connected.')}</p>}
       {groups.map(([kind, title, sub]) => (
         <section key={kind} className="badge-group">
           <div className="hl-k">{title}<span className="muted">　{sub}</span></div>
@@ -108,16 +109,16 @@ export function BadgePanel({ badges, live, onClose }) {
               return (
                 <li key={b.id} className={e ? 'on' : ''}>
                   <Medal badge={b} earned={!!e} size={58} />
-                  <b>{b.name}</b>
-                  <small>{e ? new Date(e.at).toLocaleDateString('zh-TW') : b.progress ? b.progress(progress) : b.rarity}</small>
-                  <span className="badge-tip">{e ? b.desc : `${b.desc}\n提示：${b.hint}`}</span>
+                  <b>{tx(b.name, b.nameEn)}</b>
+                  <small>{e ? new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US')) : b.progress ? b.progress(progress) : t(b.rarity)}</small>
+                  <span className="badge-tip">{e ? tx(b.desc, b.descEn) : `${tx(b.desc, b.descEn)}\n${tx('提示：', 'Hint: ')}${tx(b.hint, b.hintEn)}`}</span>
                 </li>
               );
             })}
           </ul>
         </section>
       ))}
-      <p className="fine">徽章存在這台裝置的瀏覽器裡，清除瀏覽資料會一併清除。</p>
+      <p className="fine">{tx('徽章存在這台裝置的瀏覽器裡，清除瀏覽資料會一併清除。', 'Badges are stored in this device’s browser; clearing browsing data removes them.')}</p>
     </Panel>
   );
 }
@@ -137,9 +138,9 @@ export function BadgeToast({ toast, onDone }) {
         <Medal badge={b} earned size={74} />
       </div>
       <div>
-        <small>取得徽章</small>
-        <b>{b.name}</b>
-        <span>{b.desc}</span>
+        <small>{tx('取得徽章', 'Badge earned')}</small>
+        <b>{tx(b.name, b.nameEn)}</b>
+        <span>{tx(b.desc, b.descEn)}</span>
       </div>
     </div>
   );
@@ -152,10 +153,10 @@ export function AlertBanner({ alert, onClose }) {
     <div className="alert-banner" role="status">
       <i />
       <div>
-        <b>{alert.plant || alert.unit} 出力驟降</b>
-        <span>{alert.unit}　{fmtMw(alert.from)} → {fmtMw(alert.to)} MW　（{alert.time}，偵測）</span>
+        <b>{alert.plant || alert.unit} {tx('出力驟降', 'output drop')}</b>
+        <span>{alert.unit}　{fmtMw(alert.from)} → {fmtMw(alert.to)} MW　{tx(`（${alert.time}，偵測）`, `(${alert.time}, detected)`)}</span>
       </div>
-      <button className="icon-btn" onClick={onClose} aria-label="關閉">{Icon.close}</button>
+      <button className="icon-btn" onClick={onClose} aria-label={tx('關閉', 'Close')}>{Icon.close}</button>
     </div>
   );
 }

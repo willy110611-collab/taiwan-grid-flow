@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { APP } from '../config/app.js';
 import { Icon } from './widgets.jsx';
 import { useUpdate, applyUpdate, dismissUpdate, checkUpdate } from '../update.js';
-import { useT } from '../i18n.js';
+import { useT, tx } from '../i18n.js';
 
 /* ───────────── 新版：詢問視窗 + 左上角 ⟳ ───────────── */
 export function UpdatePrompt() {
@@ -56,14 +56,14 @@ export function RefreshBtn() {
 /* ───────────── 第一次使用：功能導覽（之後在「資訊 → 使用說明」） ───────────── */
 const TOUR_KEY = 'tgf-tour-v1';
 export const GUIDE = [
-  ['🔆', '看現在', '光點是發電廠，越亮發電越多；光流從電廠流向城市。右上角是綠能／火力比例與全台發電、用電。'],
-  ['👆', '點光球', '點地圖上的電廠光球，看每部機組的即時出力、歲修或降載狀態。'],
-  ['🏠', '我的家', '設定地點後：現在適不適合用電、附近空氣品質、下風側電廠、電費試算。'],
-  ['🏪', '店家', '匯入店家智慧電表的用電明細：每月尖峰／離峰圖表、哪種電價最省、把工作移到離峰能再省多少。'],
-  ['✨', '亮點', '今天太陽能尖峰、綠能最高的時刻，以及你看過的最高紀錄。'],
-  ['⏪', '回放', '把今天（或昨天）一整天快轉播放，看太陽能如何撐起白天。'],
-  ['〰', '放空', '自動巡航各地電廠，適合當桌布；按「全島」回到俯視圖。'],
-  ['ℹ', '資訊', '資料來源、準確度、連線狀況；資料讀不到時看這裡。']
+  ['🔆', '看現在', '光點是發電廠，越亮發電越多；光流從電廠流向城市。右上角是綠能／火力比例與全台發電、用電。', 'Glowing dots are power plants — brighter means more output; light flows from plants to cities. Top-right shows the green/thermal mix and total generation and demand.'],
+  ['👆', '點光球', '點地圖上的電廠光球，看每部機組的即時出力、歲修或降載狀態。', 'Tap a plant on the map to see each unit’s live output, maintenance or reduced-load status.'],
+  ['🏠', '我的家', '設定地點後：現在適不適合用電、附近空氣品質、下風側電廠、電費試算。', 'After setting a location: whether now is a good time to use power, nearby air quality, upwind plants, and a bill calculator.'],
+  ['🏪', '店家', '匯入店家智慧電表的用電明細：每月尖峰／離峰圖表、哪種電價最省、把工作移到離峰能再省多少。', 'Import a shop’s smart-meter data: monthly peak/off-peak charts, which tariff is cheapest, and how much more you save by shifting work off-peak.'],
+  ['✨', '亮點', '今天太陽能尖峰、綠能最高的時刻，以及你看過的最高紀錄。', 'Today’s solar peak and greenest moment, plus the highest records you have seen.'],
+  ['⏪', '回放', '把今天（或昨天）一整天快轉播放，看太陽能如何撐起白天。', 'Fast-forward through today (or yesterday) to see solar carry the daytime.'],
+  ['〰', '放空', '自動巡航各地電廠，適合當桌布；按「全島」回到俯視圖。', 'Auto-cruise between plants — great as a wallpaper; tap “Overview” to return to the full view.'],
+  ['ℹ', '資訊', '資料來源、準確度、連線狀況；資料讀不到時看這裡。', 'Data sources, accuracy and connection status — check here when data won’t load.']
 ];
 
 export function Tour({ onDone }) {
@@ -76,8 +76,8 @@ export function Tour({ onDone }) {
       <div className="upd-card">
         <div className="upd-title">{t('歡迎來到')} {APP.name}</div>
         <ul className="guide-list">
-          {GUIDE.map(([ico, k, v]) => (
-            <li key={k}><span className="g-ico">{ico}</span><div><b>{t(k)}</b><p>{v}</p></div></li>
+          {GUIDE.map(([ico, k, v, en]) => (
+            <li key={k}><span className="g-ico">{ico}</span><div><b>{t(k)}</b><p>{tx(v, en)}</p></div></li>
           ))}
         </ul>
         <div className="upd-btns"><button className="primary" onClick={close}>{t('開始')}</button></div>
@@ -92,7 +92,7 @@ export function DataIssue({ snapshot, air, onOpen }) {
   const t = useT();
   const bad = [
     ...(snapshot?.diag || []).filter((d) => !d.ok).map((d) => d.name),
-    ...(air && !air.loading && air.error ? ['空氣品質'] : [])
+    ...(air && !air.loading && air.error ? ['空品'] : [])
   ];
   if (!snapshot || snapshot.cached || !bad.length) return null;
   if (snapshot.source !== 'live') {
@@ -100,8 +100,8 @@ export function DataIssue({ snapshot, air, onOpen }) {
     return <button className="data-issue" onClick={onOpen}>⚠ {t('連不到台電資料，目前是模擬畫面')} ›</button>;
   }
   return (
-    <button className="data-issue" onClick={onOpen} title={bad.join('、')}>
-      ⚠ {t('部分資料暫時讀不到')}：{bad.slice(0, 2).join('、')}{bad.length > 2 ? ` ${t('等')} ${bad.length} ${t('項')}` : ''} ›
+    <button className="data-issue" onClick={onOpen} title={bad.map(t).join('、')}>
+      ⚠ {t('部分資料暫時讀不到')}：{bad.slice(0, 2).map(t).join('、')}{bad.length > 2 ? ` ${t('等')} ${bad.length} ${t('項')}` : ''} ›
     </button>
   );
 }

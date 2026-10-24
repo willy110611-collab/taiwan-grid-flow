@@ -610,6 +610,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid rgba(255, 190, 90, 0.45); background: rgba(255, 190, 90, 0.1); color: rgb(255, 205, 120);
   font: inherit; font-size: 11px; letter-spacing: 0.04em; text-align: left; max-width: 100%;
 }
+@media (max-width: 600px) { .data-issue { max-width: 228px; border-radius: 12px; line-height: 1.35; } }
 .toolbar button { position: relative; }
 .tb-dot { position: absolute; top: 6px; right: 14px; width: 6px; height: 6px; border-radius: 50%; background: rgb(255, 190, 90); }
 .hl-list li.clickable { cursor: pointer; }
