@@ -380,6 +380,6 @@ function niceMax(v) {
 }
 function short(v, d = 0) {
   if (v >= 10000) return `${(v / 1000).toFixed(0)}k`;
-  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
+  if (v >= 1000) return `${String(+(v / 1000).toFixed(1))}k`; // 5.0k → 5k、2.5k 維持
   return v.toFixed(d);
 }
