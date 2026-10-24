@@ -44,6 +44,8 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const loadMw = snapshot?.supply?.load ?? (snapshot?.regions?.evidence === 'live'
     ? Object.values(snapshot.regions.byKey).reduce((a, r) => a + r.load, 0) : null);
   const load = useTween(loadMw ?? 0);
+  // 用電（loadpara）和發電（genary）是台電不同檔案，時間可能差 10 分鐘：不同時在用電那行標出時間
+  const useTime = String(snapshot?.supply?.time || '').match(/(\d{1,2}:\d{2})\s*$/)?.[1];
   const live = snapshot?.source === 'live';
   const t = useT();
   const [lang, setLang] = useLang();
@@ -106,7 +108,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           ))}
         </div>
         <div className="mix-total">{fmtMw(total)} <small>{t('MW · 全台發電')}</small></div>
-        {loadMw ? <div className="mix-total">{fmtMw(load)} <small>{t('MW · 全台用電')}</small></div> : null}
+        {loadMw ? <div className="mix-total">{fmtMw(load)} <small>{t('MW · 全台用電')}{useTime && useTime !== snapshot?.timestamp?.slice(-5) ? ` ${useTime}` : ''}</small></div> : null}
         {charge > 20 ? <div className="mix-total charge">⇢ {fmtMw(charge)} <small>{t('MW · 儲能充電中')}</small></div> : null}
         <SupplyChip supply={snapshot?.supply} />
         {!wallpaper && <HomeCard className="hc-desktop" sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}

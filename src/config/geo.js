@@ -49,6 +49,8 @@ export const PLANTS = [
   // 核一、核二：已停機（台電即時資料只剩廠內備用燃油氣渦輪「核二Gas1/2」），放著讓「核能」分類可以點
   { id: 'chinshan', name: '第一核能發電廠', en: 'Chinshan', pos: [121.586, 25.286], match: /核一/ },
   { id: 'kuosheng', name: '第二核能發電廠', en: 'Kuosheng', pos: [121.662, 25.203], match: /核二|國聖/ },
+  // 嘉惠電廠（民營燃氣，嘉義民雄；位置：Global Energy Monitor「Chia-Hui power station」23.5318, 120.4727）
+  { id: 'chiahui',  name: '嘉惠電廠', en: 'Chiahui', pos: [120.473, 23.532], match: /^嘉惠/ },
   // 彰濱：彰濱光、崙尾光、星崙光（彰濱工業區崙尾區，台電即時逐案公布）＋陸域風電
   { id: 'changbin', name: '彰濱風電 / 光電', en: 'Changbin', pos: [120.400, 24.110],
     match: /彰濱|彰工|彰品|王功|星彰|崙尾|星崙/, share: { wind: 0.62 } },
@@ -132,11 +134,11 @@ export const countyRegion = (name = '') => {
 
 /** 電廠所在供電區 */
 export const PLANT_REGION = {
-  datan: 'N', linkou: 'N',
+  datan: 'N', linkou: 'N', chinshan: 'N', kuosheng: 'N',
   ow_formosa1: 'C', ow_formosa2: 'C', ow_zhongneng: 'C', ow_changfang: 'C', ow_gch12: 'C', ow_gch4: 'C', ow_tpc: 'C', ow_hailong: 'C', ow_yunneng: 'C',
   taichung: 'C', tunghsiao: 'C', mailiao: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
   sol_changhua: 'C', sol_yunlin: 'C', sol_taichung: 'C', sol_miaoli: 'C', sol_nantou: 'C', sol_taoyuan: 'N', sol_north: 'N', sol_kaohsiung: 'S', sol_east: 'E',
-  hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S',
+  hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S', chiahui: 'S',
   hoping: 'E',
   penghu: 'X', kinmen: 'X', matsu: 'X', ludao: 'X', lanyu: 'X'
 };
