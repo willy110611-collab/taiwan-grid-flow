@@ -2,6 +2,7 @@
 # 1. 每次 push（一鍵更新.bat）→ 重新建置並上線
 # 2. 每 10 分鐘自動抓一次台電資料 → 放到 ./data/（同網域，手機版不受 CORS 限制）
 # 3. 部署失敗（Pages 暫時錯誤）時等 30 秒自動重試一次
+# 4. 上線前檢查：英文翻譯缺漏、無頭瀏覽器冒煙測試（推送新版時才跑）；沒過就不部署
 name: Deploy
 
 on:
@@ -30,6 +31,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: 檢查英文翻譯
+        run: npm run check
 
       - name: 抓取台電「今日電力資訊」公開資料
         continue-on-error: true
@@ -58,6 +61,11 @@ jobs:
             || { echo "genary 無效"; rm -f public/data/genary.json; }
 
       - run: npm run build
+      - name: 冒煙測試（推送新版時）
+        if: github.event_name != 'schedule'
+        run: |
+          npx playwright install --with-deps chromium
+          npm run smoke
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
