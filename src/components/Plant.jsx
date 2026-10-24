@@ -34,7 +34,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
   const peak = series.reduce((a, x) => (x.mw > (a?.mw ?? -1) ? x : a), null);
   const low = series.reduce((a, x) => (x.mw < (a?.mw ?? Infinity) ? x : a), null);
   const share = async () => {
-    const r = await shareLink(plantLink(id), `${cfg.name}｜台灣光脈搏`);
+    const r = await shareLink(plantLink(id), `${cfg.name}｜台灣光脈動`);
     setMsg(r === 'copied' ? tx('已複製連結', 'Link copied') : r === 'failed' ? tx('無法分享，請手動複製網址', 'Could not share; copy the address manually') : '');
   };
   const s = snapshot?.plants?.find((p) => p.id === id);

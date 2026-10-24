@@ -203,8 +203,10 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
             <dt>{tx('計畫性停電', 'Planned outages')}</dt>
             <dd><a href="https://data.gov.tw/dataset/26144" target="_blank" rel="noreferrer">{tx('台灣電力公司計畫性工作停電資料', 'Taipower planned work outages')}</a>{tx('（每天 17 時更新；中繼站每天存一份，累積歷史）。', ' (updated daily at 17:00; the relay keeps a daily copy to build history).')}</dd>
+            {APP.typhoon && <>
             <dt>{tx('颱風停電', 'Typhoon outages')}</dt>
             <dd><a href="https://service.taipower.com.tw/psvs1/" target="_blank" rel="noreferrer">{tx('台電「天然災害停復電查詢」', 'Taipower disaster outage map')}</a>{tx('（各縣市、鄉鎮目前／曾經停電戶數）。', ' (homes currently / ever without power by county and district).')}</dd>
+            </>}
             <dt>{tx('鄉鎮用電', 'Township use')}</dt>
             <dd><a href="https://data.gov.tw/dataset/14135" target="_blank" rel="noreferrer">{tx('台灣電力公司鄉鎮市(郵遞區)別用電統計資料', 'Taipower electricity use by township (postcode)')}</a>{tx('，取「表燈非營業用」每戶平均。', ', residential lighting (non-business) average per customer.')}</dd>
             <dt>{tx('歷年供需', 'Supply history')}</dt>
@@ -304,7 +306,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
           </dl>
           {APP.donate?.some((d) => d.url) && (
             <div className="donate">
-              <p>☕ 喜歡光脈搏的話，可以請無聊的人喝杯咖啡，支持伺服器與資料費用 🙏</p>
+              <p>☕ 喜歡光脈動的話，可以請無聊的人喝杯咖啡，支持伺服器與資料費用 🙏</p>
               <div className="donate-btns">
                 {APP.donate.filter((d) => d.url).map((d) => (
                   <a key={d.url} className="donate-btn" href={d.url} target="_blank" rel="noreferrer">{d.label}</a>

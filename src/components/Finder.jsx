@@ -60,7 +60,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
   const share = async () => {
     const v = getView?.();
     if (!v) return;
-    const r = await shareLink(viewLink(v), '台灣光脈搏');
+    const r = await shareLink(viewLink(v), '台灣光脈動');
     setMsg(r === 'copied' ? tx('已複製目前畫面的連結', 'Link to this view copied') : r === 'shared' ? '' : r === 'failed' ? tx('無法分享，請手動複製網址', 'Could not share; copy the address manually') : '');
   };
 

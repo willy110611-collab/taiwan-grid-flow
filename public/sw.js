@@ -1,6 +1,6 @@
 // 離線快取：頁面與程式用「先上網、失敗再用快取」，所以一鍵更新後重開就是新版。
 // 電力資料（data/、taipower/）永遠走網路，不快取，避免看到舊數字。
-const CACHE = 'tgf-v0.8.1';
+const CACHE = 'tgf-v0.8.2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   // 連同首頁用到的程式檔一起先存好 → 第二次打開就完全不用下載
@@ -56,7 +56,7 @@ self.addEventListener('fetch', (e) => {
 
 // ── App 通知（Web Push）：中繼站在空品不良、供電吃緊時送來 ──
 self.addEventListener('push', (e) => {
-  let msg = { title: '台灣光脈搏', body: '' };
+  let msg = { title: '台灣光脈動', body: '' };
   try { msg = { ...msg, ...e.data.json() }; } catch { if (e.data) msg.body = e.data.text(); }
   e.waitUntil(self.registration.showNotification(msg.title, {
     body: msg.body, icon: './icon-192.png', badge: './icon-192.png', tag: msg.tag || msg.title, renotify: true

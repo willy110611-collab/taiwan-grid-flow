@@ -1,6 +1,6 @@
 {
-  "name": "台灣光脈搏 Taiwan Grid Flow",
-  "short_name": "光脈搏",
+  "name": "台灣光脈動 Taiwan Grid Flow",
+  "short_name": "光脈動",
   "description": "把台電即時發電量化為夜光地圖上流動的能量",
   "lang": "zh-Hant",
   "start_url": "./",

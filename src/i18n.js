@@ -125,7 +125,7 @@ const EN = {
   '通知權限未允許': 'Notification permission not granted', '中繼站尚未更新到 v4，暫時無法開啟': 'The relay is not on v4 yet, so this is unavailable',
   '通知權限未允許（可到手機設定 → 通知 開啟）': 'Notification permission not granted (enable it in your phone’s Settings → Notifications)',
   '此瀏覽器不支援 App 通知': 'This browser does not support app notifications',
-  'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈搏開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
+  'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈動開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
   '強制模擬（網址帶 ?sim=1）': 'Forced simulation (?sim=1 in URL)',
   '日射量資料不足或過舊': 'Solar radiation data missing or stale',
   '讀不到最新 · 顯示': 'No new data · showing', '電廠': 'Plants', '更多': 'More', '店家用電試算': 'Shop energy', '今日紀錄': 'Today’s records', '收集成就': 'Collectibles', '說明・資料來源': 'Guide & sources', '電腦版': 'Desktop',

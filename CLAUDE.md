@@ -1,4 +1,4 @@
-# 台灣光脈搏 Taiwan Grid Flow — 給 Claude 的交接說明
+# 台灣光脈動 Taiwan Grid Flow（舊名：台灣光脈搏） — 給 Claude 的交接說明
 
 即時台電發電／用電視覺化網頁（React 18 + Vite 6 + MapLibre + deck.gl），GitHub Pages 部署，手機版是 PWA。
 設計者：無聊的人。回覆一律用**繁體中文**，精簡。
@@ -27,11 +27,16 @@ Cloudflare 帳號 `4bd497adc004887645c3ff9cad913f31`，Worker 名稱 `taiwan-gri
 使用者在 Claude 內建瀏覽器登入 Cloudflare 後，從 dash.cloudflare.com 頁面：
 `PUT /api/v4/accounts/{帳號}/workers/scripts/taiwan-grid-flow-data/content`，FormData：`metadata`＝`{"main_module":"worker.js","keep_bindings":["secret_text","plain_text","kv_namespace"]}`、檔案 `worker.js`（`application/javascript+module`），標頭 `x-atok: window.bootstrap.atok`。程式碼用 raw.githubusercontent 指定 commit 取得並核對 SHA-256。
 
-## 中繼站 v8 第一次部署（多了 Durable Object）
-metadata 改用：`{"main_module":"worker.js","bindings":[{"type":"durable_object_namespace","name":"PRESENCE","class_name":"Presence"}],"migrations":{"new_tag":"v1","new_sqlite_classes":["Presence"]},"keep_bindings":["secret_text","plain_text","kv_namespace"]}`。之後再部署時 migrations 拿掉（已存在），bindings 照留。
-部署後測：`/bundle.json?sid=test` 應有 7 個 files 與 online 數字；`/config.json` 的 lineFriendUrl 應為 null（網頁不顯示加 LINE 好友；供電／空品 LINE 推播只發給管理者 LINE_TO；要開放給所有好友就在 Worker 變數加 `LINE_FRIENDS=1`）。
+## 中繼站 v8（已部署 2026-10-24，commit a35db2a）
+Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已是 `v1`，之後部署**不要再帶 migrations**。
+注意：`/content` 端點只換程式碼、不會加綁定；要改綁定須用 `PUT /accounts/{帳號}/workers/scripts/taiwan-grid-flow-data`（FormData 同上），metadata：`{"main_module":"worker.js","bindings":[{"type":"durable_object_namespace","name":"PRESENCE","class_name":"Presence"}],"keep_bindings":["secret_text","plain_text","kv_namespace"],"observability":{"enabled":true,"head_sampling_rate":1}}`。
+`/config.json` 的 lineFriendUrl 為 null（供電／空品 LINE 推播只發給管理者 LINE_TO；要開放給所有好友就在 Worker 變數加 `LINE_FRIENDS=1`）。
 
 ## 目前待辦
-- 中繼站 v8（含 v7 的 psvs1 逾時重試、bundle、在線人數、LINE 推播只給管理者、資料停更連續 30 分鐘才通知、格式檢查不再誤報）**尚未部署**：部署後測 `/bundle.json`、`/typhoon.json`；颱風若仍逾時，代表 psvs1 不讓海外主機讀，需另想辦法。
+- KV 讀取：Cron 每 10 分鐘逐筆讀所有訂閱（約 144×人數 次/天，約 690 人達免費 10 萬上限）→ 建議改存 list metadata。
 - 「匯入我家用電 CSV」（智慧電表）— 使用者未決定。
 - 詳細待辦另見 claude.ai「APP」專案的《台灣光脈搏_待辦清單》。
+
+## 備選清單（暫停中）
+- **颱風停電（D2）**：2026-10-24 停用（`src/config/app.js` 的 `typhoon: false`，網頁不請求也不顯示）。原因：台電 psvs1（`service.taipower.com.tw/psvs1/`）從 Cloudflare 中繼站讀會逾時（台灣連 Worker 也一樣 502）、從台灣瀏覽器直接讀被 CORS 擋（無 `Access-Control-Allow-Origin`）、GitHub Actions 是海外主機。每月排程會自動搜尋台電是否有新的公開來源（API、開放資料、CORS 開放），有就通知使用者。恢復方式：換資料來源 → 改中繼站 `typhoon()` → `typhoon: true`。中繼站程式碼仍保留 `/typhoon.json`。
+

@@ -50,12 +50,12 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const upd = useUpdate();
   const hasIssue = (snapshot?.diag || []).some((d) => !d.ok);
   const [more, setMore] = useState(false);
-  const typhoon = useTyphoon(!wallpaper);
+  const typhoon = useTyphoon(APP.typhoon && !wallpaper);
 
   return (
     <div className={`hud ${wallpaper ? 'is-wallpaper' : ''}`}>
       <header className="brand">
-        <div className="brand-zh">台灣光脈搏</div>
+        <div className="brand-zh">台灣光脈動</div>
         <div className="brand-en">TAIWAN GRID FLOW</div>
         <div className={`badge ${live ? 'live' : 'sim'}`}>
           <i />
@@ -68,7 +68,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         )}
         {!wallpaper && <RefreshBtn />}
         {!wallpaper && live && !replay?.on && Number.isFinite(snapshot?.online) && snapshot.online > 0 && (
-          <div className="online-count" title={tx('最近 12 分鐘有開著光脈搏的分頁數', 'Tabs with Taiwan Grid Flow open in the last 12 minutes')}>
+          <div className="online-count" title={tx('最近 12 分鐘有開著光脈動的分頁數', 'Tabs with Taiwan Grid Flow open in the last 12 minutes')}>
             {snapshot.online === 1 ? tx('目前只有你在線', 'Only you online') : tx(`${snapshot.online.toLocaleString()} 人同時在線`, `${snapshot.online.toLocaleString()} online now`)}
           </div>
         )}
@@ -117,7 +117,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       <ClockPanel snapshot={snapshot} daylight={daylight} replayT={replay?.on ? snapshot?.t : null} />
 
       {!wallpaper && <AlertBanner alert={anomaly?.active} onClose={anomaly?.dismiss} />}
-      {!wallpaper && !anomaly?.active && <TyphoonBanner data={typhoon.data} onOpen={() => { setMore(false); setUi({ panel: 'typhoon' }); }} />}
+      {APP.typhoon && !wallpaper && !anomaly?.active && <TyphoonBanner data={typhoon.data} onOpen={() => { setMore(false); setUi({ panel: 'typhoon' }); }} />}
       {!wallpaper && <BadgeToast toast={badges?.toast} onDone={badges?.clearToast} />}
       {!wallpaper && replay?.on && <ReplayBar rows={rows} hasYesterday={hasYesterday} replay={replay} setReplay={setReplay} onFinish={onReplayFinish} />}
 
@@ -230,7 +230,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'finder' && <Guard key={'g-finder'} name="finder" onClose={() => setUi({ panel: null })}><FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'store' && <Guard key={'g-store'} name="store" onClose={() => setUi({ panel: null })}><StorePanel onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'appliance' && <Guard key={'g-appliance'} name="appliance" onClose={() => setUi({ panel: null })}><AppliancePanel home={home} onClose={() => setUi({ panel: null })} /></Guard>}
-      {ui.panel === 'typhoon' && <Guard key={'g-typhoon'} name="typhoon" onClose={() => setUi({ panel: null })}><TyphoonPanel data={typhoon.data} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
+      {APP.typhoon && ui.panel === 'typhoon' && <Guard key={'g-typhoon'} name="typhoon" onClose={() => setUi({ panel: null })}><TyphoonPanel data={typhoon.data} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'badges' && <Guard key={'g-badges'} name="badges" onClose={() => setUi({ panel: null })}><BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} /></Guard>}
     </div>
   );

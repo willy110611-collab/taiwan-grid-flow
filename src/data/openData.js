@@ -6,7 +6,7 @@ import { townName } from './useHome.js';
 /**
  * 台電開放資料（D1 計畫停電、D3 鄉鎮用電、D4 歷年供需、D6 縣市綠電）
  *  建置時由 scripts/opendata.mjs 產生在網站的 ./data/，需要時才下載（每份只下載一次）
- * D2 颱風停電：中繼站 /typhoon.json（每 10 分鐘）
+ * D2 颱風停電：中繼站 /typhoon.json（每 10 分鐘）；APP.typhoon 為 false 時停用
  */
 const cache = new Map();
 export function loadSiteJson(name) {
