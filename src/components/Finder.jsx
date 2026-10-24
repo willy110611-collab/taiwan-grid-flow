@@ -3,7 +3,7 @@ import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
 import { PLANTS, plantName } from '../config/geo.js';
 import { FUELS } from '../config/energy.js';
-import { t, tx, useT } from '../i18n.js';
+import { t, tx, tr, useT } from '../i18n.js';
 import { shareLink, viewLink } from '../share.js';
 
 /**
@@ -107,7 +107,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
                     <span className="issue-units">
                       {g.list.map((u) => (
                         <em key={u.unit} className={`note ${u.kind.tone}`}>
-                          {u.unit} <small>{fmtMw(u.mw)}/{fmtMw(u.capacity || 0)} MW</small> {u.note}
+                          {u.unit} <small>{fmtMw(u.mw)}/{fmtMw(u.capacity || 0)} MW</small> {tr(u.note)}
                         </em>
                       ))}
                     </span>

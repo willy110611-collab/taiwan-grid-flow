@@ -6,7 +6,7 @@ import { FUELS } from '../config/energy.js';
 import { nearestWind } from '../data/useAir.js';
 import { solarSun } from '../data/parseGenary.js';
 import { windText } from './Life.jsx';
-import { useT, isEn, tx } from '../i18n.js';
+import { useT, isEn, tx, tr } from '../i18n.js';
 import { twHM } from '../data/history.js';
 import { shareLink, plantLink } from '../share.js';
 import { NuclearStatus } from './Nuclear.jsx';
@@ -108,7 +108,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
                   <span className="u-name">{u.unit}</span>
                   <span className="u-bar"><i style={{ width: `${(pct ?? 0) * 100}%`, background: rgb(FUELS[u.fuel]?.color || [200, 200, 200]) }} /></span>
                   <span className="u-mw">{fmtMw(Math.max(0, u.mw))}{u.capacity > 0 ? <small> / {fmtMw(u.capacity)}</small> : null}</span>
-                  {u.note && u.note.trim() && <em className={`tag ${tone || ''}`}>{u.note}</em>}
+                  {u.note && u.note.trim() && <em className={`tag ${tone || ''}`}>{tr(u.note)}</em>}
                 </li>
               );
             })}
