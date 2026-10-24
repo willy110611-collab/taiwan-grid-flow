@@ -26,6 +26,8 @@ html:lang(zh-Hant) body { line-break: strict; }
 html:lang(en) { --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans TC', sans-serif; }
 p, li, dd, .fine, small { text-wrap: pretty; }
 h1, h2, h3, .upd-title, .panel-head h2 { text-wrap: balance; }
+/* 英文：中文用的大字距套在小寫英文上會變成「I n f o」，收小（全大寫的品牌與標示維持原樣） */
+html:lang(en) :is(.mix-label, .panel-head h2, .tabs button, .hl-k, .rb-head b, .adjust-banner b, .badge-toast b, .advice-head, .about-title, .cruise-caption b, .toolbar button, .filters button, .hc-advice, .hc-set) { letter-spacing: 0.06em; }
 /* 短說明（導覽、清單說明、提示）：各行等長，避免最後一行只剩「狀態。」兩三個字 */
 .guide-list p, .fine, .upd-card small, .hl-list .hl-v, .nuke-list small, .plant-note { text-wrap: balance; }
 /* 標題、標籤、按鈕等短字串：只在標點或空格換行，不把詞拆成兩半 */
