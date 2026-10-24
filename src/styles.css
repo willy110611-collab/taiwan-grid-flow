@@ -26,6 +26,10 @@ html:lang(zh-Hant) body { line-break: strict; }
 html:lang(en) { --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans TC', sans-serif; }
 p, li, dd, .fine, small { text-wrap: pretty; }
 h1, h2, h3, .upd-title, .panel-head h2 { text-wrap: balance; }
+/* 短說明（導覽、清單說明、提示）：各行等長，避免最後一行只剩「狀態。」兩三個字 */
+.guide-list p, .fine, .upd-card small, .hl-list .hl-v, .nuke-list small, .plant-note { text-wrap: balance; }
+/* 標題、標籤、按鈕等短字串：只在標點或空格換行，不把詞拆成兩半 */
+html:lang(zh-Hant) :is(.guide-list p, .fine, .panel-head h2, .guide-list b, .hl-k, .tag, .toolbar button, .filters button, .rb-head b, .nk-main b, .upd-title, .store-btns button) { word-break: keep-all; overflow-wrap: anywhere; }
 
 a { color: var(--green); text-decoration: none; }
 a:hover { text-decoration: underline; }
