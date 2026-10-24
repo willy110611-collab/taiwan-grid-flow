@@ -1,0 +1,60 @@
+# 台灣光脈搏 — 一鍵回到上一版（G5）
+#  用法：GitHub → Actions →「回到上一版」→ Run workflow
+#  做法：把程式（src、public、scripts、套件設定）還原成「上一個版本號」最後的樣子，
+#        以新的 commit 推上 main（保留完整歷史，之後可以再改回來），然後重新部署。
+#  注意：之後在電腦上改程式前，GitHub Desktop 要先 Pull。
+name: 回到上一版
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '要回到的版本號（留空 = 上一版，例如 0.6.2）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 找出要回到的版本
+        id: find
+        run: |
+          cur=$(node -p "require('./src/config/changelog.json').version")
+          want="${{ github.event.inputs.version }}"
+          target=""
+          for c in $(git log --format=%H -- src/config/changelog.json); do
+            v=$(git show "$c:src/config/changelog.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
+            if [ -n "$want" ] && [ "$v" = "$want" ]; then target=$c; tv=$v; break; fi
+            if [ -z "$want" ] && [ "$v" != "$cur" ]; then target=$c; tv=$v; break; fi
+          done
+          if [ -z "$target" ]; then echo "找不到要回到的版本"; exit 1; fi
+          # 該版本「最後」的樣子：下一個改版 commit 之前的最後一筆
+          next=$(git log --format=%H --reverse "$target"..HEAD -- src/config/changelog.json | head -1)
+          base=$(git rev-parse "${next}^")
+          echo "cur=$cur" >> $GITHUB_OUTPUT
+          echo "tv=$tv" >> $GITHUB_OUTPUT
+          echo "base=$base" >> $GITHUB_OUTPUT
+          echo "目前 v$cur → 回到 v$tv（$base）"
+      - name: 還原程式並推上 main
+        run: |
+          base=${{ steps.find.outputs.base }}
+          paths="src public scripts package.json package-lock.json index.html vite.config.js"
+          for f in $(git diff --name-only --diff-filter=A "$base" HEAD -- $paths); do git rm -q "$f"; done
+          keep=$(for p in $paths; do git cat-file -e "$base:$p" 2>/dev/null && echo "$p"; done)
+          git checkout "$base" -- $keep
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "回到上一版：v${{ steps.find.outputs.cur }} → v${{ steps.find.outputs.tv }}" || { echo "沒有變更"; exit 0; }
+          git push
+      - name: 重新部署
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
