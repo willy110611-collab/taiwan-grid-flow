@@ -1,0 +1,27 @@
+# 台灣光脈搏 — 每小時健康檢查（G2／G6）
+#  用真實資料從外部打開正式網站、檢查中繼站與網站備份
+#  正常 → 什麼都不做；有問題 → LINE 通知管理者（經中繼站），並讓這次檢查失敗（GitHub 寄 Email）
+name: 健康檢查
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: 檢查正式網站與中繼站
+        run: npm run health
