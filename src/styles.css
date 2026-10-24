@@ -87,6 +87,12 @@ a:hover { text-decoration: underline; }
 
 /* ── 右上：能源佔比 ── */
 .mix { top: calc(22px + var(--safe-t)); right: var(--gutter); text-align: right; min-width: 132px; }
+/* 地圖放大時光流會跑到文字底下：數字區背後墊一層柔和暗色漸層，仍讀得清楚 */
+.mix::before, .brand::before {
+  content: ''; position: absolute; inset: -26px -30px -44px -64px; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 72% 72% at 62% 48%, rgba(3, 5, 10, 0.8) 40%, rgba(3, 5, 10, 0) 100%);
+}
+.brand::before { inset: -26px -48px -22px -30px; background: radial-gradient(ellipse 70% 65% at 40% 45%, rgba(3, 5, 10, 0.6), rgba(3, 5, 10, 0) 100%); }
 .mix-row { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; line-height: 1.05; }
 .mix-label { font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faint); }
 .mix-value { font-family: var(--mono); font-weight: 300; font-size: 30px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
