@@ -217,6 +217,8 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dd>{tx('環境部「空氣品質指標 AQI」（每小時）；電廠煙道排放為環境部「固定污染源連續自動監測 CEMS」。', 'Ministry of Environment AQI (hourly); stack emissions from the Ministry of Environment’s continuous emission monitoring (CEMS).')}</dd>
             <dt>{tx('未來供電預測', 'Supply forecast')}</dt>
             <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
+            <dt>{tx('電廠位置', 'Plant locations')}</dt>
+            <dd><a href="https://www.gem.wiki/" target="_blank" rel="noreferrer">Global Energy Monitor</a>{tx('、維基百科「台灣發電廠列表」；太陽能群與風場為所在縣市、風場約略中心。', ' and Wikipedia “List of power stations in Taiwan”; solar clusters and wind farms are placed at their county or approximate farm centre.')}</dd>
             <dt>{tx('核電廠現況', 'Nuclear plant status')}</dt>
             <dd>{NUCLEAR_SOURCES.map((s, i) => <span key={s.url}>{i ? '；' : ''}<a href={s.url} target="_blank" rel="noreferrer">{isEn() ? s.en : s.label}</a></span>)}{tx(`（整理於 ${NUCLEAR_VERIFIED}）。`, ` (as of ${NUCLEAR_VERIFIED}).`)}</dd>
             <dt>{tx('計畫性停電', 'Planned outages')}</dt>
