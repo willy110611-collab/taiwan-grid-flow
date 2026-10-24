@@ -1,8 +1,8 @@
-# 台灣光脈搏 — GitHub Pages 自動部署
+# 台灣光脈動 — GitHub Pages 自動部署
 # 1. 每次 push（一鍵更新.bat）→ 重新建置並上線
 # 2. 每 10 分鐘自動抓一次台電資料 → 放到 ./data/（同網域，手機版不受 CORS 限制）
 # 3. 部署失敗（Pages 暫時錯誤）時等 30 秒自動重試一次
-# 4. 上線前檢查：英文翻譯缺漏、無頭瀏覽器冒煙測試（推送新版時才跑）；沒過就不部署
+# 4. 上線前檢查：英文翻譯缺漏、無頭瀏覽器冒煙測試（推送、或排程時發現線上還不是這個版本時才跑）；沒過就不部署
 name: Deploy
 
 on:
@@ -61,8 +61,17 @@ jobs:
             || { echo "genary 無效"; rm -f public/data/genary.json; }
 
       - run: npm run build
-      - name: 冒煙測試（推送新版時）
-        if: github.event_name != 'schedule'
+      # 推送觸發的部署可能被緊接著的排程部署取消（concurrency），所以排程時也要檢查：
+      # 線上版本號和這次要部署的不同 → 代表新版還沒經過冒煙測試，照樣要跑
+      - name: 判斷要不要跑冒煙測試
+        id: need
+        run: |
+          CUR=$(node -p "require('./package.json').version")
+          LIVE=$(curl -fsSL --max-time 15 "https://willy110611-collab.github.io/taiwan-grid-flow/version.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).version)}catch{console.log('')}})" || echo "")
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "$LIVE" != "$CUR" ]; then echo "run=1" >> "$GITHUB_OUTPUT"; else echo "run=0" >> "$GITHUB_OUTPUT"; fi
+          echo "線上 $LIVE，這次 $CUR"
+      - name: 冒煙測試（新版本時）
+        if: steps.need.outputs.run == '1'
         run: |
           if [ -f scripts/smoke.mjs ]; then
             npx playwright install --with-deps chromium
