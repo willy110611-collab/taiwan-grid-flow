@@ -301,6 +301,13 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
               </li>
             ))}
           </ul>
+          <div className="hl-k" style={{ marginTop: 14 }}>{tx('計算方式', 'How numbers are computed')}</div>
+          <ul className="fine-list">
+            <li>{tx('燃料分類照台電「今日電力資訊」：抽蓄水力（明潭、大觀二）與電池放電歸「儲能」，不算再生能源。', 'Fuel categories follow Taipower’s live data: pumped hydro (Mingtan, Taikuan II) and battery discharge count as “storage”, not renewables.')}</li>
+            <li>{tx('全台發電＝台電各類別小計相加（含儲能放電）；與台電公布的目前用電相差通常不到 0.5%。', 'Total generation = sum of Taipower’s category subtotals (including storage discharge); it usually matches Taipower’s published demand within 0.5%.')}</li>
+            <li>{tx('綠能＝太陽能＋風力＋水力＋其他再生能源（地熱、生質能）÷ 全台發電。', 'Green = solar + wind + hydro + other renewables (geothermal, biomass) ÷ total generation.')}</li>
+            <li>{tx('系統頻率：台電沒有公開即時值，畫面上標「模擬」的頻率只是示意。', 'System frequency: Taipower does not publish a live value; the frequency marked “sim” is illustrative only.')}</li>
+          </ul>
           <p className="fine">
             {tx('粒子數量與發電量成正比（每 100 MW 每秒 1 顆）；粒子的路線是示意，沿西部 345kV 走廊的大致走向，不代表實際輸電線位置。', 'Particle count is proportional to output (1 particle per second per 100 MW). Routes are illustrative, roughly following the western 345 kV corridor, not actual line locations.')}
           </p>

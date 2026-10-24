@@ -31,7 +31,7 @@ html:lang(en) :is(.mix-label, .panel-head h2, .tabs button, .hl-k, .rb-head b, .
 /* 短說明（導覽、清單說明、提示）：各行等長，避免最後一行只剩「狀態。」兩三個字 */
 .guide-list p, .fine, .upd-card small, .hl-list .hl-v, .nuke-list small, .plant-note { text-wrap: balance; }
 /* 標題、標籤、按鈕等短字串：只在標點或空格換行，不把詞拆成兩半 */
-html:lang(zh-Hant) :is(.guide-list p, .fine, .panel-head h2, .guide-list b, .hl-k, .tag, .toolbar button, .filters button, .rb-head b, .nk-main b, .upd-title, .store-btns button) { word-break: keep-all; overflow-wrap: anywhere; }
+html:lang(zh-Hant) :is(.guide-list p, .fine, .fine-list li, .evidence span, .panel-head h2, .guide-list b, .hl-k, .tag, .toolbar button, .filters button, .rb-head b, .nk-main b, .upd-title, .store-btns button) { word-break: keep-all; overflow-wrap: anywhere; }
 
 a { color: var(--green); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -485,6 +485,8 @@ a:hover { text-decoration: underline; }
 .units { list-style: none; margin: 6px 0 0; padding: 0; }
 .units li { display: grid; grid-template-columns: minmax(84px, 1.2fr) 1fr auto; align-items: center; gap: 4px 10px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
 .nw { white-space: nowrap; }
+.fine-list { margin: 6px 0 10px; padding-left: 18px; font-size: 11.5px; line-height: 1.65; color: var(--ink-dim); }
+.fine-list li { margin: 3px 0; text-wrap: pretty; }
 .nuke-list { list-style: none; margin: 8px 0 4px; padding: 0; }
 .nuke-list li { border-top: 1px solid var(--line); }
 .nuke-list button { display: flex; width: 100%; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 0; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; }
