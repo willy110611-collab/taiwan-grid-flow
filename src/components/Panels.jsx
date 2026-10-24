@@ -5,6 +5,7 @@ import { EVIDENCE } from '../config/energy.js';
 import { Icon, Sparkline, fmtMw, minutesAgo } from './widgets.jsx';
 import { t, tx, tr, useT } from '../i18n.js';
 
+const srcLabel = (u = '') => (/workers\.dev/.test(u) ? tx(' · 中繼站', ' · relay') : /^\.\/data\//.test(u) ? tx(' · 網站備份', ' · site backup') : /taipower/.test(u) ? tx(' · 本機代理', ' · local proxy') : '');
 const agoLabel = (m) => (m < 1 ? tx('剛剛', 'just now') : m < 60 ? tx(`${m} 分鐘前`, `${m} min ago`) : m < 1440 ? tx(`${Math.floor(m / 60)} 小時前`, `${Math.floor(m / 60)} h ago`) : tx(`${Math.floor(m / 1440)} 天前`, `${Math.floor(m / 1440)} d ago`));
 import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
 import { twHM } from '../data/history.js';
@@ -223,7 +224,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
                     <li key={d.name} className={d.ok ? (ago != null && ago > 40 && !/昨日|預測/.test(d.name) ? 'stale' : 'ok') : 'fail'}>
                       <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
                       <b>{t(d.name)}</b>
-                      <small>{d.ok ? `${t('正常')}${d.detail ? ` · ${d.detail}` : ''}${ago != null && !/昨日|預測/.test(d.name) ? ` · ${agoLabel(ago)}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || tx('未嘗試', 'not tried')}</small>
+                      <small>{d.ok ? `${t('正常')}${srcLabel(d.url)}${d.detail ? ` · ${d.detail}` : ''}${ago != null && !/昨日|預測/.test(d.name) ? ` · ${agoLabel(ago)}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || tx('未嘗試', 'not tried')}</small>
                     </li>
                   );
                 })}

@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈搏 — Cloudflare Worker 中繼站 v5
+//  台灣光脈搏 — Cloudflare Worker 中繼站 v6
+//  v6：網站錯誤回報與 30 天維修紀錄（POST /log）、台電資料格式改變偵測、每小時健康檢查失敗通知（/alert）
+//      管理者在 LINE 傳「錯誤紀錄」可看最近 7 天的錯誤統計
 //  v5：環境部 AQI 故障時改給最後一次成功的資料（存在 KV）；台電資料停更或空品備份太舊時 LINE 通知管理者（LINE_TO）
 //  貼到 Cloudflare：Workers & Pages → taiwan-grid-flow-data → Edit code → 全部取代 → Deploy
 //
@@ -31,7 +33,7 @@ const TP = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/';
 const TP_FILES = new Set(['genary.json', 'genloadareaperc.csv', 'loadpara.json', 'loadfueltype.csv', 'loadfueltype_1.csv', 'loadareas.csv']);
 const FORECAST = 'https://service.taipower.com.tw/data/opendata/apply/file/d006014/001.csv';
 const MOENV = 'https://data.moenv.gov.tw/api/v2/';
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' };
 const UA = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
   Referer: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html',
@@ -44,6 +46,8 @@ export default {
     const name = new URL(req.url).pathname.replace(/^\/(data\/)?/, '');
     if (req.method === 'POST' && name === 'line') return lineWebhook(req, env, ctx);
     if (req.method === 'POST' && (name === 'push/subscribe' || name === 'push/unsubscribe')) return pushRoute(req, env, name);
+    if (req.method === 'POST' && name === 'log') return logRoute(req, env);
+    if (name === 'alert') return alertRoute(new URL(req.url), env);
     try {
       if (name === 'config.json') {
         const id = (env.LINE_BASIC_ID || '').trim();
@@ -320,6 +324,7 @@ async function handleEvent(env, ev) {
   const t = norm(ev.message.text);
 
   if (/^(說明|help|\?|？|使用說明)$/i.test(t)) return reply(env, ev.replyToken, HELP);
+  if (id === env.LINE_TO && /^錯誤紀錄$/.test(t)) return reply(env, ev.replyToken, await errorSummary(env, 7));
   if (/^(停止|關閉|取消)(通知)?$/.test(t)) { await save({ supply: false, aqi: false }); return reply(env, ev.replyToken, '已停止所有通知。想恢復請傳「全部通知」。'); }
   if (/^只要供電$/.test(t)) { await save({ supply: true, aqi: false }); return reply(env, ev.replyToken, '好的，只會通知供電吃緊。'); }
   if (/^(全部通知|開啟|開啟通知)$/.test(t)) { await save({ supply: true, aqi: true }); return reply(env, ev.replyToken, `供電與空品通知都已開啟${user.site ? `（測站：${user.site}）` : '，請再傳你家附近的測站名稱'}。`); }
@@ -461,15 +466,18 @@ async function watchdog(env) {
     const age = ts ? (Date.now() - new Date(ts.replace(' ', 'T') + '+08:00').getTime()) / 60e3 : Infinity;
     if (!(age < 40)) issues.push(['grid', `台電機組資料${Number.isFinite(age) ? `已 ${Math.round(age)} 分鐘沒更新（最後 ${ts.slice(11, 16)}）` : '讀不到'}`]);
   } catch (e) { issues.push(['grid', `台電機組資料讀不到（${e.message}）`]); }
+  const fmt = await formatCheck();
+  if (fmt) issues.push(['format', `台電資料格式可能改了（${fmt}），網站可能需要更新程式`]);
   const since = Number(await env.NOTIFY.get('aqi:failSince')) || 0;
   if (since && Date.now() - since > 3 * 3600e3) issues.push(['aqi', `環境部空品已故障 ${Math.round((Date.now() - since) / 3600e3)} 小時，網頁顯示備份資料`]);
-  for (const k of ['grid', 'aqi']) {
+  await errorAlerts(env);
+  for (const k of ['grid', 'aqi', 'format']) {
     const hit = issues.find((x) => x[0] === k);
     const flag = await env.NOTIFY.get(`watch:${k}`);
     if (hit && !flag) {
       if (await send(env, [env.LINE_TO], `⚠ 台灣光脈搏 資料停更：${hit[1]}`)) await env.NOTIFY.put(`watch:${k}`, '1', { expirationTtl: 6 * 3600 });
     } else if (!hit && flag) {
-      await send(env, [env.LINE_TO], `✅ 台灣光脈搏：${k === 'grid' ? '台電機組資料' : '環境部空品'}已恢復正常`);
+      await send(env, [env.LINE_TO], `✅ 台灣光脈搏：${{ grid: '台電機組資料', aqi: '環境部空品', format: '台電資料格式' }[k]}已恢復正常`);
       await env.NOTIFY.delete(`watch:${k}`);
     }
   }
@@ -537,4 +545,107 @@ async function cached(ctx, name, ttl, make) {
   const out = new Response(res.body, res);
   for (const [k, v] of Object.entries(CORS)) out.headers.set(k, v);
   return out;
+}
+
+/* ───────── v6：資料格式檢查（台電大幅調整時提醒管理者更新程式）─────────
+ *  只檢查「結構」：欄位數、數字欄位、筆數；回傳問題描述，正常回傳 null */
+async function formatCheck() {
+  const get = async (f) => (await fetch(`${TP}${f}?_=${Date.now()}`, { headers: UA })).text();
+  try {
+    const g = JSON.parse((await get('genary.json')).replace(/^\uFEFF/, ''));
+    const rows = g.aaData;
+    if (!Array.isArray(rows) || rows.length < 40) return `genary 只有 ${rows?.length ?? 0} 列`;
+    const bad = rows.filter((r) => !Array.isArray(r) || r.length < 7 || !Number.isFinite(parseFloat(String(r[3]).replace(/,/g, ''))));
+    if (bad.length > rows.length * 0.2) return `genary 有 ${bad.length} 列欄位不符`;
+    const p = JSON.parse(await get('loadpara.json'));
+    if (!p?.records?.some((r) => r.fore_peak_resv_rate != null)) return 'loadpara 找不到備轉容量率';
+    const f = (await get('loadfueltype.csv')).trim().split(/\r?\n/);
+    if (f.length < 2 || f[0].split(',').length < 12) return `loadfueltype 欄位 ${f[0]?.split(',').length ?? 0} 欄`;
+    return null;
+  } catch (e) {
+    return `讀取或解析失敗：${String(e.message).slice(0, 60)}`;
+  }
+}
+
+/* ───────── v6：網站錯誤回報（G3）─────────
+ *  POST /log：網站匿名送來的錯誤（訊息、位置、版本、手機/電腦），存成每天一筆清單，保留 31 天
+ *  同一個錯誤當天出現 3 次以上（整個畫面壞掉的 1 次就算）→ LINE 通知管理者一次 */
+const sigOf = (e) => `${e.v}|${e.where}|${String(e.msg).slice(0, 80)}`;
+
+async function logRoute(req, env) {
+  const ok = new Response('ok', { headers: CORS });
+  if (!env.NOTIFY) return ok;
+  try {
+    const raw = (await req.text()).slice(0, 4000);
+    const j = JSON.parse(raw);
+    const e = {
+      t: Date.now(), v: String(j.v || '').slice(0, 12), where: String(j.where || '').slice(0, 20),
+      msg: String(j.msg || '').slice(0, 300), stack: String(j.stack || '').slice(0, 800),
+      device: j.device === 'mobile' ? 'mobile' : 'desktop', mode: j.mode === 'wallpaper' ? 'wallpaper' : 'app'
+    };
+    if (!e.msg) return ok;
+    const day = twDate();
+    const key = `err:${day}`;
+    const list = (await env.NOTIFY.get(key, 'json')) || [];
+    if (list.length < 300) {
+      list.push(e);
+      await env.NOTIFY.put(key, JSON.stringify(list), { expirationTtl: 31 * 86400 });
+    }
+  } catch { /* 格式不對就忽略 */ }
+  return ok;
+}
+
+async function errorAlerts(env) {
+  const day = twDate();
+  const list = (await env.NOTIFY.get(`err:${day}`, 'json')) || [];
+  if (!list.length) return;
+  const by = new Map();
+  for (const e of list) {
+    const k = sigOf(e);
+    const g = by.get(k) || { ...e, n: 0 };
+    g.n++;
+    by.set(k, g);
+  }
+  for (const [k, g] of by) {
+    const severe = g.where === 'map' || g.where === 'hud';
+    if (g.n < (severe ? 1 : 3)) continue;
+    const flag = `erralert:${day}:${k}`;
+    if (await env.NOTIFY.get(flag)) continue;
+    const ok = await send(env, [env.LINE_TO], `⚠ 台灣光脈搏 網站錯誤（今天 ${g.n} 次）\n版本 v${g.v}・${g.where}・${g.device}\n${g.msg}\n\n傳「錯誤紀錄」看最近 7 天`);
+    if (ok) await env.NOTIFY.put(flag, '1', { expirationTtl: 2 * 86400 });
+  }
+}
+
+async function errorSummary(env, days) {
+  const out = [];
+  for (let i = 0; i < days; i++) {
+    const day = new Date(Date.now() + 8 * 3600e3 - i * 864e5).toISOString().slice(0, 10);
+    const list = (await env.NOTIFY.get(`err:${day}`, 'json')) || [];
+    if (!list.length) continue;
+    const by = new Map();
+    for (const e of list) { const k = sigOf(e); by.set(k, (by.get(k) || 0) + 1); }
+    out.push(`${day}　${list.length} 筆`);
+    for (const [k, n] of [...by].sort((a, b) => b[1] - a[1]).slice(0, 5)) {
+      const [v, where, msg] = k.split('|');
+      out.push(`・${n}× v${v} ${where}：${msg}`);
+    }
+  }
+  return out.length ? `🛠 最近 ${days} 天網站錯誤\n${out.join('\n')}` : `✅ 最近 ${days} 天沒有網站錯誤紀錄`;
+}
+
+/* ───────── v6：外部健康檢查通知（G2／G6）─────────
+ *  GitHub Actions 每小時用真實資料打開網站；失敗才呼叫 /alert?type=site
+ *  只接受固定幾種類型、訊息內容寫死在這裡；同一類型 3 小時內只通知一次 */
+const ALERTS = {
+  site: '⚠ 台灣光脈搏 每小時檢查失敗：正式網站用真實資料打開時出錯，詳見 GitHub Actions「健康檢查」',
+  data: '⚠ 台灣光脈搏 每小時檢查：網站上的台電資料超過 1 小時沒更新，詳見 GitHub Actions「健康檢查」'
+};
+async function alertRoute(url, env) {
+  const type = url.searchParams.get('type');
+  const res = (s) => new Response(s, { headers: { ...CORS, 'Content-Type': 'text/plain; charset=utf-8' } });
+  if (!ALERTS[type] || !env.NOTIFY || !env.LINE_TOKEN || !env.LINE_TO) return res('ignored');
+  const flag = `alert:${type}`;
+  if (await env.NOTIFY.get(flag)) return res('throttled');
+  if (await send(env, [env.LINE_TO], ALERTS[type])) await env.NOTIFY.put(flag, '1', { expirationTtl: 3 * 3600 });
+  return res('sent');
 }

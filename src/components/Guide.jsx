@@ -95,7 +95,7 @@ export function DataIssue({ snapshot, air, onOpen }) {
     ...(snapshot?.diag || []).filter((d) => !d.ok).map((d) => d.name),
     ...(air && !air.loading && air.error ? ['空品'] : [])
   ];
-  if (!snapshot || snapshot.cached || !bad.length) return null;
+  if (!snapshot || (snapshot.cached && !snapshot.stale) || !bad.length) return null;
   if (snapshot.source !== 'live') {
     if (!snapshot.diag?.length) return null; // 刻意開模擬模式（?sim=1）不算問題
     return <button className="data-issue" onClick={onOpen}>⚠ {t('連不到台電資料，目前是模擬畫面')} ›</button>;

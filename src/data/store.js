@@ -271,7 +271,16 @@ export function summarize(months, shift = 0, { bimonthly = null, kw = 0 } = {}) 
 
 /* ───────── 儲存（只在這台裝置） ───────── */
 const KEY = 'tgf-store';
-export function loadStore() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } }
+export function loadStore() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (!s || typeof s !== 'object') return null;
+    // 存檔壞掉或格式不對的月份直接略過，不讓整個店家面板出錯
+    const ok = (M) => M && typeof M.kwh === 'number' && M.two && M.three && Array.isArray(M.wk) && Array.isArray(M.we);
+    const months = Object.fromEntries(Object.entries(s.months || {}).filter(([, M]) => ok(M)));
+    return { ...s, months };
+  } catch { return null; }
+}
 export function saveStore(s) { try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch { /* 略 */ } }
 
 /** 範例：小吃店（週一公休，10–14、17–21 營業，冷藏 24 小時），近 12 個月、每 15 分鐘 */

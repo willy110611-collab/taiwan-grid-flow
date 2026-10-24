@@ -11,6 +11,7 @@ import { useHome, useNotify, townName } from './data/useHome.js';
 import { usageAdvice } from './data/advice.js';
 import { homeSummary } from './components/Life.jsx';
 import { getPowerPref } from './power.js';
+import { Guard } from './components/Guard.jsx';
 
 /**
  * 網址參數
@@ -268,9 +269,10 @@ export default function App() {
 
   return (
     <main className={`app ${WALLPAPER ? 'wallpaper' : ''}`} style={daylight ? { '--sky': daylight.sky } : undefined}>
-      <GridFlowMap snapshot={shown} options={options} onReady={(e) => { engine.current = e; if (params.has('debug')) window.tgf = e; }} />
+      <Guard name="map" full><GridFlowMap snapshot={shown} options={options} onReady={(e) => { engine.current = e; if (params.has('debug')) window.tgf = e; }} /></Guard>
       <div className="sky" style={{ opacity: daylight ? 0.25 + daylight.day * 0.35 + daylight.twilight * 0.4 : 0.3 }} />
       <div className="vignette" />
+      <Guard name="hud" full>
       <Hud
         snapshot={shown}
         ui={ui}
@@ -296,6 +298,7 @@ export default function App() {
         power={power}
         getView={() => engine.current?.getView()}
       />
+      </Guard>
     </main>
   );
 }

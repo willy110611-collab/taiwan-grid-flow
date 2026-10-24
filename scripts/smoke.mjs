@@ -25,11 +25,18 @@ try {
     await page.waitForSelector('.toolbar', { timeout: 30000 });
     await sleep(3000);
     for (const label of LABELS[lang]) {
-      const btn = page.locator('.toolbar button', { hasText: new RegExp(`^\\s*${label}\\s*$`) }).first();
+      let btn = page.locator('.toolbar > button', { hasText: new RegExp(`^\\s*${label}\\s*$`) }).first();
+      if (!(await btn.count())) {
+        // 收在「更多」選單裡
+        const more = page.locator('.toolbar > button', { hasText: /^\s*(更多|More)\s*$/ }).first();
+        if (await more.count()) { await more.click(); await sleep(300); }
+        btn = page.locator('.more-menu button', { hasText: new RegExp(label) }).first();
+      }
       if (!(await btn.count())) { errors.push(`${tag} 找不到按鈕「${label}」`); continue; }
       await btn.click();
       await sleep(700);
       if (!(await page.locator('.panel').count())) errors.push(`${tag}「${label}」沒有打開面板`);
+      if (await page.locator('.guard-card').count()) errors.push(`${tag}「${label}」顯示錯誤卡片`);
       const close = page.locator('.panel .icon-btn').first();
       if (await close.count()) { await close.click(); await sleep(300); }
     }

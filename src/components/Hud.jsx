@@ -10,6 +10,7 @@ import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 import { PlantPanel } from './Plant.jsx';
 import { StorePanel } from './Store.jsx';
 import { FinderPanel } from './Finder.jsx';
+import { Guard } from './Guard.jsx';
 import { useT, useLang } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
@@ -46,6 +47,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const charge = (snapshot?.charging?.pump || 0) + (snapshot?.charging?.battery || 0);
   const upd = useUpdate();
   const hasIssue = (snapshot?.diag || []).some((d) => !d.ok);
+  const [more, setMore] = useState(false);
 
   return (
     <div className={`hud ${wallpaper ? 'is-wallpaper' : ''}`}>
@@ -54,7 +56,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         <div className="brand-en">TAIWAN GRID FLOW</div>
         <div className={`badge ${live ? 'live' : 'sim'}`}>
           <i />
-          {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('回放')} ${twHM(snapshot.t)}` : snapshot ? (snapshot.cached ? `${t('更新中 · 上次')} ${twHM(snapshot.t)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
+          {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('回放')} ${twHM(snapshot.t)}` : snapshot ? (snapshot.stale ? `${t('讀不到最新 · 顯示')} ${twHM(snapshot.t)}` : snapshot.cached ? `${t('更新中 · 上次')} ${twHM(snapshot.t)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
         </div>
         {!wallpaper && (
           <button className="lang-btn" onClick={() => setLang(lang === 'en' ? 'zh' : 'en')} aria-label="切換語言 / Language">
@@ -130,33 +132,38 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
 
       {!wallpaper && (
         <div className="toolbar">
-          <button className={ui.cruise ? 'on' : ''} onClick={() => setUi({ toggleCruise: true })}>
-            {Icon.cruise}<span>{t('放空')}</span>
-          </button>
-          <button className={ui.panel === 'finder' || ui.panel === 'plant' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'finder' ? null : 'finder' })}>
-            {Icon.search}<span>{t('電廠')}</span>
-          </button>
-          <button className={ui.panel === 'home' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })}>
+          <button className={ui.panel === 'home' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'home' ? null : 'home' }); }}>
             {Icon.home}<span>{t('我的家')}</span>
           </button>
-          <button className={ui.panel === 'store' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'store' ? null : 'store' })}>
-            {Icon.store}<span>{t('店家')}</span>
+          <button className={ui.panel === 'finder' || ui.panel === 'plant' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'finder' ? null : 'finder' }); }}>
+            {Icon.search}<span>{t('電廠')}</span>
           </button>
-          <button className={ui.panel === 'highlights' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'highlights' ? null : 'highlights' })}>
-            {Icon.spark}<span>{t('亮點')}</span>
-          </button>
-          <button className={ui.panel === 'badges' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'badges' ? null : 'badges' })}>
-            {Icon.medal}<span>{t('徽章')}</span>
-          </button>
-          <button className={replay?.on ? 'on' : ''} onClick={() => setUi({ toggleReplay: true })}>
+          <button className={replay?.on ? 'on' : ''} onClick={() => { setMore(false); setUi({ toggleReplay: true }); }}>
             {Icon.replay}<span>{t('回放')}</span>
           </button>
-          <button className={ui.panel === 'info' ? 'on' : ''} onClick={() => setUi({ panel: ui.panel === 'info' ? null : 'info', infoTab: null })}>
-            {Icon.info}<span>{t('資訊')}</span>{hasIssue && <i className="tb-dot" />}
+          <button className={ui.cruise ? 'on' : ''} onClick={() => { setMore(false); setUi({ toggleCruise: true }); }}>
+            {Icon.cruise}<span>{t('放空')}</span>
           </button>
-          <button className="desktop-only" onClick={toggleFullscreen}>
-            {Icon.full}<span>{t('全螢幕')}</span>
+          <button className={more || MORE_PANELS.includes(ui.panel) ? 'on' : ''} onClick={() => setMore(!more)} aria-expanded={more}>
+            {Icon.more}<span>{t('更多')}</span>{hasIssue && <i className="tb-dot" />}
           </button>
+          {more && (
+            <div className="more-menu" role="menu">
+              {[
+                ['store', Icon.store, '店家', '店家用電試算'],
+                ['highlights', Icon.spark, '亮點', '今日紀錄'],
+                ['badges', Icon.medal, '徽章', '收集成就'],
+                ['info', Icon.info, '資訊', '說明・資料來源'],
+              ].map(([id, ico, label, sub]) => (
+                <button key={id} role="menuitem" className={ui.panel === id ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === id ? null : id, infoTab: null }); }}>
+                  {ico}<b>{t(label)}</b><small>{t(sub)}</small>{id === 'info' && hasIssue && <i className="tb-dot" />}
+                </button>
+              ))}
+              <button className="desktop-only" role="menuitem" onClick={() => { setMore(false); toggleFullscreen(); }}>
+                {Icon.full}<b>{t('全螢幕')}</b><small>{t('電腦版')}</small>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -204,15 +211,15 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {!wallpaper && <UpdatePrompt />}
       {!wallpaper && !(upd.available && !upd.dismissed) && <Tour />}
 
-      {ui.panel === 'highlights' && <HighlightsPanel hl={highlights} records={records} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'info' && <InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} power={power} powerSave={powerSave} onClose={() => setUi({ panel: null, infoTab: null })} />}
-      {ui.panel === 'demand' && <DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'home' && <HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'air' && <AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'plant' && ui.plantId && <PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'finder' && <FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'store' && <StorePanel onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'badges' && <BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} />}
+      {ui.panel === 'highlights' && <Guard key={'g-highlights'} name="highlights" onClose={() => setUi({ panel: null })}><HighlightsPanel hl={highlights} records={records} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'info' && <Guard key={'g-info'} name="info" onClose={() => setUi({ panel: null })}><InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} power={power} powerSave={powerSave} onClose={() => setUi({ panel: null, infoTab: null })} /></Guard>}
+      {ui.panel === 'demand' && <Guard key={'g-demand'} name="demand" onClose={() => setUi({ panel: null })}><DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'home' && <Guard key={'g-home'} name="home" onClose={() => setUi({ panel: null })}><HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'air' && <Guard key={'g-air'} name="air" onClose={() => setUi({ panel: null })}><AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'plant' && ui.plantId && <Guard key={'g-plant'} name="plant" onClose={() => setUi({ panel: null })}><PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'finder' && <Guard key={'g-finder'} name="finder" onClose={() => setUi({ panel: null })}><FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'store' && <Guard key={'g-store'} name="store" onClose={() => setUi({ panel: null })}><StorePanel onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'badges' && <Guard key={'g-badges'} name="badges" onClose={() => setUi({ panel: null })}><BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} /></Guard>}
     </div>
   );
 }
@@ -244,6 +251,8 @@ function ClockPanel({ snapshot, daylight, replayT }) {
     </footer>
   );
 }
+
+const MORE_PANELS = ['store', 'highlights', 'badges', 'info'];
 
 function toggleFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen?.();

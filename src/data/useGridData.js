@@ -15,15 +15,42 @@ import { APP } from '../config/app.js';
  *  3. 本機 /taipower/* 代理（啟動.bat、桌布伺服器）
  */
 const TP = '/taipower/d006/loadGraph/loadGraph/data';
+
+/**
+ * G4 資料合理性檢查：每份資料都要「確定來自台電、數值合理、時間夠新」才採用
+ *  不合理 → 視為這個來源失敗、改試下一個來源；全部失敗 → 繼續顯示上一份真實資料並標示時間（不改成模擬）
+ */
+const twNow = () => Date.now();
+const ageMin = (ts) => {
+  const t = new Date(String(ts || '').replace(/\//g, '-').replace(' ', 'T') + '+08:00').getTime();
+  return Number.isFinite(t) ? (twNow() - t) / 60e3 : null;
+};
+function checkedGenary(text) {
+  const g = parseGenary(text);
+  if (!g) throw new Error('格式不符');
+  const total = Object.entries(g.totals || {}).filter(([f]) => f !== 'storage').reduce((a, [, v]) => a + v, 0);
+  if (!(g.units?.length >= 40)) throw new Error(`資料不合理：只有 ${g.units?.length || 0} 部機組`);
+  if (total < 8000 || total > 60000) throw new Error(`資料不合理：全台發電 ${Math.round(total)} MW`);
+  const age = ageMin(g.timestamp);
+  if (age == null) throw new Error('資料不合理：沒有資料時間');
+  if (age > 180) throw new Error(`資料過舊：${g.timestamp}`);
+  if (age < -30) throw new Error(`資料時間不合理：${g.timestamp}`);
+  return g;
+}
+function checkedForecast(text) {
+  const rows = parseForecast(text);
+  if (rows && rows.some((d) => !(d.rate >= 0 && d.rate <= 60))) throw new Error('資料不合理：備轉容量率超出範圍');
+  return rows;
+}
 const R = APP.relayUrl;
 const FILES = {
-  genary:    { name: '各機組發電量', urls: [`${R}/genary.json`, './data/genary.json', `${TP}/genary.json`, `${TP}/genary.txt`], parse: parseGenary },
+  genary:    { name: '各機組發電量', urls: [`${R}/genary.json`, './data/genary.json', `${TP}/genary.json`, `${TP}/genary.txt`], parse: checkedGenary },
   areas:     { name: '各區發電/用電', urls: [`${R}/genloadareaperc.csv`, './data/genloadareaperc.csv', `${TP}/genloadareaperc.csv`], parse: parseGenLoadAreas },
   para:      { name: '供電狀況', urls: [`${R}/loadpara.json`, './data/loadpara.json', `${TP}/loadpara.json`], parse: parseLoadPara },
   fuelCurve: { name: '今日燃料別曲線', urls: [`${R}/loadfueltype.csv`, './data/loadfueltype.csv', `${TP}/loadfueltype.csv`], parse: parseFuelCurve, ms: 9000 },
   areaCurve: { name: '今日區域用電曲線', urls: [`${R}/loadareas.csv`, './data/loadareas.csv', `${TP}/loadareas.csv`], parse: parseLoadAreasCurve, ms: 9000 },
   yFuel:     { name: '昨日燃料別曲線', urls: [`${R}/loadfueltype_1.csv`, './data/loadfueltype_1.csv', `${TP}/loadfueltype_1.csv`], parse: parseYesterday, ms: 9000 },
-  forecast:  { name: '未來供電預測', urls: [`${R}/forecast.csv`, './data/forecast.csv'], parse: parseForecast, ms: 9000 }
+  forecast:  { name: '未來供電預測', urls: [`${R}/forecast.csv`, './data/forecast.csv'], parse: checkedForecast, ms: 9000 }
 };
 /** 昨日曲線：要是「完整的一天」才用（台電換日前後偶爾只有半天或空檔）→ 不完整就當作讀取失敗、改試下一個來源 */
 function parseYesterday(text) {
@@ -150,6 +177,8 @@ function saveCached(snap) {
 export function useGridData() {
   const [snapshot, setSnapshot] = useState(loadCached);
   const timer = useRef();
+  const lastLive = useRef(null);
+  if (!lastLive.current && snapshot?.source === 'live') lastLive.current = snapshot;
 
   useEffect(() => {
     const forceSim = new URLSearchParams(location.search).has('sim');
@@ -168,10 +197,18 @@ export function useGridData() {
       });
       if (!alive) return;
       gotFirst = true;
-      setSnapshot(snap);
-      saveCached(snap);
+      if (snap.source === 'live') {
+        lastLive.current = snap;
+        setSnapshot(snap);
+        saveCached(snap);
+      } else if (!forceSim && lastLive.current && Date.now() - lastLive.current.t < CACHE_MAX_AGE) {
+        // 台電資料讀不到或不合理：不要亂顯示模擬值，繼續顯示上一份真實資料，並標示「讀不到最新」
+        setSnapshot({ ...lastLive.current, cached: true, stale: true, diag: snap.diag });
+      } else {
+        setSnapshot(snap);
+      }
       // 即時模式：對齊台電的 10 分鐘更新（整 10 分後 1 分鐘再抓）
-      const wait = snap.source === 'live'
+      const wait = snap.source === 'live' || lastLive.current
         ? Math.min(LIVE_REFRESH_MS, 10 * 60000 - (Date.now() % (10 * 60000)) + 60000)
         : SIM_REFRESH_MS;
       timer.current = setTimeout(tick, wait);

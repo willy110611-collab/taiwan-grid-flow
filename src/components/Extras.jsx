@@ -94,7 +94,12 @@ export function Medal({ badge, earned, size = 64 }) {
 
 export function BadgePanel({ badges, live, onClose }) {
   useT();
+  // 點選：點另一個徽章直接切換；再點同一個才收起。滑鼠移過只預覽（觸控的「假 hover」不算），不改變選取
   const [sel, setSel] = useState(null);
+  const [hover, setHover] = useState(null);
+  const shown = hover || sel;
+  const detailRef = useRef(null);
+  useEffect(() => { if (sel) detailRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [sel]);
   const { earned, progress } = badges;
   const count = BADGES.filter((b) => earned[b.id]).length;
   const groups = [['grid', tx('電網徽章', 'Grid badges'), tx('真實電網出現這個狀態的當下打開才拿得到', 'Earned only when the real grid is in that state while the app is open')], ['explore', tx('探索徽章', 'Explorer badges'), tx('使用光脈搏的各種方式', 'Ways to use the app')]];
@@ -108,7 +113,17 @@ export function BadgePanel({ badges, live, onClose }) {
             {BADGES.filter((b) => b.kind === kind).map((b) => {
               const e = earned[b.id];
               return (
-                <li key={b.id} className={`${e ? 'on' : ''} ${sel === b.id ? 'sel' : ''}`} onClick={() => setSel(sel === b.id ? null : b.id)} onMouseEnter={() => setSel(b.id)}>
+                <li
+                  key={b.id}
+                  className={`${e ? 'on' : ''} ${shown === b.id ? 'sel' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={sel === b.id}
+                  onClick={() => { setHover(null); setSel((cur) => (cur === b.id ? null : b.id)); }}
+                  onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setSel((cur) => (cur === b.id ? null : b.id)); } }}
+                  onPointerEnter={(ev) => { if (ev.pointerType === 'mouse') setHover(b.id); }}
+                  onPointerLeave={(ev) => { if (ev.pointerType === 'mouse') setHover(null); }}
+                >
                   <Medal badge={b} earned={!!e} size={58} />
                   <b>{tx(b.name, b.nameEn)}</b>
                   <small>{e ? new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US')) : b.progress ? b.progress(progress) : t(b.rarity)}</small>
@@ -117,11 +132,11 @@ export function BadgePanel({ badges, live, onClose }) {
             })}
           </ul>
           {(() => {
-            const b = BADGES.find((x) => x.id === sel && x.kind === kind);
+            const b = BADGES.find((x) => x.id === shown && x.kind === kind);
             if (!b) return null;
             const e = earned[b.id];
             return (
-              <div className="badge-detail" ref={(el) => el && el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}>
+              <div className="badge-detail" ref={detailRef}>
                 <b>{tx(b.name, b.nameEn)}</b>{e && <small>　{tx('已取得', 'Earned')} {new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US'))}</small>}
                 <p>{tx(b.desc, b.descEn)}</p>
                 {!e && <p className="muted">{tx('提示：', 'Hint: ')}{tx(b.hint, b.hintEn)}</p>}
@@ -130,7 +145,7 @@ export function BadgePanel({ badges, live, onClose }) {
           })()}
         </section>
       ))}
-      {!sel && <p className="fine">{tx('點一下徽章看說明與取得提示。', 'Tap a badge for its description and hint.')}</p>}
+      {!shown && <p className="fine">{tx('點一下徽章看說明與取得提示。', 'Tap a badge for its description and hint.')}</p>}
       <p className="fine">{tx('徽章存在這台裝置的瀏覽器裡，清除瀏覽資料會一併清除。', 'Badges are stored in this device’s browser; clearing browsing data removes them.')}</p>
     </Panel>
   );

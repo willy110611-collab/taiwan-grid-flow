@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import './styles.css';
 import { startUpdateChecks } from './update.js';
+import { installErrorReporting } from './report.js';
+
+installErrorReporting(); // G3：網站出錯時匿名回報給中繼站
 
 createRoot(document.getElementById('root')).render(<App />);
 
