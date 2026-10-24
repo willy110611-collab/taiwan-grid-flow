@@ -663,7 +663,8 @@ export class GridFlowEngine {
       }));
       // 數字太密會疊成一團：依螢幕位置挑，AQI 高的優先，彼此至少隔 26 像素（顏色光點仍全部畫）
       const c = this.map.getCenter();
-      const viewKey = `${st.length}|${st[0]?.time}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${this.map.getZoom().toFixed(2)}|${this.map.getBearing().toFixed(0)}|${this.map.getPitch().toFixed(0)}`;
+      if (this.stationsRef !== this.stations) { this.aqiGen = (this.aqiGen || 0) + 1; this.stationsRef = this.stations; } // 測站資料換新就重算
+      const viewKey = `${this.aqiGen}|${this.map.getCanvas().width}x${this.map.getCanvas().height}|${st.length}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${this.map.getZoom().toFixed(2)}|${this.map.getBearing().toFixed(0)}|${this.map.getPitch().toFixed(0)}`;
       const nums = this.memo('aqiNums', viewKey, () => {
         const picked = [];
         for (const s of [...st].sort((a, b) => b.aqi - a.aqi)) {
@@ -784,9 +785,9 @@ export class GridFlowEngine {
       }));
       // 核一、核二很近：核一的字放左邊、其他放右邊
       const left = (d) => d.id === 'chinshan';
-      const lines = this.memo('nukeLines', `${en}|${this.hover.id}|${sites.map((d) => Math.round(d.targetMw)).join()}`, () => sites.filter((d) => d.id !== this.hover.id).flatMap((d) => { // 被選取的那座已有電廠標籤，不重複
+      const lines = this.memo('nukeLines', `${en}|${this.hover.id}|${sites.map((d) => Math.round(d.mix?.nuclear || 0)).join()}`, () => sites.filter((d) => d.id !== this.hover.id).flatMap((d) => { // 被選取的那座已有電廠標籤，不重複
         const n = NUCLEAR[d.id];
-        const mw = d.targetMw > 1 ? ` · ${Math.round(d.targetMw)} MW` : '';
+        const nmw = d.mix?.nuclear || 0; const mw = nmw > 1 ? ` · ${Math.round(nmw)} MW` : ''; // 只算核能（核二、核三廠內的 Gas 是燃油）
         return [
           { d, text: (en ? n.shortEn : n.short) + mw, size: 12, dy: -7, color: [214, 228, 255] },
           { d, text: en ? n.mapStatusEn || n.statusEn : n.mapStatus || n.status, size: 10, dy: 8, color: [160, 175, 205] }
@@ -909,7 +910,7 @@ export class GridFlowEngine {
         .slice(0, 2)
         .map(([f, mw]) => `${(isEn() ? FUELS[f]?.en : FUELS[f]?.label) ?? f} ${Math.round((mw / (hp.targetMw || 1)) * 100)}%`)
         .join(' · ');
-      const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.mw)}|${fuelText}|${isEn()}|${this.source}|${!!this.cems?.[hp.id]}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
+      const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.mw)}|${fuelText}|${isEn()}|${this.source}|${this.cems?.[hp.id]?.time || ''}|${Object.values(this.cems?.[hp.id]?.items || {}).map((it) => it.max).join()}|${!!solarSun()}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
         { pos: hp.pos, text: isEn() ? hp.en : hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
         { pos: hp.pos, text: isEn() ? hp.name : hp.en.toUpperCase(), size: 9, off: [22, 7], font: isEn() ? FONT : MONO, color: [150, 165, 195], weight: 300 },
         {

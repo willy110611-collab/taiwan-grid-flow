@@ -141,8 +141,8 @@ export function useSun() {
         const latest = stations.map(day).filter(Boolean).sort().pop();
         const tooOld = latest && Date.now() - new Date(latest + 'T00:00:00+08:00').getTime() > 3 * 86400e3;
         const ok = stations.filter((x) => x.value > 0 && (!latest || day(x) === latest));
-        // 夜裡日射量全是 0：不是故障，只是沒有太陽（係數回到只依裝置容量）
-        if (!tooOld && ok.length < 5 && stations.some((x) => day(x) === latest) && stations.every((x) => !(x.value > 0))) {
+        // 夜裡或日出日落時，有日照的測站太少：不是故障，只是太陽還不夠高（係數回到只依裝置容量）
+        if (!tooOld && ok.length < 5 && stations.some((x) => day(x) === latest)) {
           setSolarSun(null);
           if (alive) setSun({ factors: null, error: null, night: true });
           return;

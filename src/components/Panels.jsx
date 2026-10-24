@@ -18,7 +18,7 @@ export function Panel({ title, meta, onClose, children }) {
   useT();
   // 鍵盤：Esc 關閉面板
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape' && !e.defaultPrevented) onClose?.(); };
+    const onKey = (e) => { if (e.key === 'Escape' && !e.defaultPrevented && !e.isComposing && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) onClose?.(); }; // 注音組字中、輸入框裡按 Esc 不關面板
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -277,7 +277,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
                     <li key={name} className={ok ? (staleAt ? 'stale' : 'ok') : 'fail'}>
                       <span className={`dot ${ok ? 'live' : 'sim'}`} />
                       <b>{t(name)}</b>
-                      <small>{ok && name === '氣象署日射量' && sun?.night ? tx('正常 · 夜間沒有日照', 'OK · no sunlight at night') : ok ? `${staleAt ? tx('環境部暫時故障，顯示備份', 'MOENV down — showing backup') : t('正常')}${ago != null ? ` · ${agoLabel(ago)}` : ''}` : tr(err) || t('讀取中…')}</small>
+                      <small>{ok && name === '氣象署日射量' && sun?.night ? tx('正常 · 夜間或日出日落，日照太弱', 'OK · night or low sun') : ok ? `${staleAt ? tx('環境部暫時故障，顯示備份', 'MOENV down — showing backup') : t('正常')}${ago != null ? ` · ${agoLabel(ago)}` : ''}` : tr(err) || t('讀取中…')}</small>
                     </li>
                   );
                 })}

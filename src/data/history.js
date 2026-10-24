@@ -87,6 +87,15 @@ function reconstructDay(snap, fuel = snap.curves?.fuel, areaRows = snap.curves?.
       sum = w.reduce((a, b) => a + b, 0);
       coverage = 1;
     }
+    // 儲能：曲線只有「抽蓄＋電池」總量；用裝置容量拆出抽蓄的份額（畫在明潭），不用快照當下比例
+    // （快照若剛好電池 0，會把整天的電池都算進明潭；剛好抽蓄 0 則整天都畫不出來）
+    if (f === 'storage') {
+      const su = (snap.units || []).filter((u) => u.fuel === 'storage' && !u.load && u.capacity > 0);
+      const all = su.reduce((a, u) => a + u.capacity, 0);
+      const pump = su.filter((u) => u.plantId === 'mingtan').reduce((a, u) => a + u.capacity, 0);
+      const i = snap.plants.findIndex((p) => p.id === 'mingtan');
+      if (all > 0 && pump > 0 && i >= 0) { w = snap.plants.map((_, j) => (j === i ? 1 : 0)); sum = 1; coverage = pump / all; }
+    }
     if (sum) weights[f] = { w: w.map((x) => x / sum), coverage };
   }
 

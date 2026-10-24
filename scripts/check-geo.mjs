@@ -16,7 +16,7 @@ const file = ['public/data/genary.json', 'dist/data/genary.json'].find((f) => fs
 if (file) {
   const g = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^﻿/, ''));
   for (const row of g.aaData || []) {
-    const unit = String(row[2] || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s*\(註\s*\d+\)/g, '').trim();
+    const unit = String(row[2] ?? row[1] ?? '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s*\(註\s*\d+\)/g, '').trim();
     if (!unit || /小計/.test(unit)) continue;
     const hits = PLANTS.filter((p) => p.match && p.match.test(unit)).map((p) => p.id);
     if (hits.length > 1) errs.push(`機組「${unit}」同時對到 ${hits.join('、')}（只會算到第一個）`);

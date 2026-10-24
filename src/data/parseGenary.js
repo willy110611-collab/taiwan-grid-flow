@@ -61,6 +61,7 @@ export function parseGenary(raw) {
       if (/抽蓄/.test(String(row[1]))) charging.pump += -mw; else charging.battery += -mw;
       continue;
     }
+    if (isLoad) continue; // 儲能負載列只看充電（負值），不算進發電
     if (mw <= 0) continue; // 停機不發光
 
     totals[fuel] = (totals[fuel] || 0) + mw;

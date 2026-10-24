@@ -61,14 +61,18 @@ jobs:
             || { echo "genary 無效"; rm -f public/data/genary.json; }
 
       - run: npm run build
+      - name: 檢查電廠對應（用剛抓到的台電資料：機組名稱不能同時對到兩座電廠）
+        if: hashFiles('scripts/check-geo.mjs') != ''
+        run: node scripts/check-geo.mjs
       # 推送觸發的部署可能被緊接著的排程部署取消（concurrency），所以排程時也要檢查：
-      # 線上版本號和這次要部署的不同 → 代表新版還沒經過冒煙測試，照樣要跑
+      # 線上的主程式檔名（內容雜湊）和這次建出來的不同 → 程式有改、還沒經過冒煙測試，照樣要跑
       - name: 判斷要不要跑冒煙測試
         id: need
         run: |
-          CUR=$(node -p "require('./package.json').version")
-          LIVE=$(curl -fsSL --max-time 15 "https://willy110611-collab.github.io/taiwan-grid-flow/version.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).version)}catch{console.log('')}})" || echo "")
-          if [ "${{ github.event_name }}" != "schedule" ] || [ "$LIVE" != "$CUR" ]; then echo "run=1" >> "$GITHUB_OUTPUT"; else echo "run=0" >> "$GITHUB_OUTPUT"; fi
+          ENTRY='const f=s=>{try{return JSON.parse(s).entry||""}catch{return ""}};'
+          CUR=$(node -e "$ENTRY console.log(f(require('fs').readFileSync('dist/version.json','utf8')))" 2>/dev/null || echo "")
+          LIVE=$(curl -fsSL --max-time 15 "https://willy110611-collab.github.io/taiwan-grid-flow/version.json" | node -e "$ENTRY let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(f(s)))" || echo "")
+          if [ "${{ github.event_name }}" != "schedule" ] || [ -z "$CUR" ] || [ "$LIVE" != "$CUR" ]; then echo "run=1" >> "$GITHUB_OUTPUT"; else echo "run=0" >> "$GITHUB_OUTPUT"; fi
           echo "線上 $LIVE，這次 $CUR"
       - name: 冒煙測試（新版本時）
         if: steps.need.outputs.run == '1'
