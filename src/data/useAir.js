@@ -50,7 +50,7 @@ export function useAir() {
 const PLANT_ALIAS = [
   [/台中發電廠|臺中發電廠/, 'taichung'], [/麥寮汽電|麥寮發電/, 'mailiao'], [/興達發電廠/, 'hsinta'], [/林口發電廠/, 'linkou'],
   [/大林發電廠|南部發電廠/, 'nanbu'], [/和平.*發電廠/, 'hoping'], [/大潭發電廠/, 'datan'], [/通霄發電廠/, 'tunghsiao'],
-  [/尖山發電廠/, 'penghu'], [/塔山發電廠/, 'kinmen'], [/珠山發電廠/, 'matsu']
+  [/協和發電廠/, 'hsiehho'], [/尖山發電廠/, 'penghu'], [/塔山發電廠/, 'kinmen'], [/珠山發電廠/, 'matsu']
 ];
 const ITEM_NAME = [[/SO|硫/i, '硫氧化物'], [/NO|氮/i, '氮氧化物'], [/不透光|OP/i, '不透光率'], [/粒狀|PM|TSP/i, '粒狀物'], [/CO(?!2)|一氧化碳/i, '一氧化碳']];
 
