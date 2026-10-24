@@ -53,7 +53,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
     <Panel title={plantName(cfg)} onClose={onClose}>
       <div className="plant-head">
         <div><b>{fmtMw(mw)}</b> <small>MW</small></div>
-        <span className="muted">{cfg.en}</span>
+        <span className="muted">{isEn() ? cfg.name : cfg.en}</span>
       </div>
 
       {mix.length > 0 && (
