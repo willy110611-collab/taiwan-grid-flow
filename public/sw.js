@@ -21,7 +21,6 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return; // 字型、地形圖磚交給瀏覽器
   if (/\/(data|taipower)\//.test(url.pathname)) return; // 即時資料不快取
   if (/version\.json$/.test(url.pathname)) return; // 新版檢查：永遠問伺服器
-  if (/version\.json$/.test(url.pathname)) return; // 新版檢查：永遠問伺服器
 
   // 程式檔（檔名含版本雜湊，內容永不改變）：快取優先 → 第二次打開幾乎不用下載
   if (/\/assets\//.test(url.pathname)) {

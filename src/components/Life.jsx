@@ -54,7 +54,7 @@ export function homeSummary({ home, snapshot, air, rows, advice }) {
     return { ...p, mw, d, downwind };
   }).filter((p) => p.mw > 50).sort((a, b) => a.d - b.d).slice(0, 3);
   const region = home.region && REGIONS[home.region] ? { ...REGIONS[home.region], ...snapshot.regions?.byKey?.[home.region] } : null;
-  const ciSeries = rows.map((r) => carbonIntensity(r.totals, snapshot.carbonFx)).filter((x) => x != null);
+  const ciSeries = ciSeries0; // 上面已算過，不重算
   return { station, wind, thermal, region, ci: advice?.ci, ciSeries };
 }
 
