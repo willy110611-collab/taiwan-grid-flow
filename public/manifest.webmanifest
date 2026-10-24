@@ -1,7 +1,7 @@
 {
   "name": "台灣光脈動 Taiwan Grid Flow",
   "short_name": "光脈動",
-  "description": "把台電即時發電量化為夜光地圖上流動的能量",
+  "description": "台電即時發電與用電，畫成流動的光。每 10 分鐘更新。",
   "lang": "zh-Hant",
   "start_url": "./",
   "scope": "./",
