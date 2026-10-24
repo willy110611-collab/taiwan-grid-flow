@@ -41,6 +41,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - **v8.1 已在 main、尚未部署**：推播與 LINE 文字改「台灣光脈動」；`/typhoon.json` 直接回 503（不再等 24 秒逾時）。用 `/content` 端點部署即可（綁定不變，不帶 migrations）。部署後測 `/`、`/bundle.json?sid=x`、`/typhoon.json`（應立即 503）。
 - KV 讀取：Cron 每 10 分鐘逐筆讀所有訂閱（約 144×人數 次/天，約 690 人達免費 10 萬上限）→ 改存 list metadata。
 ### 其他
+- 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。可評估精簡 deck.gl 圖層、延後載入；回訪有 service worker 快取很快。
 - CEMS：中繼站沒有漏資料，環境部 aqx_p_187 本身時常缺台中、興達、麥寮汽電（2026-10-25 02:00 查證）。
 - 地圖北緯 23.5° 附近有暗色矩形（像地形圖磚沒載入），待在手機實機確認是否只在測試環境出現。
 - 電腦版東部供電區標籤會被右側面板蓋住；右下資料來源列與「蘭嶼鄉」地名重疊（已加陰影）。
