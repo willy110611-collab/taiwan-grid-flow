@@ -14,7 +14,7 @@ import { SupplyHistory, RenewTab } from './OpenData.jsx';
 import { NUCLEAR_SOURCES, NUCLEAR_VERIFIED } from '../config/nuclear.js';
 
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
-export function Panel({ title, onClose, children }) {
+export function Panel({ title, meta, onClose, children }) {
   useT();
   // 鍵盤：Esc 關閉面板
   useEffect(() => {
@@ -30,7 +30,7 @@ export function Panel({ title, onClose, children }) {
     <section className="panel" role="dialog" aria-label={title} tabIndex={-1} ref={ref}>
       <div className="panel-grip" onClick={onClose} />
       <header className="panel-head">
-        <h2>{title}</h2>
+        <h2>{title}{meta != null && <small className="panel-meta">{meta}</small>}</h2>
         <button className="icon-btn" onClick={onClose} aria-label={tx('關閉', 'Close')}>{Icon.close}</button>
       </header>
       <div className="panel-body">{children}</div>

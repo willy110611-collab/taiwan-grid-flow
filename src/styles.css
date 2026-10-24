@@ -162,6 +162,7 @@ a:hover { text-decoration: underline; }
   animation: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .panel:focus { outline: none; }
+.panel-meta { margin-left: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-dim); }
 .panel-grip { display: none; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 6px; }
 .panel-head h2 { margin: 0; font-size: 13px; font-weight: 400; letter-spacing: 0.4em; }
@@ -194,6 +195,7 @@ a:hover { text-decoration: underline; }
 .hl-list { list-style: none; padding: 0; margin: 4px 0 12px; }
 .hl-list li { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .hl-k { font-size: 10.5px; letter-spacing: 0.2em; color: var(--ink-faint); display: flex; align-items: center; gap: 8px; }
+.hl-k :is(.muted, small) { letter-spacing: 0.06em; } /* 標題拉開字距，旁邊的說明句子用一般字距比較好讀 */
 .hl-v { color: var(--ink); font-size: 13.5px; grid-row: 2; }
 .hl-v.gold { color: var(--gold); font-family: var(--mono); }
 .hl-v.green { color: var(--green); font-family: var(--mono); }
