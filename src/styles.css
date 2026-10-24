@@ -542,7 +542,7 @@ a:hover { text-decoration: underline; }
   /* 英文字串較長：縮小字距、限制寬度，不壓到左邊的時鐘列 */
   html:lang(en) .home-card.hc-mobile { max-width: 46%; }
   html:lang(en) .home-card.hc-mobile .hc-advice, html:lang(en) .home-card.hc-mobile .hc-set { letter-spacing: 0.04em; }
-  .reset-view { bottom: calc(186px + var(--safe-b)) !important; }
+  .reset-view { bottom: calc(226px + var(--safe-b)) !important; } /* 在「我的家」小卡上方，不重疊 */
   /* 抽屜打開時收起上方的篩選列與小卡，讓出看地圖的空間 */
   .hud:has(.panel) .filters, .hud:has(.panel) .home-card, .hud:has(.panel) .cruise-caption, .hud:has(.panel) .alert-banner { opacity: 0; pointer-events: none; }
   .pick-banner { top: calc(186px + var(--safe-t)); width: max-content; max-width: calc(100% - 32px); }
