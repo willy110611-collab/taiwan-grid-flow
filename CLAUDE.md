@@ -19,7 +19,7 @@
 - 版本號：`package.json`、`public/sw.js` 的 CACHE、`src/config/changelog.json` 三處一起改。
 
 ## 測試
-- `npm run check`（英文翻譯）、`npm run build`、`npm run smoke`（無頭瀏覽器，用模擬資料開每個面板）。
+- `npm run check`（英文翻譯、電廠設定：供電區、座標、機組對應不重複）、`npm run build`、`npm run smoke`（無頭瀏覽器，用模擬資料開每個面板）。
 - 網址參數：`?sim=1&density=0.2&fps=10&debug=1`（模擬資料、`window.tgf`＝地圖引擎）。
 
 ## 中繼站部署（要使用者允許）

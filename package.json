@@ -9,7 +9,7 @@
     "build": "node scripts/opendata.mjs && vite build",
     "preview": "vite preview",
     "wallpaper": "vite build && vite preview",
-    "check": "node scripts/check-i18n.mjs",
+    "check": "node scripts/check-i18n.mjs && node scripts/check-geo.mjs",
     "smoke": "node scripts/smoke.mjs",
     "health": "node scripts/health.mjs"
   },
