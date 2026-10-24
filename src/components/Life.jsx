@@ -10,6 +10,8 @@ import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSuppor
 import { SUPPLY_LEVELS } from '../data/parseAux.js';
 import { billCompare } from '../data/advice.js';
 import { t, tx, tr, isEn, useT } from '../i18n.js';
+import { OutageSection, TownCompare } from './OpenData.jsx';
+import { pushExtra } from '../data/openData.js';
 
 const DIRS = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
 const DIRS_EN = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -78,7 +80,7 @@ export function HomeCard({ sum, advice, onOpen, className = '' }) {
 }
 
 /* ───────── 我的家 面板 ───────── */
-export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, onClose }) {
+export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, onMarks, onClose }) {
   useT();
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
@@ -87,7 +89,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
   // 我的家換了地方 → App 通知改登記新的測站（不再發測試通知）
   useEffect(() => {
     if (!home.push || !st0 || !line?.vapidPublic || st0.site === home.pushSite) return;
-    enablePush(APP.relayUrl, line.vapidPublic, st0.site, { test: false }).then(() => setHome({ pushSite: st0.site })).catch(() => {});
+    enablePush(APP.relayUrl, line.vapidPublic, st0.site, { test: false, extra: pushExtra(home) }).then(() => setHome({ pushSite: st0.site })).catch(() => {});
   }, [home.push, st0?.site, line?.vapidPublic]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!sum) return <Panel title="我的家" onClose={onClose}><p className="muted">{t('資料讀取中…')}</p></Panel>;
   const st = sum.station;
@@ -106,6 +108,9 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
       <LocationPicker home={home} setHome={setHome} stations={air.stations} onPick={onPick} setMsg={setMsg} />
       {msg && <p className="fine warm">{msg}</p>}
 
+      {/* D1 計畫性停電 */}
+      <OutageSection home={home} setHome={setHome} line={line} onMarks={onMarks} />
+
       {/* 1. 用電時機 */}
       <section className="life-sec">
         <div className="hl-k">{tx('現在用電時機', 'Is now a good time?')}</div>
@@ -121,6 +126,9 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
         <p className="fine">{tx('時段依台電簡易型二段式時間電價（114 年 10 月起）：平日夏月（6–9 月）09–24 時尖峰、其他月份 06–11、14–24 時尖峰；週六、週日與國定假日全日離峰。', 'Periods follow Taipower’s simple two-period TOU tariff (since Oct 2025): on weekdays, peak is 09–24 in summer (Jun–Sep) and 06–11 & 14–24 in other months; weekends and national holidays are off-peak all day.')}</p>
         <BillCalc home={home} setHome={setHome} />
       </section>
+
+      {/* D3 你家 vs 鄉鎮平均 */}
+      <TownCompare home={home} setHome={setHome} />
 
       {/* 2. 碳排 */}
       <section className="life-sec">
@@ -202,10 +210,12 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
               try {
                 if (e.target.checked) {
                   if (!st) throw new Error(tx('請先設定「我的家」地點', 'Please set your Home location first'));
-                  await enablePush(APP.relayUrl, line?.vapidPublic, st.site);
+                  await enablePush(APP.relayUrl, line?.vapidPublic, st.site, { extra: pushExtra({ ...home, push: true }) });
                   setHome({ push: true, pushSite: st.site });
                 } else {
-                  await disablePush(APP.relayUrl);
+                  // 還有開計畫停電提醒 → 保留訂閱，只關空品／供電
+                  if (home.outD3 || home.outD1) await enablePush(APP.relayUrl, line?.vapidPublic, null, { test: false, extra: pushExtra({ ...home, push: false }) });
+                  else await disablePush(APP.relayUrl);
                   setHome({ push: false });
                 }
                 setMsg('');

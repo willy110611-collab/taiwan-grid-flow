@@ -11,7 +11,7 @@ for (let i = 0; i < 40; i++) { try { if ((await fetch(`http://127.0.0.1:${PORT}/
 
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
 const errors = [];
-const LABELS = { zh: ['電廠', '我的家', '店家', '亮點', '徽章', '資訊'], en: ['Plants', 'Home', 'Shop', 'Peaks', 'Badges', 'Info'] };
+const LABELS = { zh: ['電廠', '我的家', '家電', '店家', '亮點', '徽章', '資訊'], en: ['Plants', 'Home', 'Appliances', 'Shop', 'Peaks', 'Badges', 'Info'] };
 try {
   for (const [vp, lang] of [[{ width: 402, height: 874 }, 'zh'], [{ width: 402, height: 874 }, 'en'], [{ width: 1440, height: 900 }, 'zh']]) {
     const tag = `${vp.width}/${lang}`;

@@ -95,14 +95,14 @@ export function pushSupport() {
 }
 
 /** 開啟 App 通知：向中繼站登記（site = 我的家最近的空品測站） */
-export async function enablePush(relayUrl, vapidPublic, site, { test = true } = {}) {
+export async function enablePush(relayUrl, vapidPublic, site, { test = true, extra = {} } = {}) {
   const sup = pushSupport();
   if (!sup.ok) throw new Error(sup.why);
   if (!vapidPublic) throw new Error('中繼站尚未更新到 v4，暫時無法開啟');
   if ((await Notification.requestPermission()) !== 'granted') throw new Error('通知權限未允許（可到手機設定 → 通知 開啟）');
   const reg = await navigator.serviceWorker.ready;
   const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(vapidPublic) }));
-  const r = await fetch(`${relayUrl}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), site, test }) });
+  const r = await fetch(`${relayUrl}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), site, test, ...extra }) });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `中繼站回應 ${r.status}`);
 }
 

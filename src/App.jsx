@@ -81,6 +81,8 @@ export default function App() {
   const homeSum = useMemo(() => homeSummary({ home, snapshot: shown, air, rows, advice }), [home, shown, air, rows, advice]);
   useEffect(() => { engine.current?.setHome(home.pos ? home : null); }, [home.pos?.[0], home.pos?.[1], home.name, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { engine.current?.setAir(air.stations, air.cems); }, [air, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  // D1 計畫停電：只在「我的家」打開時把清單畫到地圖上
+  useEffect(() => { engine.current?.setOutages(ui.panel === 'home' ? ui.outageMarks : null); }, [ui.panel, ui.outageMarks, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 提醒（開著 App 時的網頁通知）
   const notifyEvents = useMemo(() => {

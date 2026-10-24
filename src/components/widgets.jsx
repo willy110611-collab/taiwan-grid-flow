@@ -101,6 +101,9 @@ export const Icon = {
   store: (
     <svg viewBox="0 0 24 24"><path d="M4 9.5 5.5 5h13L20 9.5" /><path d="M4 9.5c0 1.4 1.1 2.5 2.7 2.5S9.3 10.9 9.3 9.5c0 1.4 1.2 2.5 2.7 2.5s2.7-1.1 2.7-2.5c0 1.4 1.1 2.5 2.6 2.5S20 10.9 20 9.5" /><path d="M5.5 12v7.5h13V12M10 19.5v-4.5h4v4.5" /></svg>
   ),
+  plug: (
+    <svg viewBox="0 0 24 24"><path d="M9 3.5v4.5M15 3.5v4.5" /><path d="M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0z" /><path d="M12 17v3.5" /></svg>
+  ),
   more: (
     <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="18" cy="12" r="1.4" /></svg>
   ),

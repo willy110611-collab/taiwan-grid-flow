@@ -59,12 +59,13 @@ export const GUIDE = [
   ['🔆', '看現在', '光點是發電廠，越亮發電越多；光流從電廠流向城市。右上角是綠能／火力比例與全台發電、用電。', 'Glowing dots are power plants — brighter means more output; light flows from plants to cities. Top-right shows the green/thermal mix and total generation and demand.'],
   ['👆', '點光球', '點地圖上的電廠光球，看每部機組的即時出力、歲修或降載狀態。', 'Tap a plant on the map to see each unit’s live output, maintenance or reduced-load status.'],
   ['🔍', '電廠', '搜尋電廠或機組並飛過去；也列出今天歲修、故障、降載的機組和出力前五名。', 'Search a plant or unit and fly to it; also lists units under maintenance, faults or derating today, and the top 5 plants.'],
-  ['🏠', '我的家', '設定地點後：現在適不適合用電、附近空氣品質、下風側電廠、電費試算。', 'After setting a location: whether now is a good time to use power, nearby air quality, upwind plants, and a bill calculator.'],
+  ['🏠', '我的家', '設定地點後：計畫性停電提醒、現在適不適合用電、你家 vs 鄉鎮平均用電、附近空氣品質、下風側電廠、電費試算。', 'After setting a location: planned-outage reminders, whether now is a good time to use power, your use vs the township average, nearby air quality, upwind plants, and a bill calculator.'],
+  ['🔌', '家電', '算一台家電一個月多少度、多付多少電費；電費小手冊整理台電的省電與電價說明，每篇附原始連結。', 'Work out an appliance’s monthly kWh and extra cost; the handbook summarises Taipower’s tips and tariff notes, each linked to the original.'],
   ['🏪', '店家', '匯入店家智慧電表的用電明細：每月尖峰／離峰圖表、哪種電價最省、把工作移到離峰能再省多少。', 'Import a shop’s smart-meter data: monthly peak/off-peak charts, which tariff is cheapest, and how much more you save by shifting work off-peak.'],
-  ['✨', '亮點', '今天太陽能尖峰、綠能最高的時刻，以及你看過的最高紀錄。', 'Today’s solar peak and greenest moment, plus the highest records you have seen.'],
+  ['✨', '亮點', '今天太陽能尖峰、綠能最高的時刻、你看過的最高紀錄；今天用電在今年排第幾、每日備轉容量率年曆。', 'Today’s solar peak and greenest moment, your highest records, how today’s demand ranks this year, and a calendar of daily reserve margins.'],
   ['⏪', '回放', '把今天（或昨天）一整天快轉播放，看太陽能如何撐起白天。', 'Fast-forward through today (or yesterday) to see solar carry the daytime.'],
   ['〰', '放空', '自動巡航各地電廠，適合當桌布；按「全島」回到俯視圖。', 'Auto-cruise between plants — great as a wallpaper; tap “Overview” to return to the full view.'],
-  ['ℹ', '資訊', '資料來源、準確度、連線狀況；資料讀不到時看這裡。', 'Data sources, accuracy and connection status — check here when data won’t load.']
+  ['ℹ', '資訊', '資料來源、準確度、連線狀況、各縣市綠電；資料讀不到時看這裡。', 'Data sources, accuracy, connection status and renewables by county — check here when data won’t load.']
 ];
 
 export function Tour({ onDone }) {

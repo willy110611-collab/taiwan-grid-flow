@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈搏 — Cloudflare Worker 中繼站 v6
+//  台灣光脈搏 — Cloudflare Worker 中繼站 v7
+//  v7：台電開放資料原檔轉送（/open/…，給 GitHub 建置用）、颱風停電（/typhoon.json）、
+//      計畫停電每日存檔（KV outage:raw:日期）與「前 3 天／前 1 天」App 通知（依訂閱者的鄉鎮、路名）
 //  v6：網站錯誤回報與 30 天維修紀錄（POST /log）、台電資料格式改變偵測、每小時健康檢查失敗通知（/alert）
 //      管理者在 LINE 傳「錯誤紀錄」可看最近 7 天的錯誤統計
 //  v5：環境部 AQI 故障時改給最後一次成功的資料（存在 KV）；台電資料停更或空品備份太舊時 LINE 通知管理者（LINE_TO）
@@ -12,6 +14,9 @@
 //  /cems.json               環境部 固定污染源 CEMS 1 小時值，只保留電廠（需 MOENV_KEY）
 //  /sun.json                氣象署 署屬氣象站日射量 O-A0091-001（需 CWA_KEY）
 //  /config.json             給網頁：LINE 加好友連結
+//  /open/outage.zip 等      台電開放資料原檔（計畫停電、鄉鎮用電、過去供需、縣市再生能源），不解析、只轉送
+//  /typhoon.json            台電「天然災害停復電」各縣市目前停電／曾經停電戶數（免金鑰）
+//  /typhoon/county.json?gid= 同上，某縣市各鄉鎮市區
 //  POST /line               LINE Webhook（好友登記測站、查詢；回覆訊息免費）
 //  POST /push/subscribe     App 通知（Web Push，免費）訂閱／取消，金鑰自動產生存在 KV
 //
@@ -57,6 +62,9 @@ export default {
       if (!name) return text(`OK · 機房 ${req.cf?.colo || '?'} · 環境部金鑰${env.MOENV_KEY ? '已設定' : '未設定'}`);
       if (TP_FILES.has(name)) return await cached(ctx, name, 120, () => upstream(TP + name, name));
       if (name === 'forecast.csv') return await cached(ctx, name, 3600, () => upstream(FORECAST, name));
+      if (name.startsWith('open/')) return await openRoute(ctx, name.slice(5));
+      if (name === 'typhoon.json') return await cached(ctx, name, 300, () => typhoon());
+      if (name === 'typhoon/county.json') { const gid = new URL(req.url).searchParams.get('gid'); if (!/^\d{1,3}$/.test(gid || '')) return new Response('bad gid', { status: 400, headers: CORS }); return await cached(ctx, `typhoon-${gid}`, 300, () => typhoonCounty(gid)); }
       if (name === 'aqi.json') return await cached(ctx, name, 600, () => aqi(env));
       if (name === 'cems.json') return await cached(ctx, name, 900, () => cems(env));
       if (name === 'sun.json') return new URL(req.url).searchParams.has('raw') ? await sun(env, new URL(req.url)) : await cached(ctx, name, 1800, () => sun(env));
@@ -74,6 +82,7 @@ export default {
     if (!env.NOTIFY) return;
     await watchdog(env); // 資料停更檢查（全天，不受 07–22 限制）
     const hour = new Date(Date.now() + 8 * 3600e3).getUTCHours();
+    if (hour === 18) await outageDaily(env).catch(() => {}); // 計畫停電：存檔＋前 3 天／前 1 天提醒（台電 17 時更新）
     if (hour < SEND_FROM || hour >= SEND_TO) return;
     const today = twDate();
     const users = env.LINE_TOKEN ? await listUsers(env) : [];
@@ -89,7 +98,7 @@ export default {
         if (await send(env, to, `台灣光脈搏 ${text}`)) await env.NOTIFY.put(`${today}:supply`, '1', { expirationTtl: 2 * 86400 });
       }
       if (subs.length && !(await env.NOTIFY.get(`${today}:psupply`))) {
-        await pushAll(env, subs, { title: '台灣光脈搏・供電提醒', body: text });
+        await pushAll(env, subs.filter((p) => p.alerts !== false), { title: '台灣光脈搏・供電提醒', body: text }); // v7：只訂停電提醒的不收
         await env.NOTIFY.put(`${today}:psupply`, '1', { expirationTtl: 2 * 86400 });
       }
     }
@@ -214,9 +223,14 @@ async function pushRoute(req, env, name) {
   if (name === 'push/unsubscribe') { await env.NOTIFY.delete(key); return json({ ok: true }); }
   if (!sub.keys?.p256dh || !sub.keys?.auth) return json({ error: 'bad subscription' }, 400);
   const site = String(body.site || '').slice(0, 20) || null;
-  await env.NOTIFY.put(key, JSON.stringify({ sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site, since: twDate() }));
+  // v7：計畫停電提醒（只存鄉鎮與選填的路名，用來比對台電公告的停電範圍）
+  const town = String(body.town || '').replace(/\s+/g, '').slice(0, 12) || null;
+  const road = String(body.road || '').replace(/\s+/g, '').slice(0, 20) || null;
+  const outage = { d3: !!body.o3, d1: !!body.o1 };
+  const alerts = body.alerts !== false; // false＝只要停電提醒，不收空品／供電
+  await env.NOTIFY.put(key, JSON.stringify({ sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, since: twDate() }));
   if (body.test) await pushOne(env, sub, { title: '台灣光脈搏', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
-  return json({ ok: true, site });
+  return json({ ok: true, site, town, outage });
 }
 
 async function listPushSubs(env) {
@@ -648,4 +662,108 @@ async function alertRoute(url, env) {
   if (await env.NOTIFY.get(flag)) return res('throttled');
   if (await send(env, [env.LINE_TO], ALERTS[type])) await env.NOTIFY.put(flag, '1', { expirationTtl: 3 * 3600 });
   return res('sent');
+}
+
+/* ───────── v7：台電開放資料原檔轉送（給 GitHub Actions 建置用，GitHub 主機直連台電會被擋）─────────
+ *  只轉送固定幾個檔案；不解析（避免超過 Worker CPU 限制），解析在建置時做 */
+const OPEN = 'https://service.taipower.com.tw/data/opendata/apply/file/';
+const OPEN_FILES = { 'outage.zip': ['d077004/001.zip', 3600], 'supply-history.csv': ['d006005/001.csv', 6 * 3600], 'renew.csv': ['d007011/001.csv', 12 * 3600] };
+async function openRoute(ctx, file) {
+  const kwh = file.match(/^kwh-(\d{3})\.csv$/);
+  const hit = OPEN_FILES[file] || (kwh ? [`d007025/dist_kwh_${kwh[1]}.csv`, 12 * 3600] : null);
+  if (!hit) return new Response('not found', { status: 404, headers: CORS });
+  return cached(ctx, `open-${file}`, hit[1], async () => {
+    const r = await fetch(OPEN + hit[0], { headers: UA });
+    if (!r.ok) throw new Error(`台電回應 ${r.status}`);
+    return new Response(r.body, { headers: { 'Content-Type': file.endsWith('.zip') ? 'application/zip' : 'text/csv' } });
+  });
+}
+
+/* ───────── v7：颱風／天然災害停電（台電「停電資訊」psvs1）─────────
+ *  Country：各縣市 c0＝目前停電戶數、c1＝曾經停電戶數；typhoonVer：資料時間；title.json：事件名稱 */
+const PSVS = 'https://service.taipower.com.tw/psvs1/';
+const psvsGet = async (path) => {
+  const r = await fetch(`${PSVS}${path}${path.includes('?') ? '&' : '?'}_=${Date.now()}`, { headers: { ...UA, Referer: PSVS, Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`台電停電資訊回應 ${r.status}`);
+  return JSON.parse((await r.text()).replace(/^\uFEFF/, ''));
+};
+async function typhoon() {
+  const [title, ver, list] = await Promise.all([psvsGet('data/title.json').catch(() => ({})), psvsGet('nj_psvs_attr/RangeInfo/typhoonVer').catch(() => []), psvsGet('nj_psvs_attr/RangeInfo/Country')]);
+  const dts = String((Array.isArray(ver) ? ver[0]?.dts : '') || ''); // 20261024.1400
+  const m = dts.match(/^(\d{4})(\d{2})(\d{2})\.(\d{2})(\d{2})/);
+  const counties = (Array.isArray(list) ? list : []).map((c) => ({ gid: c.gid, name: String(c.name || '').replace(/臺/g, '台'), now: Number(c.c0) || 0, ever: Number(c.c1) || 0 }))
+    .filter((c) => c.name).sort((a, b) => b.now - a.now || b.ever - a.ever);
+  const now = counties.reduce((a, c) => a + c.now, 0), ever = counties.reduce((a, c) => a + c.ever, 0);
+  return new Response(JSON.stringify({ name: String(title?.name || ''), time: m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00+08:00` : null, now, ever, counties }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+}
+async function typhoonCounty(gid) {
+  // rangeFG 會附帶邊界座標（很大）；只用文字比對取出 info 欄位：「貢寮區:604:340:3966:4137, …」＝名稱:fcid:gid:目前停電:曾經停電
+  const r = await fetch(`${PSVS}nj_psvs_attr/RangeInfo/rangeFG?gid=${gid}&fcid=603&_=${Date.now()}`, { headers: { ...UA, Referer: PSVS } });
+  if (!r.ok) throw new Error(`台電停電資訊回應 ${r.status}`);
+  const t = await r.text();
+  const info = (t.match(/"info"\s*:\s*"([^"]*)"/) || [])[1] || '';
+  const towns = info.split(/,\s*/).map((x) => x.split(':')).filter((a) => a.length >= 5)
+    .map((a) => ({ name: a[0].replace(/臺/g, '台'), now: Number(a[3]) || 0, ever: Number(a[4]) || 0 })).sort((a, b) => b.now - a.now || b.ever - a.ever);
+  return new Response(JSON.stringify({ gid: Number(gid), towns }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+}
+
+/* ───────── v7：計畫性工作停電（每天 18 時跑一次）─────────
+ *  1. 存一份原始 ZIP 到 KV（台電不提供歷史，自己累積）
+ *  2. App 通知：訂閱者「我的家」所在鄉鎮（有填路名就比對路名）3 天後／明天有停電 → 通知一次 */
+async function outageDaily(env) {
+  const today = twDate();
+  if (await env.NOTIFY.get(`outage:done:${today}`)) return;
+  const r = await fetch(OPEN + 'd077004/001.zip', { headers: UA });
+  if (!r.ok) throw new Error(`台電回應 ${r.status}`);
+  const zip = new Uint8Array(await r.arrayBuffer());
+  await env.NOTIFY.put(`outage:raw:${today}`, zip); // 不設期限：長期累積成歷史
+  await env.NOTIFY.put(`outage:done:${today}`, '1', { expirationTtl: 2 * 86400 });
+
+  const subs = (await listPushSubs(env)).filter((p) => p.town && (p.outage?.d3 || p.outage?.d1));
+  if (!subs.length) return;
+  const rows = [];
+  for (const u8 of Object.values(await unzipFiles(zip))) {
+    const lines = new TextDecoder().decode(u8).split(/\r?\n/).slice(1);
+    for (const l of lines) {
+      const c = l.split(',');
+      if (c.length < 6) continue;
+      const m = String(c[3]).match(/(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}:\d{2})\s*[~～-]\s*(\d{1,2}:\d{2})/);
+      if (!m) continue;
+      rows.push({ date: `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`, time: `${m[4]}–${m[5]}`, office: c[0].replace(/^台電/, ''), place: norm(c[5]) });
+    }
+  }
+  const day = (n) => new Date(Date.parse(today) + n * 864e5).toISOString().slice(0, 10);
+  const WD = '日一二三四五六';
+  for (const p of subs) {
+    for (const [n, flag] of [[3, 'd3'], [1, 'd1']]) {
+      if (!p.outage?.[flag]) continue;
+      const date = day(n);
+      const town = norm(p.town);
+      const hits = rows.filter((x) => x.date === date && x.place.startsWith(town) && (!p.road || x.place.includes(norm(p.road))));
+      if (!hits.length) continue;
+      const times = [...new Set(hits.map((x) => x.time))].join('、');
+      const roads = [...new Set(hits.map((x) => x.place.slice(town.length)).filter(Boolean))];
+      const when = `${n === 1 ? '明天' : '3 天後'} ${date.slice(5).replace('-', '/')}（${WD[new Date(date + 'T12:00:00+08:00').getUTCDay()]}）${times}`;
+      await pushOne(env, p.sub, { title: '台灣光脈搏・計畫停電提醒', body: `${when}，${p.town}${roads.length ? ` ${roads.slice(0, 4).join('、')}${roads.length > 4 ? ` 等 ${roads.length} 處` : ''}` : ''}有計畫性停電（${hits[0].office}）。實際範圍以台電通知為準，可撥 1911 查詢。` });
+    }
+  }
+}
+
+async function unzipFiles(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 70000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('不是 ZIP 檔');
+  const out = {};
+  let p = dv.getUint32(eocd + 16, true);
+  for (let k = 0, n = dv.getUint16(eocd + 10, true); k < n; k++) {
+    const method = dv.getUint16(p + 10, true), size = dv.getUint32(p + 20, true);
+    const fl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + fl));
+    const start = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+    const raw = u8.subarray(start, start + size);
+    if (/^\d+\.csv$/i.test(name)) out[name] = method === 0 ? raw : new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    p += 46 + fl + el + cl;
+  }
+  return out;
 }

@@ -360,6 +360,11 @@ export class GridFlowEngine {
     this.home = home;
   }
 
+  /** D1 計畫性停電地點（null＝不顯示） */
+  setOutages(list) {
+    this.outages = list?.length ? list : null;
+  }
+
   /** 空品測站（環境部 AQI）與電廠煙道監測（CEMS） */
   setAir(stations, cems) {
     this.stations = stations || [];
@@ -688,6 +693,46 @@ export class GridFlowEngine {
         characterSet: 'auto',
         outlineWidth: 3,
         outlineColor: [3, 5, 10, 200],
+        fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
+        parameters: NO_DEPTH
+      }));
+    }
+
+    // ⑥-d 計畫性停電（我的家面板打開時）：同一鄉鎮合併成一個圈，標最早的日期
+    if (this.outages) {
+      const by = new Map();
+      for (const g of this.outages) {
+        const k = g.pos.join(',');
+        const x = by.get(k) || by.set(k, { pos: g.pos, town: g.town || g.county, date: g.date, n: 0 }).get(k);
+        x.n++; if (g.date < x.date) x.date = g.date;
+      }
+      const pts = [...by.values()];
+      layers.push(new ScatterplotLayer({
+        id: 'outages',
+        data: pts,
+        getPosition: (d) => d.pos,
+        getRadius: (d) => 9 + Math.min(10, d.n * 1.5),
+        radiusUnits: 'pixels',
+        stroked: true,
+        getFillColor: [255, 140, 60, 60],
+        getLineColor: [255, 160, 90, 230],
+        lineWidthUnits: 'pixels',
+        getLineWidth: 1.5,
+        parameters: NO_DEPTH
+      }));
+      // 點太多時只畫圈（避免文字疊在一起），5 個以內才標日期
+      if (pts.length <= 5) layers.push(new TextLayer({
+        id: 'outage-labels',
+        data: pts,
+        getPosition: (d) => d.pos,
+        getText: (d) => `${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8, 10))} ${d.town}`,
+        getSize: 11,
+        getPixelOffset: [0, 22],
+        getColor: [255, 190, 130, 240],
+        fontFamily: FONT,
+        characterSet: 'auto',
+        outlineWidth: 3,
+        outlineColor: [3, 5, 10, 220],
         fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
         parameters: NO_DEPTH
       }));

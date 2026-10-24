@@ -10,6 +10,7 @@ const agoLabel = (m) => (m < 1 ? tx('剛剛', 'just now') : m < 60 ? tx(`${m} �
 import { PLANTS, SOLAR_COUNTY_KW } from '../config/geo.js';
 import { twHM } from '../data/history.js';
 import { setPowerPref } from '../power.js';
+import { SupplyHistory, RenewTab } from './OpenData.jsx';
 
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
 export function Panel({ title, onClose, children }) {
@@ -36,7 +37,7 @@ const REC_ROWS = [
   ['load', '全台用電', 'MW', '']
 ];
 
-export function HighlightsPanel({ hl, records, onPlant, onClose }) {
+export function HighlightsPanel({ hl, live, records, onPlant, onClose }) {
   useT();
   return (
     <Panel title="今日亮點" onClose={onClose}>
@@ -112,6 +113,7 @@ export function HighlightsPanel({ hl, records, onPlant, onClose }) {
           <p className="fine">
             {hl.partial ? tx(`今日紀錄從 ${hl.since} 開始（打開頁面後才開始累計）。`, `Today’s records start at ${hl.since} (counted only while the page is open).`) : t('統計範圍：今日 00:00 至現在。')}
           </p>
+          <SupplyHistory hl={hl} live={live} />
         </>
       )}
     </Panel>
@@ -123,6 +125,7 @@ const TABS = [
   ['guide', '使用說明'],
   ['source', '資料來源'],
   ['accuracy', '準確度'],
+  ['renew', '縣市綠電'],
   ['about', '關於']
 ];
 
@@ -170,6 +173,8 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
         </div>
       )}
 
+      {tab === 'renew' && <RenewTab />}
+
       {tab === 'source' && (
         <div className="doc">
           <div className="status-row">
@@ -196,6 +201,18 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dd>{tx('環境部「空氣品質指標 AQI」（每小時）；電廠煙道排放為環境部「固定污染源連續自動監測 CEMS」。', 'Ministry of Environment AQI (hourly); stack emissions from the Ministry of Environment’s continuous emission monitoring (CEMS).')}</dd>
             <dt>{tx('未來供電預測', 'Supply forecast')}</dt>
             <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
+            <dt>{tx('計畫性停電', 'Planned outages')}</dt>
+            <dd><a href="https://data.gov.tw/dataset/26144" target="_blank" rel="noreferrer">{tx('台灣電力公司計畫性工作停電資料', 'Taipower planned work outages')}</a>{tx('（每天 17 時更新；中繼站每天存一份，累積歷史）。', ' (updated daily at 17:00; the relay keeps a daily copy to build history).')}</dd>
+            <dt>{tx('颱風停電', 'Typhoon outages')}</dt>
+            <dd><a href="https://service.taipower.com.tw/psvs1/" target="_blank" rel="noreferrer">{tx('台電「天然災害停復電查詢」', 'Taipower disaster outage map')}</a>{tx('（各縣市、鄉鎮目前／曾經停電戶數）。', ' (homes currently / ever without power by county and district).')}</dd>
+            <dt>{tx('鄉鎮用電', 'Township use')}</dt>
+            <dd><a href="https://data.gov.tw/dataset/14135" target="_blank" rel="noreferrer">{tx('台灣電力公司鄉鎮市(郵遞區)別用電統計資料', 'Taipower electricity use by township (postcode)')}</a>{tx('，取「表燈非營業用」每戶平均。', ', residential lighting (non-business) average per customer.')}</dd>
+            <dt>{tx('歷年供需', 'Supply history')}</dt>
+            <dd><a href="https://data.gov.tw/dataset/19995" target="_blank" rel="noreferrer">{tx('台灣電力公司過去電力供需資訊', 'Taipower past supply & demand')}</a>{tx('（每日尖峰負載、備轉容量率）。', ' (daily peak load and operating reserve).')}</dd>
+            <dt>{tx('縣市綠電', 'Renewables by county')}</dt>
+            <dd><a href="https://data.gov.tw/dataset/29936" target="_blank" rel="noreferrer">{tx('台灣電力公司各縣市再生能源別購入情形', 'Taipower renewable purchases by county')}</a>{tx('。', '.')}</dd>
+            <dt>{tx('電費小手冊', 'Bill handbook')}</dt>
+            <dd>{tx('整理自台電網站的電價說明與省電文章，每篇附原始連結。', 'Summarised from Taipower’s tariff notes and energy-saving articles; each item links to the original.')}</dd>
             <dt>{tx('電價與碳排', 'Tariffs & carbon')}</dt>
             <dd>
               {tx('台電「電價表」（114/10/1 公告，115/4/1 凍漲沿用）：住宅與營業用非時間電價、簡易型二段式／三段式時間電價；碳排以經濟部能源署公告電力排碳係數（0.467 kg/度）為基準，依機組類型細分。假日依行政院人事行政總處「政府行政機關辦公日曆表」。',

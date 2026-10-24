@@ -10,6 +10,8 @@ import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 import { PlantPanel } from './Plant.jsx';
 import { StorePanel } from './Store.jsx';
 import { FinderPanel } from './Finder.jsx';
+import { AppliancePanel, TyphoonBanner, TyphoonPanel } from './OpenData.jsx';
+import { useTyphoon } from '../data/openData.js';
 import { Guard } from './Guard.jsx';
 import { useT, useLang } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
@@ -48,6 +50,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const upd = useUpdate();
   const hasIssue = (snapshot?.diag || []).some((d) => !d.ok);
   const [more, setMore] = useState(false);
+  const typhoon = useTyphoon(!wallpaper);
 
   return (
     <div className={`hud ${wallpaper ? 'is-wallpaper' : ''}`}>
@@ -109,6 +112,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       <ClockPanel snapshot={snapshot} daylight={daylight} replayT={replay?.on ? snapshot?.t : null} />
 
       {!wallpaper && <AlertBanner alert={anomaly?.active} onClose={anomaly?.dismiss} />}
+      {!wallpaper && !anomaly?.active && <TyphoonBanner data={typhoon.data} onOpen={() => { setMore(false); setUi({ panel: 'typhoon' }); }} />}
       {!wallpaper && <BadgeToast toast={badges?.toast} onDone={badges?.clearToast} />}
       {!wallpaper && replay?.on && <ReplayBar rows={rows} hasYesterday={hasYesterday} replay={replay} setReplay={setReplay} onFinish={onReplayFinish} />}
 
@@ -150,6 +154,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           {more && (
             <div className="more-menu" role="menu">
               {[
+                ['appliance', Icon.plug, '家電', '電費試算・小手冊'],
                 ['store', Icon.store, '店家', '店家用電試算'],
                 ['highlights', Icon.spark, '亮點', '今日紀錄'],
                 ['badges', Icon.medal, '徽章', '收集成就'],
@@ -211,14 +216,16 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {!wallpaper && <UpdatePrompt />}
       {!wallpaper && !(upd.available && !upd.dismissed) && <Tour />}
 
-      {ui.panel === 'highlights' && <Guard key={'g-highlights'} name="highlights" onClose={() => setUi({ panel: null })}><HighlightsPanel hl={highlights} records={records} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'highlights' && <Guard key={'g-highlights'} name="highlights" onClose={() => setUi({ panel: null })}><HighlightsPanel hl={highlights} live={live} records={records} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'info' && <Guard key={'g-info'} name="info" onClose={() => setUi({ panel: null })}><InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} power={power} powerSave={powerSave} onClose={() => setUi({ panel: null, infoTab: null })} /></Guard>}
       {ui.panel === 'demand' && <Guard key={'g-demand'} name="demand" onClose={() => setUi({ panel: null })}><DemandPanel snapshot={snapshot} onClose={() => setUi({ panel: null })} /></Guard>}
-      {ui.panel === 'home' && <Guard key={'g-home'} name="home" onClose={() => setUi({ panel: null })}><HomePanel onPick={() => setUi({ pickHome: true })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'home' && <Guard key={'g-home'} name="home" onClose={() => setUi({ panel: null })}><HomePanel onPick={() => setUi({ pickHome: true })} onMarks={(m) => setUi({ outageMarks: m })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'air' && <Guard key={'g-air'} name="air" onClose={() => setUi({ panel: null })}><AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'plant' && ui.plantId && <Guard key={'g-plant'} name="plant" onClose={() => setUi({ panel: null })}><PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'finder' && <Guard key={'g-finder'} name="finder" onClose={() => setUi({ panel: null })}><FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'store' && <Guard key={'g-store'} name="store" onClose={() => setUi({ panel: null })}><StorePanel onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'appliance' && <Guard key={'g-appliance'} name="appliance" onClose={() => setUi({ panel: null })}><AppliancePanel home={home} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'typhoon' && <Guard key={'g-typhoon'} name="typhoon" onClose={() => setUi({ panel: null })}><TyphoonPanel data={typhoon.data} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'badges' && <Guard key={'g-badges'} name="badges" onClose={() => setUi({ panel: null })}><BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} /></Guard>}
     </div>
   );
@@ -252,7 +259,7 @@ function ClockPanel({ snapshot, daylight, replayT }) {
   );
 }
 
-const MORE_PANELS = ['store', 'highlights', 'badges', 'info'];
+const MORE_PANELS = ['appliance', 'store', 'highlights', 'badges', 'info'];
 
 function toggleFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen?.();
