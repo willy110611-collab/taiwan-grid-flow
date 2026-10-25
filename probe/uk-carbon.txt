@@ -1,1 +1,0 @@
-{"data":{"from":"2026-10-25T16:30Z","to":"2026-10-25T17:00Z","generationmix":[{"fuel":"biomass","perc":3.5},{"fuel":"coal","perc":0},{"fuel":"imports","perc":11.4},{"fuel":"gas","perc":13.3},{"fuel":"nuclear","perc":13.3},{"fuel":"other","perc":9.2},{"fuel":"hydro","perc":5.5},{"fuel":"solar","perc":0.7},{"fuel":"wind","perc":43}]}}
