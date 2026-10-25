@@ -59,15 +59,16 @@ export const PLANTS = [
   { id: 'xintao',   name: '新桃電廠', en: 'Hsintao',  pos: [121.198, 24.814], match: /^新桃/ },   // 新竹關西
   { id: 'kuokuang', name: '國光電廠', en: 'Kuokuang', pos: [121.342, 25.042], match: /^國光/ },   // 桃園
   { id: 'xingyuan', name: '星元電廠', en: 'Star Buck', pos: [120.421, 24.129], match: /^星元/ },   // 彰化彰濱工業區
+  { id: 'xingneng', name: '星能彰濱電廠', en: 'Star Energy Changbin', pos: [120.432, 24.127], match: /^星彰/ },   // 星能公司，彰化彰濱工業區（OSM「彰濱電廠」）
   // 彰濱：彰濱光、崙尾光、星崙光（彰濱工業區崙尾區，台電即時逐案公布）＋陸域風電
   { id: 'changbin', name: '彰濱風電 / 光電', en: 'Changbin', pos: [120.400, 24.110],
-    match: /彰濱|彰工|彰品|王功|星彰|崙尾|星崙/, share: { wind: 0.62 } },
+    match: /彰濱|彰工|彰品|王功|崙尾|星崙/, share: { wind: 0.62 } }, // 星彰（星能燃氣）另外列
   { id: 'cigu',     name: '台南太陽能群', en: 'Tainan Solar', pos: [120.140, 23.160], match: /南鹽|七股/, share: { solar: kw('台南市') }, solar: true },
 
   // ── 補充節點：讓全台光網更完整（可自行刪減） ──
   { id: 'linkou',   name: '林口發電廠',   en: 'Linkou',     pos: [121.305, 25.120], match: /林口/ },
   { id: 'tunghsiao',name: '通霄發電廠',   en: 'Tunghsiao',  pos: [120.672, 24.492], match: /通霄/ },
-  { id: 'mailiao',  name: '麥寮電廠',     en: 'Mailiao',    pos: [120.189, 23.803], match: /麥寮|雲林|雲麥|四湖|崙背/, share: { wind: 0.18 } }, // 星元在彰濱，另外列（v0.8.33 前曾併在這裡）
+  { id: 'mailiao',  name: '麥寮電廠',     en: 'Mailiao',    pos: [120.189, 23.803], match: /麥寮|雲林|雲麥|四湖|崙背/, share: { wind: 0.18 }, fuel: 'coal' }, // fuel＝電廠主燃料（台電即時資料目前沒有麥寮燃煤機組） // 星元在彰濱，另外列（v0.8.33 前曾併在這裡）
   { id: 'chiayi',   name: '嘉義太陽能群', en: 'Chiayi Solar', pos: [120.200, 23.420], share: { solar: kw('嘉義縣', '嘉義市') }, solar: true },
   { id: 'pingtung', name: '屏東太陽能群', en: 'Pingtung Solar', pos: [120.560, 22.560], share: { solar: kw('屏東縣') }, solar: true },
   // ── 各縣市太陽能群（依台電各縣市裝置容量分配「其它購電太陽能」；位置取該縣市光電較集中處）──
@@ -88,8 +89,8 @@ export const PLANTS = [
   { id: 'mingtan',  name: '明潭 / 大觀抽蓄', en: 'Sun Moon Lake Hydro', pos: [120.865, 23.835], match: /明潭|大觀|日月潭/, share: { hydro: 0.62 } },
   // ── 離島（獨立電網，不與本島相連；電只在島內流動）──
   //  est：台電若未即時公布（顯示 0 或 N/A），以典型負載推估（MW）
-  { id: 'penghu', name: '澎湖尖山電廠', en: 'Penghu · Jianshan', pos: [119.661, 23.563], match: /澎湖|尖山|中屯|湖西/, island: 'penghu', est: 75 },
-  { id: 'kinmen', name: '金門塔山電廠', en: 'Kinmen · Tashan', pos: [118.281, 24.414], match: /金門|塔山|夏興/, island: 'kinmen', est: 55 },
+  { id: 'penghu', name: '澎湖尖山電廠', en: 'Penghu · Jianshan', pos: [119.661, 23.563], match: /澎湖|尖山|中屯|湖西/, island: 'penghu', est: 75, fuel: 'oil' },
+  { id: 'kinmen', name: '金門塔山電廠', en: 'Kinmen · Tashan', pos: [118.281, 24.414], match: /金門|塔山|夏興/, island: 'kinmen', est: 55, fuel: 'oil' },
   { id: 'matsu',  name: '馬祖珠山電廠', en: 'Matsu · Zhushan', pos: [119.935, 26.157], match: /馬祖|珠山|連江/, island: 'matsu', est: 14 },
   { id: 'ludao',  name: '綠島發電廠',   en: 'Green Island', pos: [121.476, 22.659], match: /綠島/, island: 'ludao', est: 3 },
   { id: 'lanyu',  name: '蘭嶼發電廠',   en: 'Orchid Island', pos: [121.540, 22.026], match: /蘭嶼/, island: 'lanyu', est: 2.5 },
@@ -146,7 +147,7 @@ export const countyRegion = (name = '') => {
 export const PLANT_REGION = {
   datan: 'N', linkou: 'N', chinshan: 'N', kuosheng: 'N', hsiehho: 'N', haihu: 'N', xintao: 'N', kuokuang: 'N',
   ow_formosa1: 'C', ow_formosa2: 'C', ow_zhongneng: 'C', ow_changfang: 'C', ow_gch12: 'C', ow_gch4: 'C', ow_tpc: 'C', ow_hailong: 'C', ow_yunneng: 'C',
-  taichung: 'C', tunghsiao: 'C', mailiao: 'C', xingyuan: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
+  taichung: 'C', tunghsiao: 'C', mailiao: 'C', xingyuan: 'C', xingneng: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
   sol_changhua: 'C', sol_yunlin: 'C', sol_taichung: 'C', sol_miaoli: 'C', sol_nantou: 'C', sol_taoyuan: 'N', sol_north: 'N', sol_kaohsiung: 'S', sol_east: 'E',
   hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S', talin: 'S', chiahui: 'S', fengde: 'S',
   hoping: 'E',

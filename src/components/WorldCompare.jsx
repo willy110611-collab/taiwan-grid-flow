@@ -110,8 +110,9 @@ function TaiwanMix({ series }) {
   return (
     <div className="world-mix">
       <div className="hl-k">{tx(`台灣發電結構 ${ys[0].year}–${ys[ys.length - 1].year}`, `Taiwan’s generation mix ${ys[0].year}–${ys[ys.length - 1].year}`)}</div>
-      <svg className="fs-chart" viewBox={`0 0 ${MW} ${MH + 14}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} tabIndex={0} onKeyDown={chartKeys(si, ys.length, setPick)} role="img"
-        aria-label={tx(`${sel.year} 年燃煤 ${sel.coal}%、燃氣 ${sel.gas}%、核能 ${sel.nuclear}%、再生能源 ${sel.renew}%`, `${sel.year}: coal ${sel.coal}%, gas ${sel.gas}%, nuclear ${sel.nuclear}%, renewables ${sel.renew}%`)}>
+      <svg className="fs-chart" viewBox={`0 0 ${MW} ${MH + 14}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} tabIndex={0} onKeyDown={chartKeys(si, ys.length, setPick)}
+        role="slider" aria-label={tx('台灣發電結構', 'Taiwan’s generation mix')} aria-valuemin={0} aria-valuemax={ys.length - 1} aria-valuenow={si}
+        aria-valuetext={tx(`${sel.year} 年燃煤 ${sel.coal}%、燃氣 ${sel.gas}%、核能 ${sel.nuclear}%、再生能源 ${sel.renew}%`, `${sel.year}: coal ${sel.coal}%, gas ${sel.gas}%, nuclear ${sel.nuclear}%, renewables ${sel.renew}%`)}>
         {layers.map((l) => <polygon key={l.k} points={l.points} fill={rgb(FUELS[l.c]?.color || [200, 200, 200], 0.8)} />)}
         <line x1={x(si)} x2={x(si)} y1="0" y2={MH} className="fs-cursor" />
         {[0, Math.floor((ys.length - 1) / 2), ys.length - 1].map((i, j) => (

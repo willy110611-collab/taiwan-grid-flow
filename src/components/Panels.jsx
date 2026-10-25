@@ -52,6 +52,20 @@ const REC_ROWS = [
 /** 亮點內容很長：頂端一排跳到各段的按鈕（只在面板內捲動） */
 const JUMPS = [['today', '今日', 'Today'], ['fuel', '發電組成', 'Mix'], ['history', '歷年供需', 'History'], ['world', '國際比較', 'World']];
 function JumpBar() {
+  const ref = useRef(null);
+  const [avail, setAvail] = useState(() => JUMPS.map(([k]) => k));
+  // 只顯示面板裡真的有的段落（例如剛過午夜發電組成圖還沒資料、國際比較讀不到時）
+  useEffect(() => {
+    const check = () => {
+      const body = ref.current?.closest('.panel-body');
+      if (!body) return;
+      const next = JUMPS.map(([k]) => k).filter((k) => body.querySelector(`[data-jump="${k}"]`));
+      setAvail((cur) => (cur.join() === next.join() ? cur : next));
+    };
+    check();
+    const id = setInterval(check, 1500);
+    return () => clearInterval(id);
+  }, []);
   const go = (e, k) => {
     const body = e.currentTarget.closest('.panel-body');
     const el = body?.querySelector(`[data-jump="${k}"]`);
@@ -61,8 +75,8 @@ function JumpBar() {
     body.scrollTo({ top: Math.max(0, top), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   };
   return (
-    <nav className="hl-jump" aria-label={tx('跳到', 'Jump to')}>
-      {JUMPS.map(([k, zh, en]) => <button key={k} onClick={(e) => go(e, k)}>{tx(zh, en)}</button>)}
+    <nav className="hl-jump" ref={ref} aria-label={tx('跳到', 'Jump to')}>
+      {JUMPS.filter(([k]) => avail.includes(k)).map(([k, zh, en]) => <button key={k} onClick={(e) => go(e, k)}>{tx(zh, en)}</button>)}
     </nav>
   );
 }
@@ -244,7 +258,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dt>{tx('未來供電預測', 'Supply forecast')}</dt>
             <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
             <dt>{tx('電廠位置', 'Plant locations')}</dt>
-            <dd><a href="https://www.gem.wiki/" target="_blank" rel="noreferrer">Global Energy Monitor</a>{tx('、維基百科「台灣發電廠列表」、OpenStreetMap（豐德、海湖、新桃、國光、星元等民營燃氣電廠；火力、核能、離島電廠已和 OSM 交叉核對，相差 1.3 公里內；OSM 沒有綠島發電廠）；太陽能群與風場為所在縣市、風場約略中心。', ', Wikipedia “List of power stations in Taiwan” and OpenStreetMap (private gas plants such as Fong Der, Haihu, Hsintao, Kuokuang and Star Buck; thermal, nuclear and island plants cross-checked against OSM, all within 1.3 km; OSM has no Green Island plant); solar clusters and wind farms are placed at their county or approximate farm centre.')}</dd>
+            <dd><a href="https://www.gem.wiki/" target="_blank" rel="noreferrer">Global Energy Monitor</a>{tx('、維基百科「台灣發電廠列表」、OpenStreetMap（豐德、海湖、新桃、國光、星元、星能等民營燃氣電廠；火力、核能、離島電廠已和 OSM 交叉核對，相差約 1.3 公里內）；太陽能群與風場為所在縣市、風場約略中心。', ', Wikipedia “List of power stations in Taiwan” and OpenStreetMap (private gas plants such as Fong Der, Haihu, Hsintao, Kuokuang, Star Buck and Star Energy; thermal, nuclear and island plants cross-checked against OSM, all within about 1.3 km); solar clusters and wind farms are placed at their county or approximate farm centre.')}</dd>
             <dt>{tx('核電廠現況', 'Nuclear plant status')}</dt>
             <dd>{NUCLEAR_SOURCES.map((s, i) => <span key={s.url}>{i ? '；' : ''}<a href={s.url} target="_blank" rel="noreferrer">{isEn() ? s.en : s.label}</a></span>)}{tx(`（整理於 ${NUCLEAR_VERIFIED}）。`, ` (as of ${NUCLEAR_VERIFIED}).`)}</dd>
             <dt>{tx('計畫性停電', 'Planned outages')}</dt>
@@ -342,7 +356,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <li>{tx('燃料分類照台電「今日電力資訊」：抽蓄水力（明潭、大觀二）與電池放電歸「儲能」，不算再生能源。', 'Fuel categories follow Taipower’s live data: pumped hydro (Mingtan, Taikuan II) and battery discharge count as “storage”, not renewables.')}</li>
             <li>{tx('全台發電＝台電各類別小計相加（含儲能放電）；與台電公布的目前用電相差通常不到 0.5%。', 'Total generation = sum of Taipower’s category subtotals (including storage discharge); it usually matches Taipower’s published demand within 0.5%.')}</li>
             <li>{tx('綠能＝太陽能＋風力＋水力＋其他再生能源（地熱、生質能）÷ 全台發電。', 'Green = solar + wind + hydro + other renewables (geothermal, biomass) ÷ total generation.')}</li>
-            <li>{tx('對不到電廠的出力：「其它購電太陽能／風力」等依各縣市裝置容量或風場比例分到地圖上的節點；汽電共生、電池放電沒有固定位置，只算進全台總量，不畫在地圖上。', 'Output that cannot be tied to a plant: lumped purchased solar and wind are spread over map nodes by county capacity or wind-farm share; cogeneration and battery discharge have no fixed location, so they count toward the national total but are not drawn.')}</li>
+            <li>{tx('對不到電廠的出力：「其它購電太陽能／風力」等依各縣市裝置容量或風場比例分到地圖上的節點，其餘（例如小水力、石門）依同燃料電廠的出力比例分配；汽電共生、電池放電沒有固定位置，只算進全台總量，不畫在地圖上。', 'Output that cannot be tied to a plant: lumped purchased solar and wind are spread over map nodes by county capacity or wind-farm share, and the rest (e.g. small hydro, Shimen) in proportion to same-fuel plants; cogeneration and battery discharge have no fixed location, so they count toward the national total but are not drawn.')}</li>
             <li>{tx('系統頻率：台電沒有公開即時值，畫面上標「模擬」的頻率只是示意。', 'System frequency: Taipower does not publish a live value; the frequency marked “sim” is illustrative only.')}</li>
           </ul>
           <p className="fine">

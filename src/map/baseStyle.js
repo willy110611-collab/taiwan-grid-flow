@@ -53,7 +53,7 @@ export function createBaseStyle({ hillshade = true } = {}) {
       type: 'raster-dem',
       tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
       encoding: 'terrarium',
-      // 原圖是 256 px；宣告成 512 → 同樣畫面少抓一級（全島約 16 張 → 4–6 張，手機首次載入省約 1.5 MB），山影稍柔和
+      // 原圖是 256 px；宣告成 512 → 同樣畫面少抓一級（全島約 16 張 → 4–6 張，手機首次載入省約 1.3 MB），山影稍柔和
       tileSize: 512,
       maxzoom: 11,
       attribution: 'Terrain: Mapzen / AWS Open Data · 縣市界: 內政部'

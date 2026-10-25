@@ -55,8 +55,9 @@ export function PlantHistory({ id, fuel }) {
   return (
     <div className="life-sec plant-hist">
       {head}
-      <svg className="ph-chart" viewBox={`0 0 ${W} ${H + 14}`} onPointerMove={onMove} onPointerDown={onMove} tabIndex={0} onKeyDown={chartKeys(sel, h.e.length, setPick)} role="img"
-        aria-label={tx(`${h.e.length} 天合計 ${gwh(total)}`, `${h.e.length}-day total ${gwh(total)}`)}>
+      <svg className="ph-chart" viewBox={`0 0 ${W} ${H + 14}`} onPointerMove={onMove} onPointerDown={onMove} tabIndex={0} onKeyDown={chartKeys(sel, h.e.length, setPick)}
+        role="slider" aria-label={tx(`過去發電量，${h.e.length} 天合計 ${gwh(total)}`, `Past generation, ${h.e.length}-day total ${gwh(total)}`)} aria-valuemin={0} aria-valuemax={h.e.length - 1} aria-valuenow={sel}
+        aria-valuetext={tx(`${dayOf(data.start, sel)} 發電 ${gwh(h.e[sel])}，最高 ${fmtMw(h.pk[sel])} MW`, `${dayOf(data.start, sel)}: ${gwh(h.e[sel])}, peak ${fmtMw(h.pk[sel])} MW`)}>
         {h.e.map((v, i) => {
           const bh = (v / max) * H;
           return <rect key={i} x={i * bw + 0.3} y={H - bh} width={Math.max(0.6, bw - 0.6)} height={bh} fill={color} opacity={i === sel ? 1 : 0.55} />;

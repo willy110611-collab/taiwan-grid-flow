@@ -64,8 +64,9 @@ export function FuelStack({ today, yesterday }) {
           ))}
         </div>
       )}
-      <svg className="fs-chart" viewBox={`0 0 ${W} ${H + 16}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} tabIndex={0} onKeyDown={chartKeys(pick ?? chart.pts.length - 1, chart.pts.length, setPick)} role="img"
-        aria-label={tx(`${hm} 全台發電 ${fmtMw(tot)} MW，綠能 ${((green / tot) * 100).toFixed(1)}%`, `${hm} total ${fmtMw(tot)} MW, green ${((green / tot) * 100).toFixed(1)}%`)}>
+      <svg className="fs-chart" viewBox={`0 0 ${W} ${H + 16}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} tabIndex={0} onKeyDown={chartKeys(Math.min(pick ?? Infinity, chart.pts.length - 1), chart.pts.length, setPick)}
+        role="slider" aria-label={t('發電組成')} aria-valuemin={0} aria-valuemax={chart.pts.length - 1} aria-valuenow={chart.pts.indexOf(sel)}
+        aria-valuetext={tx(`${hm} 全台發電 ${fmtMw(tot)} MW，綠能 ${((green / tot) * 100).toFixed(1)}%`, `${hm} total ${fmtMw(tot)} MW, green ${((green / tot) * 100).toFixed(1)}%`)}>
         {chart.grid.map((g) => (
           <g key={g.v}>
             <line x1="0" x2={W} y1={g.y} y2={g.y} className="fs-grid" />

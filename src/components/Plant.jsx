@@ -50,8 +50,12 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
   const pump = id === 'mingtan' ? snapshot?.charging?.pump : 0;
   const cems = air?.cems?.[id];
   // 裝置容量與目前利用率：只在出力幾乎都來自自己的機組時顯示（太陽能群等依比例分攤的節點不算）
-  const cap = units.reduce((a, u) => a + (u.capacity || 0), 0);
-  const showCap = cap > 0 && s && !s.estimated && (s.allocatedMw || 0) <= mw * 0.05 + 1;
+  //  容量欄是「-」的機組（例如部分光電、停用機組）不算，出力也只算有容量的機組；抽水中（明潭）不顯示
+  const capUnits = units.filter((u) => u.capacity > 0);
+  const cap = capUnits.reduce((a, u) => a + u.capacity, 0);
+  const capMw = capUnits.reduce((a, u) => a + Math.max(0, u.mw || 0), 0);
+  const showCap = cap > 0 && s && !s.estimated && !(pump > 1) && (s.allocatedMw || 0) <= mw * 0.05 + 1;
+  const capPct = Math.min(100, Math.round((capMw / (cap || 1)) * 100));
 
   return (
     <Panel title={plantName(cfg)} onClose={onClose}>
@@ -61,8 +65,8 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
       </div>
       {showCap && (
         <p className="fine plant-cap">
-          {tx(`裝置容量 ${fmtMw(cap)} MW・目前運轉 ${Math.round((mw / cap) * 100)}%`, `Capacity ${fmtMw(cap)} MW · running at ${Math.round((mw / cap) * 100)}%`)}
-          <span className="cap-bar"><i style={{ width: `${Math.min(100, (mw / cap) * 100)}%` }} /></span>
+          {tx(`裝置容量 ${fmtMw(cap)} MW・目前運轉 ${capPct}%`, `Capacity ${fmtMw(cap)} MW · running at ${capPct}%`)}
+          <span className="cap-bar"><i style={{ width: `${capPct}%` }} /></span>
         </p>
       )}
 
@@ -106,7 +110,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
 
       <NuclearStatus id={id} />
 
-      <PlantHistory id={id} fuel={mix[0]?.[0] || cfg.fuel} />
+      <PlantHistory id={id} fuel={cfg.fuel || mix[0]?.[0]} />
 
       <div className="life-sec">
         <div className="hl-k">{units.length ? `${t('台電即時機組')}（${units.length}）` : t('資料來源')}</div>

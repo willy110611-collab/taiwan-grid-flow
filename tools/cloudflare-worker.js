@@ -254,16 +254,18 @@ async function kvPutJson(env, key, obj) {
   const text = JSON.stringify(obj);
   await env.NOTIFY.put(key, text, new TextEncoder().encode(text).length <= META_MAX ? { metadata: obj } : undefined);
 }
+const MIGRATE_PER_RUN = 100; // 補寫 metadata 每次最多幾筆（KV 免費每天 1,000 次寫入，不能一次用光）
 async function kvListJson(env, prefix) {
   const out = [];
-  let cursor;
+  let cursor, migrated = 0;
   do {
     const r = await env.NOTIFY.list({ prefix, cursor });
     for (const k of r.keys) {
       let v = k.metadata;
       if (!v) {
         v = await env.NOTIFY.get(k.name, 'json');
-        if (v && new TextEncoder().encode(JSON.stringify(v)).length <= META_MAX) await kvPutJson(env, k.name, v);
+        // 補寫失敗（例如寫入額度用完）不影響這次通知
+        if (v && migrated < MIGRATE_PER_RUN && new TextEncoder().encode(JSON.stringify(v)).length <= META_MAX) { migrated++; await kvPutJson(env, k.name, v).catch(() => {}); }
       }
       if (v) out.push([k.name, v]);
     }
