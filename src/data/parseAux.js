@@ -91,6 +91,12 @@ export function parseLoadPara(text) {
   };
   walk(json);
   if (!Number.isFinite(found.rate) || found.rate < 0 || found.rate > 80) return null;
+  // 發布日期（民國 "115.10.26(一)01:20" 或西元）→ YYYY-MM-DD，用來判斷是不是今天的預估
+  const dm = /(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/.exec(found.time || '');
+  if (dm) {
+    const y = +dm[1] < 1000 ? +dm[1] + 1911 : +dm[1];
+    found.date = `${y}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`;
+  }
   return { ...found, ...supplyLevel(found.rate, found.cap, found.indicator) };
 }
 

@@ -175,7 +175,7 @@ export function useRecords(snapshot) {
       green: greenPct(snapshot.totals),
       solar: snapshot.totals.solar || 0,
       wind: snapshot.totals.wind || 0,
-      load: snapshot.supply?.load || snapshot.total || 0
+      load: (!snapshot.supply?.old && snapshot.supply?.load) || snapshot.total || 0
     };
     setRec((old) => {
       let changed = false;

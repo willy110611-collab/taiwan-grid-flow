@@ -16,7 +16,7 @@ export function SupplyChip({ supply }) {
       <i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />
       <span>{t(supply.label)}</span>
       <b>{supply.rate?.toFixed(1)}%</b>
-      <small>{t(supply.evidence === 'live' ? '尖峰備轉' : '模擬')}</small>
+      <small>{t(supply.evidence === 'live' ? '尖峰備轉' : '模擬')}{supply.old && supply.date ? ` ${+supply.date.slice(5, 7)}/${+supply.date.slice(8)}` : ''}</small>
     </div>
   );
 }

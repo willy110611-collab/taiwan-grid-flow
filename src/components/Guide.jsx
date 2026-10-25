@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { APP } from '../config/app.js';
 import { Icon } from './widgets.jsx';
 import { useUpdate, applyUpdate, dismissUpdate, checkUpdate } from '../update.js';
-import { useT, tx } from '../i18n.js';
+import { useT, tx, isEn } from '../i18n.js';
 
 /* ───────────── 新版：詢問視窗 + 左上角 ⟳ ───────────── */
 /** 對話框按 Esc 關閉（輸入法選字中不算） */
@@ -20,12 +20,14 @@ export function UpdatePrompt() {
   const t = useT();
   useEsc(!!u.available && !u.dismissed, dismissUpdate);
   if (!u.available || u.dismissed) return null;
+  // 英文介面：有英文說明才列（只有中文時不列，避免英文介面出現中文）
+  const notes = (isEn() ? u.available.notesEn : u.available.notes) || [];
   return (
-    <div className="upd-wrap" role="dialog" aria-label="有新版本">
+    <div className="upd-wrap" role="dialog" aria-label={t('有新版本')}>
       <div className="upd-card">
         <div className="upd-title">{t('有新版本')} <b>v{u.available.version}</b></div>
-        {u.available.notes?.length > 0 && (
-          <ul className="upd-notes">{u.available.notes.slice(0, 4).map((n) => <li key={n}>{n}</li>)}</ul>
+        {notes.length > 0 && (
+          <ul className="upd-notes">{notes.slice(0, 4).map((n) => <li key={n}>{n}</li>)}</ul>
         )}
         <div className="upd-btns">
           <button onClick={dismissUpdate}>{t('稍後')}</button>

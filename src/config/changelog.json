@@ -1,6 +1,16 @@
 {
-  "version": "0.8.44",
+  "version": "0.8.45",
+  "notesEn": [
+    "Update notes now appear in English in the English interface",
+    "If Taipower's supply signal hasn't been refreshed for today yet, its date is shown and it is no longer used as current demand",
+    "Badge fixes: several badges earned at once now show one after another; keeping the page open past midnight counts as a new day",
+    "Time-based badges now use Taipower's data time, and stale data no longer awards them; Dawn Shift needs the sun to be up",
+    "Anomaly Spotter no longer fires after a tab sat in the background for hours, and demo mode never awards it",
+    "Time Traveler requires actually finishing a replay; plants opened from search or a shared link count toward Plant Dex"
+  ],
   "notes": [
+    "英文介面的更新說明改成英文",
+    "台電供電燈號如果還是前一天發布的，會標出日期，也不再拿來當「目前用電」",
     "徽章修正：一次拿到多枚會依序跳出；開著網頁跨過午夜也算新的一天（連續觀測）",
     "「黎明交班」要太陽真的升起才算；「深夜低谷」等時間型徽章改看台電資料時間，資料太舊不頒",
     "「異常目擊」不再因為分頁放在背景太久回來而誤報；示範模式不頒發",

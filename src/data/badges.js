@@ -75,7 +75,7 @@ export const BADGES = [
     desc: '供電燈號亮起黃燈或更高等級時在線。', hint: '炎夏傍晚',
     nameEn: 'Yellow Light Witness', descEn: `Online when the supply signal is yellow or worse.`, hintEn: 'A hot summer evening',
     glyph: 'M12 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM12 15v5M8 20h8M12 7v3',
-    check: ({ snap }) => snap.supply?.evidence === 'live' && snap.supply.level >= 1
+    check: ({ snap }) => snap.supply?.evidence === 'live' && !snap.supply.old && snap.supply.level >= 1
   },
   {
     id: 'anomaly', name: '異常目擊', kind: 'grid', rarity: '稀有', color: [255, 110, 110],

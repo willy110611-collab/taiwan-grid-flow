@@ -134,7 +134,9 @@ const totalOf = (totals) => Object.entries(totals).reduce((a, [, v]) => a + v, 0
 export function buildSnapshot(base, { source, areas = null, para = null, curves = null, forecast = null, diag = [], date = new Date() }) {
   const total = totalOf(base.totals);
   const regions = computeRegions(base.plants, total, areas, date);
-  let supply = para ? { ...para, evidence: 'live' } : null;
+  // 發布日期不是今天（台灣時間）→ 標記 old：燈號是前一天的預估、「目前用電」也是舊的
+  const today = new Date(date.getTime() + 8 * 3600e3).toISOString().slice(0, 10);
+  let supply = para ? { ...para, evidence: 'live', old: !!para.date && para.date !== today } : null;
   if (!supply && source !== 'live') {
     const m = mockLoadPara(total);
     supply = { ...m, ...supplyLevel(m.rate, m.cap), evidence: 'simulated' };
