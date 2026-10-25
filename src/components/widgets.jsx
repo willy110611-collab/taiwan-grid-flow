@@ -81,6 +81,9 @@ export const Icon = {
   info: (
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>
   ),
+  pylon: (
+    <svg viewBox="0 0 24 24"><path d="M12 3 8 21M12 3l4 18M6 8h12M7.5 13h9M9.5 8 14.5 13M14.5 8 9.5 13" /></svg>
+  ),
   full: (
     <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
   ),

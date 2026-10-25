@@ -1,4 +1,5 @@
 import { SPINE } from '../config/geo.js';
+import { gridRoute } from './gridNet.js';
 
 /**
  * 流線幾何：電廠 → 負載點
@@ -10,14 +11,18 @@ import { SPINE } from '../config/geo.js';
  * 2. 控制點被「西部骨幹 SPINE」吸引（離骨幹越近吸力越強）→ 粒子沿西海岸走
  * 3. 再加一點垂直方向的弧度（依 pair 雜湊決定左右），讓線條像光纖一樣微彎
  * 4. 以「等弧長」重新取樣，粒子可以用固定速度前進，不會在彎道忽快忽慢
+ * C. 真實線路模式（grid=true）：沿 OSM 輸電線的最短路徑，接不上路網時退回 A／B
  */
-const SAMPLES = 160;
+const SAMPLE_N = 160;
+const GRID_SAMPLES = 320; // 真實線路彎折多，取樣密一點
 const LAT_SCALE = Math.cos((23.7 * Math.PI) / 180); // 經度在台灣緯度的縮放
 
 const lerp = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
 
-export function buildPath(from, to, seed = 0) {
-  const dense = routeViaSpine(from, to, seed) || bezierRoute(from, to, seed);
+export function buildPath(from, to, seed = 0, grid = false) {
+  const real = grid && gridDense(from, to);
+  const dense = real || routeViaSpine(from, to, seed) || bezierRoute(from, to, seed);
+  const SAMPLES = real ? GRID_SAMPLES : SAMPLE_N;
 
   // 累積弧長
   const cum = [0];
@@ -83,9 +88,19 @@ function routeViaSpine(from, to, seed) {
   for (let s = sIn; dir > 0 ? s < sOut : s > sOut; s += dir * step) ctrl.push(spineAt(s, offset));
   ctrl.push(spineAt(sOut, offset), to);
 
-  // Chaikin 角切 4 次 → 平滑流線
+  return chaikin(ctrl, 4);
+}
+
+/** 路線 C：沿真實線路；角切 2 次只磨掉頂點的尖角，不偏離線路 */
+function gridDense(from, to) {
+  const route = gridRoute(from, to);
+  return route ? chaikin(route, 2) : null;
+}
+
+/** Chaikin 角切 n 次 → 平滑流線 */
+function chaikin(ctrl, n) {
   let pts = ctrl;
-  for (let k = 0; k < 4; k++) {
+  for (let k = 0; k < n; k++) {
     const next = [pts[0]];
     for (let i = 0; i < pts.length - 1; i++) {
       const p = pts[i], q = pts[i + 1];

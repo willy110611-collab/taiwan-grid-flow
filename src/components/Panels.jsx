@@ -249,6 +249,9 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dd>{tx('Cloudflare Workers：轉送台電、環境部、氣象署資料（解決跨網域、編碼與金鑰），並負責 App 推播通知與同時在線人數。', 'Cloudflare Workers: relays Taipower, MOENV and CWA data (handling CORS, encoding and API keys), sends app push notifications and counts who is online.')}</dd>
             <dt>{tx('縣市界、海岸線', 'County borders & coastline')}</dt>
             <dd>{tx('內政部國土測繪中心開放資料（經 taiwan-atlas 整理）。', 'Ministry of the Interior NLSC open data (via taiwan-atlas).')}</dd>
+            <dt>{tx('輸電線路', 'Transmission lines')}</dt>
+            <dd>{tx('© OpenStreetMap 貢獻者（ODbL 授權）：345kV、161kV 線路與超高壓變電所，2026-10-25 擷取。光流沿線路的最短路徑跑，實際電力潮流以台電調度為準；可在「更多 → 線路」改回示意光纖。',
+              '© OpenStreetMap contributors (ODbL): 345 kV and 161 kV lines and EHV substations, extracted 2026-10-25. Particles follow the shortest path along the lines; real power flows follow Taipower dispatch. Switch back to schematic routes under More → Lines.')}</dd>
             <dt>{tx('山脈陰影', 'Hillshade')}</dt>
             <dd>Mapzen Terrain Tiles / AWS Open Data。</dd>
             <dt>{tx('日出日落、天色', 'Sunrise, sunset & sky')}</dt>

@@ -41,6 +41,8 @@ function saveView(v) {
   try { v ? localStorage.setItem(VIEW_KEY, JSON.stringify(v)) : localStorage.removeItem(VIEW_KEY); } catch { /* 無法儲存時只在本次有效 */ }
 }
 const SAVED_VIEW = WALLPAPER ? loadView() : null;
+// 光流路線（真實輸電線／示意光纖），引擎也讀同一個鍵
+const ROUTE0 = (() => { try { return localStorage.getItem('tgf-route') === 'fiber' ? 'fiber' : 'grid'; } catch { return 'grid'; } })();
 // 分享連結帶的畫面位置
 const VIEW_PARAM = (() => {
   const v = (params.get('view') || '').split(',').map(Number);
@@ -61,7 +63,7 @@ export default function App() {
   const [daylight, setDaylight] = useState(null);
   const [replay, setReplay] = useState({ on: false, idx: 0, playing: false, speed: 300, day: 'today' });
   const rRows = replay.day === 'yesterday' && yRows.length ? yRows : rows;
-  const [ui, setUiState] = useState({ filter: 'all', panel: null, cruise: WALLPAPER && !SAVED_VIEW, shot: null, locked: true, fixedView: !!SAVED_VIEW });
+  const [ui, setUiState] = useState({ route: ROUTE0, filter: 'all', panel: null, cruise: WALLPAPER && !SAVED_VIEW, shot: null, locked: true, fixedView: !!SAVED_VIEW });
   const lockTimer = useRef(null);
   const pickCancel = useRef(null);
   const setHomeRef = useRef(null);
@@ -199,6 +201,11 @@ export default function App() {
     if (patch.toggleReplay) {
       setReplay((r) => (r.on ? { ...r, on: false, playing: false } : { ...r, on: true, idx: 0, playing: true, day: 'today' }));
       setUiState((s) => ({ ...s, panel: MOBILE ? null : s.panel }));
+      return;
+    }
+    if (patch.route) {
+      e?.setRouteMode(patch.route);
+      setUiState((s) => ({ ...s, route: patch.route }));
       return;
     }
     if (patch.filter) {

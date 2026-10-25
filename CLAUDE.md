@@ -39,6 +39,9 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 「匯入我家用電 CSV」（智慧電表）。
 ### 中繼站
 - v8.1 已部署（2026-10-25，commit 040fbc8，SHA-256 1260d9b6…5190）：推播改名台灣光脈動、`/typhoon.json` 直接回 503。
+- v8.2 已部署（2026-10-25，commit 281cf9e，SHA-256 dc6c43b2…8a61）：`/open/unit-history.json`（data.gov.tw 37331 台電各機組過去發電量）。
+  查證結果：檔案 196 MB、只有 3 個月、只有台電自有 153 部機組（無民營電廠、購電再生能源；2026-04-15 12:00 合計只有 19,356 MW、太陽能 84 MW）→ 不適合做全台回放，待使用者決定用途。
+- 用量（2026-10-24）：Workers 一天 5,496 次（免費 10 萬的 5.5%）。每個前景分頁每小時約 16 次（bundle 6、aqi 4、cems 4、日照 2）。
 - KV 讀取：Cron 每 10 分鐘逐筆讀所有訂閱（約 144×人數 次/天，約 690 人達免費 10 萬上限）→ 改存 list metadata（需部署）。
 ### 其他
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。可評估精簡 deck.gl 圖層、延後載入；回訪有 service worker 快取很快。
@@ -51,7 +54,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 
 ### 可加的資料（2026-10-25 研究，免費優先；網址待在台灣網路確認）
 1. 台電各機組過去發電量（data.gov.tw 37331）→ 回放任一天。
-2. OSM 超高壓線路與變電所（ODbL）→ 光流沿真實線路跑。
+2. ~~OSM 超高壓線路與變電所~~（v0.8.19 已做，「更多 → 線路」可切回示意光纖）。
 3. 全國部門別用電月資料（161209）→「誰用掉了電」。
 4. 縣市住宅／服務業／機關用電（29935）。
 5. 氣象署颱風路徑 W-C0034-005（已有 CWA_KEY）→ 補颱風功能。
@@ -61,6 +64,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 付費：Electricity Maps 商用約 €6,000／年，資料多半也來自台電 → 不建議。
 
 ## 資料需定期更新
+- `public/grid-lines.json`：OSM 345kV／161kV 線路與超高壓變電所（ODbL，2026-10-25 擷取，Douglas-Peucker 精簡）。這個環境連不到 Overpass：要更新時在分支放一次性 workflow 由 Actions 抓取提交，用完刪掉。光流模式 `localStorage tgf-route`（grid／fiber），引擎 `src/engine/gridNet.js`。
 - `src/config/nuclear.js`：核電廠現況（核安會、經濟部）。狀態有變（例如核三再運轉進度、核二送審）要更新，並改 `NUCLEAR_VERIFIED`。
 
 ## 備選清單（暫停中）

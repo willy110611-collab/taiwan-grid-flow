@@ -8,6 +8,7 @@ import { PLANTS, LOADS, TAIWAN_BOUNDS, REGIONS, REGION_KEYS, LOAD_REGION } from 
 import { FUELS, FUEL_KEYS, FILTERS, EVIDENCE } from '../config/energy.js';
 import { createBaseStyle } from '../map/baseStyle.js';
 import { solveFlows } from './flowModel.js';
+import { setGridNet, gridNet } from './gridNet.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { createGlowSprite } from './glowSprite.js';
 import { Cruise } from './cruise.js';
@@ -15,6 +16,9 @@ import { NUCLEAR, NUCLEAR_IDS } from '../config/nuclear.js';
 import { isEn, tx } from '../i18n.js';
 import { solarSun } from '../data/parseGenary.js';
 import { daylightState, daylightPalette, applyDaylight } from './daylight.js';
+
+const ROUTE_KEY = 'tgf-route';
+const readRouteMode = () => { try { return localStorage.getItem(ROUTE_KEY) === 'fiber' ? 'fiber' : 'grid'; } catch { return 'grid'; } };
 
 /** 加法混合：光疊光會更亮，是「發光感」的關鍵 */
 const ADDITIVE = {
@@ -90,6 +94,8 @@ export class GridFlowEngine {
     }));
     this.loads = LOADS.map((l, i) => ({ ...l, idx: i, energy: 0, pulse: 0, mw: 0, targetLoadMw: 0 }));
     this.puffs = [];
+    this.routeMode = readRouteMode();
+    this.gridMix = 0;
 
     this.particles = new ParticleSystem({
       density,
@@ -106,6 +112,7 @@ export class GridFlowEngine {
         }
       }
     });
+    if (this.routeMode === 'grid') this.loadGrid();
 
     const wallpaper = mode === 'wallpaper';
     this.map = new maplibregl.Map({
@@ -242,6 +249,7 @@ export class GridFlowEngine {
   /** 能源篩選：'all' | 'green' | 'thermal' | 'nuclear' */
   setFilter(id) {
     const f = FILTERS.find((x) => x.id === id) || FILTERS[0];
+    this.filterId = f.id;
     this.demandView = !!f.demand;
     this.airView = !!f.air;
     const wasNuke = this.nukeView;
@@ -273,6 +281,22 @@ export class GridFlowEngine {
 
   toggleCruise() {
     return this.cruise.toggle();
+  }
+
+  /** 光流路線：'grid'＝沿真實輸電線（OpenStreetMap）、'fiber'＝示意光纖 */
+  setRouteMode(mode) {
+    this.routeMode = mode === 'fiber' ? 'fiber' : 'grid';
+    try { localStorage.setItem(ROUTE_KEY, this.routeMode); } catch { /* 無法儲存時只在本次有效 */ }
+    if (this.routeMode === 'grid' && !gridNet()) return this.loadGrid(); // 路網載入後才切換
+    this.particles.setGridRoutes(this.routeMode === 'grid' && !!gridNet());
+  }
+
+  loadGrid() {
+    this.gridLoading ||= fetch('./grid-lines.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+      .then((d) => { setGridNet(d); this.particles.setGridRoutes(this.routeMode === 'grid'); })
+      .catch(() => { this.gridLoading = null; }); // 載入失敗：維持示意光纖，下次切換再試
+    return this.gridLoading;
   }
 
   /** 回到一開始的全島俯視圖（停止巡航、清除手動移動） */
@@ -442,6 +466,7 @@ export class GridFlowEngine {
     this.demandMix += ((this.demandView ? 1 : 0) - this.demandMix) * (1 - Math.exp(-dt / 0.3));
     this.airMix += ((this.airView ? 1 : 0) - this.airMix) * (1 - Math.exp(-dt / 0.3));
     this.nukeMix += ((this.nukeView ? 1 : 0) - this.nukeMix) * (1 - Math.exp(-dt / 0.3));
+    this.gridMix += ((this.routeMode === 'grid' && gridNet() ? 1 : 0) - this.gridMix) * (1 - Math.exp(-dt / 0.4));
     if (Math.floor(this.time * 8) !== Math.floor((this.time - dt) * 8)) this.updateRegionHeat();
 
     // 能源篩選：各燃料可見度平滑淡入淡出（約 0.6 秒）
@@ -508,8 +533,29 @@ export class GridFlowEngine {
 
     const layers = [];
 
-    // ① 光纖：極淡的流線骨架，粗細對應流量
-    {
+    // ⓪ 真實輸電路網（OpenStreetMap）：161kV 細線、345kV 主幹加光暈、超高壓變電所
+    const net = gridNet();
+    if (net && this.gridMix > 0.01) {
+      const a = this.gridMix * (1 - 0.5 * this.airMix);
+      const l161 = this.memo('net161', net, () => net.lines.filter((l) => l.kv < 345));
+      const l345 = this.memo('net345', net, () => net.lines.filter((l) => l.kv >= 345));
+      const line = (id, data, color, width) => new PathLayer({
+        id, data, getPath: (d) => d.c, getColor: color, getWidth: width,
+        widthUnits: 'pixels', capRounded: true, jointRounded: true, opacity: a, parameters: ADDITIVE
+      });
+      layers.push(
+        line('net-161', l161, [120, 170, 255, 70], 0.8),
+        line('net-345-glow', l345, [120, 170, 255, 34], 5),
+        line('net-345', l345, [190, 225, 255, 190], 1.3),
+        new ScatterplotLayer({
+          id: 'net-subs', data: net.subs, getPosition: (d) => d.pos, getRadius: 2.6, radiusUnits: 'pixels',
+          getFillColor: [220, 235, 255, 230], opacity: a, parameters: ADDITIVE
+        })
+      );
+    }
+
+    // ① 光纖：極淡的流線骨架，粗細對應流量（真實線路模式下已有路網，光纖淡出）
+    if (this.gridMix < 0.99) {
       layers.push(new PathLayer({
         id: 'fibers',
         data: this.particles.fibers().filter((d) => d.mw > 1), // 篩選掉的燃料不畫（widthMinPixels 會讓 0 寬的線仍留一條細線）
@@ -520,7 +566,7 @@ export class GridFlowEngine {
         widthMinPixels: 0.4,
         capRounded: true,
         jointRounded: true,
-        opacity: 0.07 + 0.05 * breath,
+        opacity: (0.07 + 0.05 * breath) * (1 - this.gridMix),
         parameters: ADDITIVE
       }));
     }
@@ -849,16 +895,19 @@ export class GridFlowEngine {
     }));
 
     // 彰化外海離岸風場群：一個總量標籤（各風場細節點光點看）
+    //  不常駐：選到離岸風場、切到「綠能」、或放大到彰化外海時才淡入
     {
       const ow = this.plants.filter((p) => p.offshore && p.pos[1] < 24.35);
       const owMw = ow.reduce((a, p) => a + (p.mw || 0), 0);
-      if (ow.length && dm < 0.5) {
+      const want = this.filterId === 'green' || ow.some((p) => p.id === this.hover.id) || this.map.getZoom() >= 8.6;
+      this.owMix = (this.owMix || 0) + ((want ? 1 : 0) - (this.owMix || 0)) * 0.12;
+      if (ow.length && dm < 0.5 && this.owMix > 0.02) {
         const c = [Math.min(...ow.map((p) => p.pos[0])) - 0.05, ow.reduce((a, p) => a + p.pos[1], 0) / ow.length];
         layers.push(new TextLayer({
           id: 'offshore-cluster',
           data: [{ pos: c, text: `${tx('彰化外海風場群', 'Offshore wind')}\n${owMw >= 1 ? `${Math.round(owMw).toLocaleString()} MW` : tx('目前風小', 'Light wind')}` }],
           getPosition: (d) => d.pos, getText: (d) => d.text,
-          getColor: [150, 235, 255, 150], getSize: 10.5, getTextAnchor: 'end', getAlignmentBaseline: 'center',
+          getColor: [150, 235, 255, 150], getSize: 10.5, getTextAnchor: 'end', getAlignmentBaseline: 'center', opacity: this.owMix,
           fontFamily: FONT, fontWeight: 300, lineHeight: 1.35, characterSet: 'auto',
           fontSettings: { sdf: true, fontSize: 48, buffer: 6 }, outlineWidth: 3, outlineColor: [3, 5, 10, 180],
           updateTriggers: { getText: [Math.round(owMw), isEn()] }, parameters: NO_DEPTH

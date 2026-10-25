@@ -172,6 +172,9 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
                   {ico}<b>{t(label)}</b><small>{t(sub)}</small>{id === 'info' && hasIssue && <i className="tb-dot" />}
                 </button>
               ))}
+              <button role="menuitem" onClick={() => setUi({ route: ui.route === 'fiber' ? 'grid' : 'fiber' })} title={t('光流路線：真實輸電線（OpenStreetMap）或示意光纖')}>
+                {Icon.pylon}<b>{t(ui.route === 'fiber' ? '線路：示意' : '線路：真實')}</b>
+              </button>
               <button className="desktop-only" role="menuitem" onClick={() => { setMore(false); toggleFullscreen(); }}>
                 {Icon.full}<b>{t('全螢幕')}</b><small>{t('電腦版')}</small>
               </button>
@@ -192,7 +195,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       )}
 
       <footer className="sourceline">
-        {lang === 'en' ? `Data: Taipower${live ? '' : ' (sim)'} · MOENV · CWA · MOI · Mapzen · flows are modeled · Design: ${APP.designer}` : <>資料：台灣電力公司{live ? '即時' : '（模擬）'} · 環境部 · 氣象署 · 內政部 · Mapzen · 流向為模型推估 · 設計：{APP.designer}</>}
+        {lang === 'en' ? `Data: Taipower${live ? '' : ' (sim)'} · MOENV · CWA · MOI · Mapzen${ui.route !== 'fiber' ? ' · © OpenStreetMap' : ''} · flows are modeled · Design: ${APP.designer}` : <>資料：台灣電力公司{live ? '即時' : '（模擬）'} · 環境部 · 氣象署 · 內政部 · Mapzen{ui.route !== 'fiber' && ' · © OpenStreetMap'} · 流向為模型推估 · 設計：{APP.designer}</>}
         {!wallpaper && APP.donate?.some((d) => d.url) && (
           <> · <button className="donate-link" onClick={() => setUi({ panel: 'info', infoTab: 'about' })}>☕ {t('贊助')}</button></>
         )}

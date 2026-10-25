@@ -133,7 +133,7 @@ const EN = {
   'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈動開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
   '強制模擬（網址帶 ?sim=1）': 'Forced simulation (?sim=1 in URL)',
   '日射量資料不足或過舊': 'Solar radiation data missing or stale',
-  '讀不到最新 · 顯示': 'No new data · showing', '電廠': 'Plants', '更多': 'More', '店家用電試算': 'Shop energy', '今日紀錄': 'Today’s records', '收集成就': 'Collectibles', '說明・資料來源': 'Guide & sources', '電腦版': 'Desktop',
+  '讀不到最新 · 顯示': 'No new data · showing', '電廠': 'Plants', '更多': 'More', '店家用電試算': 'Shop energy', '今日紀錄': 'Today’s records', '收集成就': 'Collectibles', '說明・資料來源': 'Guide & sources', '電腦版': 'Desktop', '線路：示意': 'Lines: schematic', '線路：真實': 'Lines: real', '光流路線：真實輸電線（OpenStreetMap）或示意光纖': 'Flow routes: real transmission lines (OpenStreetMap) or schematic',
   '家電': 'Appliances', '電費試算・小手冊': 'Costs & tips', '家電電費': 'Appliance costs', '颱風停電': 'Typhoon outages', '縣市綠電': 'Green by county',
   // 語言
   '中文': '中文', 'English': 'English'

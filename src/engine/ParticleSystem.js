@@ -51,12 +51,13 @@ export class ParticleSystem {
    * @param targets [{ pos }]
    */
   setFlows(flows, sources, targets) {
+    this.last = [flows, sources, targets];
     this.emitters = flows.map((f) => {
       const key = `${f.source}>${f.target}`;
       let idx = this.pathIndex.get(key);
       if (idx === undefined) {
         idx = this.paths.length;
-        this.paths.push(buildPath(sources[f.source].pos, targets[f.target].pos, f.source * 31 + f.target * 7 + 1));
+        this.paths.push(buildPath(sources[f.source].pos, targets[f.target].pos, f.source * 31 + f.target * 7 + 1, this.gridRoutes));
         this.pathIndex.set(key, idx);
       }
       const prev = this.emitters?.find((e) => e.pathIdx === idx);
@@ -176,6 +177,31 @@ export class ParticleSystem {
         getRadius: { value: this.outRad.subarray(0, n), size: 1 }
       }
     };
+  }
+
+  /** 切換路線：true＝沿真實輸電線、false＝示意光纖。路徑快取全部重建 */
+  setGridRoutes(on) {
+    if (this.gridRoutes === on) return;
+    this.gridRoutes = on;
+    const oldPaths = this.paths;
+    const keyOf = [];
+    for (const [k, i] of this.pathIndex) keyOf[i] = k;
+    this.paths = [];
+    this.pathIndex = new Map();
+    if (!this.last) return;
+    const acc = this.emitters.map((e) => e.acc);
+    this.emitters = null;
+    this.setFlows(...this.last);
+    this.emitters.forEach((e, i) => { e.acc = acc[i] ?? e.acc; });
+    // 路上的粒子換到新路徑的同一進度（速度依新路徑長度換算）；新路徑沒有的就移除
+    for (let i = 0; i < this.count; i++) {
+      const old = this.pathOf[i];
+      const idx = this.pathIndex.get(keyOf[old]);
+      if (idx === undefined) { this.kill(i); i--; continue; }
+      this.speed[i] *= oldPaths[old].length / this.paths[idx].length;
+      this.paths[idx].targetIdx = oldPaths[old].targetIdx;
+      this.pathOf[i] = idx;
+    }
   }
 
   /** 給背景「光纖」層用：目前有流量的路徑（依燃料可見度加權） */
