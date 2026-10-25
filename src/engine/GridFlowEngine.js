@@ -988,16 +988,16 @@ export class GridFlowEngine {
         .join(' · ');
       const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.targetMw)}|${fuelText}|${isEn()}|${this.source}|${this.cems?.[hp.id]?.time || ''}|${Object.values(this.cems?.[hp.id]?.items || {}).map((it) => it.max).join()}|${!!solarSun()}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
         { pos: hp.pos, text: isEn() ? hp.en : hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
-        { pos: hp.pos, text: isEn() ? hp.name : hp.en.toUpperCase(), size: 9, off: [22, 7], font: isEn() ? FONT : MONO, color: [150, 165, 195], weight: 300 },
+        { pos: hp.pos, text: isEn() ? hp.name : hp.en.toUpperCase(), size: 10.5, off: [22, 8], font: isEn() ? FONT : MONO, color: [150, 165, 195], weight: 300 },
         {
           pos: hp.pos,
           text: hp.targetMw > 1 ? `${Math.round(hp.targetMw).toLocaleString()} MW${fuelText ? '   ' + fuelText : ''}` : tx('— 停機 · 0 MW', '— offline · 0 MW'),
-          size: 12, off: [22, 23], font: MONO, color: hp.color, weight: 400
+          size: 12.5, off: [22, 25], font: MONO, color: hp.color, weight: 400
         },
-        { pos: hp.pos, text: evidenceText(hp, this.source), size: 9.5, off: [22, 39], font: FONT, color: [150, 165, 195], weight: 300 },
-        ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 9.5, off: [22, 54], font: FONT, color: [225, 190, 160], weight: 300 }] : []),
+        { pos: hp.pos, text: evidenceText(hp, this.source), size: 10.5, off: [22, 42], font: FONT, color: [150, 165, 195], weight: 300 },
+        ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 10.5, off: [22, 58], font: FONT, color: [225, 190, 160], weight: 300 }] : []),
         // 滑鼠裝置：提示可以點開電廠卡（手機點一下就直接開，不需要提示）
-        ...(CAN_HOVER ? [{ pos: hp.pos, text: tx('點一下看各機組 ›', 'Click for units ›'), size: 9.5, off: [22, this.cems?.[hp.id] ? 69 : 54], font: FONT, color: [110, 240, 190], weight: 300 }] : [])
+        ...(CAN_HOVER ? [{ pos: hp.pos, text: tx('點一下看各機組 ›', 'Click for units ›'), size: 10.5, off: [22, this.cems?.[hp.id] ? 74 : 58], font: FONT, color: [110, 240, 190], weight: 300 }] : [])
       ]);
       layers.push(new TextLayer({
         id: 'hover-label',

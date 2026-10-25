@@ -15,6 +15,18 @@ function useEsc(active, fn) {
   }, [active, fn]);
 }
 
+/** 對話框：Tab 只在卡片裡循環（不跑到後面的地圖與按鈕） */
+function trapTab(e) {
+  if (e.key !== 'Tab') return;
+  const items = [...e.currentTarget.querySelectorAll('button, a[href], input, [tabindex]:not([tabindex="-1"])')].filter((x) => !x.disabled);
+  if (!items.length) return;
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  else if (!e.currentTarget.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+}
+
 export function UpdatePrompt() {
   const u = useUpdate();
   const t = useT();
@@ -23,7 +35,7 @@ export function UpdatePrompt() {
   // 英文介面：有英文說明才列（只有中文時不列，避免英文介面出現中文）
   const notes = (isEn() ? u.available.notesEn : u.available.notes) || [];
   return (
-    <div className="upd-wrap" role="dialog" aria-label={t('有新版本')}>
+    <div className="upd-wrap" role="dialog" aria-modal="true" aria-label={t('有新版本')} onKeyDown={trapTab}>
       <div className="upd-card">
         <div className="upd-title">{t('有新版本')} <b>v{u.available.version}</b></div>
         {notes.length > 0 && (
@@ -89,7 +101,7 @@ export function Tour({ onDone }) {
   useEsc(show, close);
   if (!show) return null;
   return (
-    <div className="upd-wrap tour" role="dialog" aria-label={t('功能導覽')}>
+    <div className="upd-wrap tour" role="dialog" aria-modal="true" aria-label={t('功能導覽')} onKeyDown={trapTab}>
       <div className="upd-card">
         <div className="upd-title">{t('歡迎來到')} {tx(APP.name, APP.en)}</div>
         <ul className="guide-list">
