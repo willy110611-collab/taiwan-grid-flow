@@ -94,7 +94,7 @@ const EN = {
   // 亮點／紀錄／試算
   '我的紀錄': 'My records', '這台裝置看過的最高值': 'highest seen on this device', '綠能佔比': 'Green share', '太陽能出力': 'Solar output',
   '風力出力': 'Wind output', '全台用電': 'Demand', '試算：時間電價划算嗎？': 'Calc: is time-of-use cheaper?',
-  '空品測站風速資料讀取中（需中繼站環境部金鑰）': 'Loading station wind (needs MOENV key on relay)',
+  '附近測站的風速資料讀取中': 'Loading wind data from the nearest station',
   '目前出力最大': 'Top plant now', '太陽能今日尖峰': 'Solar peak today', '日出後開始累計': 'counts after sunrise', '綠能佔比最高': 'Peak green share',
   '全台負載最高': 'Peak demand', '南電北送': 'South → North', '模型推估': 'modeled', '中南部 → 北部': 'Central/South → North',
   '今日機組異常（偵測）': 'Unit anomalies today', '今日綠能佔比': 'Green share today', '資料讀取中…': 'Loading…', '統計範圍：今日 00:00 至現在。': 'Range: today 00:00 to now.',
@@ -127,13 +127,13 @@ const EN = {
   // 錯誤訊息
   '此瀏覽器不支援定位': 'This browser does not support location', '定位權限被拒絕': 'Location permission denied', '無法取得位置': 'Could not get your location',
   '此瀏覽器不支援通知（iPhone 需先「加入主畫面」）': 'This browser does not support notifications (on iPhone, Add to Home Screen first)',
-  '通知權限未允許': 'Notification permission not granted', '中繼站尚未更新到 v4，暫時無法開啟': 'The relay is not on v4 yet, so this is unavailable',
+  '通知權限未允許': 'Notification permission not granted', '通知服務暫時無法使用，請稍後再試': 'Notifications are temporarily unavailable; please try again later',
   '通知權限未允許（可到手機設定 → 通知 開啟）': 'Notification permission not granted (enable it in your phone’s Settings → Notifications)',
   '此瀏覽器不支援 App 通知': 'This browser does not support app notifications',
   'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈動開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
-  '強制模擬（網址帶 ?sim=1）': 'Forced simulation (?sim=1 in URL)',
+  '示範模式（模擬資料）': 'Demo mode (simulated data)',
   '日射量資料不足或過舊': 'Solar radiation data missing or stale',
-  '讀不到最新 · 顯示': 'No new data · showing', '電廠': 'Plants', '更多': 'More', '店家用電試算': 'Shop energy', '今日紀錄': 'Today’s records', '收集成就': 'Collectibles', '說明・資料來源': 'Guide & sources', '電腦版': 'Desktop', '線路：示意': 'Lines: schematic', '線路：真實': 'Lines: real', '光流路線：真實輸電線（OpenStreetMap）或示意光纖': 'Flow routes: real transmission lines (OpenStreetMap) or schematic',
+  '讀不到最新 · 顯示': 'No new data · showing', '電廠': 'Plants', '更多': 'More', '店家用電試算': 'Shop energy', '今日紀錄': 'Today’s records', '收集成就': 'Collectibles', '說明・資料來源': 'Guide & sources', '電腦版': 'Desktop', '線路：示意': 'Lines: schematic', '背景音：開': 'Sound: on', '背景音：關': 'Sound: off', '震動：開': 'Vibration: on', '震動：關': 'Vibration: off', '意見回饋': 'Feedback', '線路：真實': 'Lines: real', '光流路線：真實輸電線（OpenStreetMap）或示意光纖': 'Flow routes: real transmission lines (OpenStreetMap) or schematic',
   '家電': 'Appliances', '電費試算・小手冊': 'Costs & tips', '家電電費': 'Appliance costs', '颱風停電': 'Typhoon outages', '縣市綠電': 'Green by county',
   // 語言
   '中文': '中文', 'English': 'English'

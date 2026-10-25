@@ -104,7 +104,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
               {wind.site}{t('測站')}（{t('岸邊')}，{wind.d.toFixed(0)} km）：{windText(wind.dir)} <b>{wind.speed} m/s</b>
               {' · '}{wind.speed < 3 ? t('風太小，風機轉不太動') : wind.speed > 20 ? t('風太大，風機可能停機保護') : mw < 1 ? t('有風但沒發電：可能是檢修、測試或尚未商轉') : t('風況正常')}
             </p>
-          ) : <p className="fine">{t('空品測站風速資料讀取中（需中繼站環境部金鑰）')}</p>}
+          ) : <p className="fine">{t('附近測站的風速資料讀取中')}</p>}
           <p className="fine">{t('岸邊風速通常比外海小，僅供參考。')}</p>
         </div>
       )}

@@ -44,6 +44,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.3 已部署（2026-10-25，commit fd8e133，SHA-256 66c00aab…d823）：`/bundle.json?x=air` 一起帶 aqi、cems、sun（壓縮後 11 KB → 19 KB）。網頁 `src/data/extras.js`：資料包有帶就用，舊中繼站或失敗時各自退回原網址。
 - 用量（2026-10-24）：Workers 一天 5,496 次（免費 10 萬的 5.5%）。v0.8.20 起每個前景分頁每小時約 6 次（原本約 16 次）→ 免費額度約可撐全天平均 690 人同時在線；同時在線 > 400（`BUSY_ONLINE`）時網頁改每 20 分鐘更新。超過免費額度會回 1027 到台灣早上 8 點；要更多就升級 Workers Paid（$5／月含 1,000 萬次，超過每百萬 $0.30）。
 - 部署 curl 注意：檔案欄位要寫 `filename=worker.js`，否則回 10021「No such module」。
+- v8.5 已部署（2026-10-25，commit c293723，SHA-256 952fca18…441e）：意見回饋 POST /feedback（KV `fb:日期` 存 180 天、全站每天上限 100 則、同 IP 60 秒一則；每天前 10 則 LINE 通知管理者；管理者在 LINE 傳「回饋」看最近 7 天）。
 - v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
 ### 其他
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
@@ -66,6 +67,20 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 8. 電力交易平台輔助服務價格（公開網址待確認）。
 - 能源署（moeaea.gov.tw，161209／112650／160060）：GitHub Actions 被 Cloudflare 驗證頁擋、這個環境也連不到 → 要經中繼站或在台灣網路抓。台電 29935 需加進中繼站 OPEN_FILES（要部署）。
 付費：Electricity Maps 商用約 €6,000／年，資料多半也來自台電 → 不建議。
+
+## 管理者手冊：介面不寫的提醒（2026-10-25 起規則：只給管理者知道的寫這裡，介面只寫使用者有權知道的）
+- 空品讀不到、錯誤訊息含「金鑰」：到環境部資料開放平台申請 API 金鑰，設成中繼站 Worker 的 Secret `MOENV_KEY`。日射量要 `CWA_KEY`（氣象署）。
+- 中繼站免費額度用完（錯誤 429／1027）：台灣早上 8 點重置；要避免就升級 Workers Paid。介面只說「今天使用人數太多，空品資料暫停更新，早上 8 點恢復」。
+- 預報（forecast）、App 通知（需 v4 以上的 vapid 金鑰）都靠中繼站；讀不到時介面只說「暫時讀不到／暫時無法使用」。
+- 本機版：用「啟動.bat」或桌布伺服器開（直接開 HTML 檔連不到台電）；GitHub Pages 版的備份資料由 Actions 每 10 分鐘抓。
+- 意見回饋：中繼站 `POST /feedback` → KV `fb:日期`（180 天），每天前 10 則 LINE 推播給 LINE_TO；在 LINE 傳「回饋」看最近 7 天。
+- 介面的錯誤一律只寫「暫時讀不到／暫時無法使用、何時恢復」。原始原因看中繼站 `/aqi.json`、`/cems.json`、`/sun.json` 的 error 欄位，或 /log 的錯誤紀錄（31 天）；通知開不起來多半是 KV（NOTIFY）沒綁或 `/config.json` 沒有 vapidPublic。
+- 連線診斷的檔名、筆數、HTTP 碼只給開發看（本機 `?debug=1`）；`?sim=1` 是示範模式；`/taipower/...` 只有本機 vite 代理才有。
+- 計畫停電原始 ZIP 每天存 KV `outage:raw:日期`（沒有期限）累積歷史，注意 KV 容量。
+- 中繼站開了 observability（Workers Logs）：尚未確認是否記錄 IP；介面目前寫「IP 位址不會寫入資料庫；送回饋時只暫存 60 秒防重複」。
+- 開放 LINE 給所有好友（`LINE_FRIENDS=1`）前，先在「本站伺服器與你的資料」補 LINE 使用者 ID 的保存說明（封鎖即刪）。
+- 待改：App 通知內文、更新提示的 notes 只有中文（英文介面也是中文）。`public/donate-qr.png` 仍在 repo 會公開，待使用者決定是否移除。
+- 使用者看得到的「本站伺服器與你的資料」（資訊 → 資料來源）要和中繼站實際保存的內容一致：通知訂閱（關閉即刪）、回饋 180 天、在線代碼 12 分鐘、錯誤回報約 30 天、不存 IP。改中繼站保存方式時要一起改這段文字。
 
 ## 資料需定期更新
 - `public/grid-lines.json`：OSM 345kV／161kV 線路與超高壓變電所（ODbL，2026-10-25 擷取，Douglas-Peucker 精簡）。這個環境連不到 Overpass：要更新時在分支放一次性 workflow 由 Actions 抓取提交，用完刪掉。光流模式 `localStorage tgf-route`（grid／fiber），引擎 `src/engine/gridNet.js`：只走最大連通網路；路線比直線長超過 2.5 倍＋0.1° 改用示意路線（OSM 缺線段，例如和平→花蓮、德基→花蓮）。

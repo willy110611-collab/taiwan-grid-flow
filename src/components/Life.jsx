@@ -18,12 +18,10 @@ const DIRS_EN = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', '
 export const windText = (deg) => (deg == null ? '—' : isEn() ? `${DIRS_EN[Math.round(deg / 22.5) % 16]} wind` : `${DIRS[Math.round(deg / 22.5) % 16]}風`);
 const R_EN = { NORTH: 'Northern', CENTRAL: 'Central', SOUTH: 'Southern', EAST: 'Eastern' };
 const rName = (r) => (isEn() ? R_EN[r.en] || r.en : r.name);
-/** 空品讀不到的原因：環境部故障 vs 中繼站沒設定金鑰 */
-const airErrText = (err) => (/金鑰|MOENV_KEY/.test(err || '')
-  ? tx('空品資料尚未接上：', 'Air data not connected: ') + tr(err)
-  : /429|1027/.test(err || '')
-    ? tx('今天使用人數太多，中繼站免費額度用完，空品資料早上 8 點恢復（發電資料改用網站備份，照常顯示）。', 'Too many visitors today: the relay’s free quota is used up. Air data returns at 8 am Taiwan time (power data keeps working from the site backup).')
-    : tx('環境部空品服務暫時故障，稍後會自動恢復。', 'The MOENV air-quality service is temporarily down; it will recover automatically.'));
+/** 空品讀不到的原因（使用者只需要知道「暫時讀不到、何時恢復」；金鑰等設定問題寫在手冊） */
+const airErrText = (err) => (/429|1027/.test(err || '')
+  ? tx('今天使用人數太多，空品資料暫停更新，早上 8 點恢復（發電資料照常顯示）。', 'Too many visitors today: air data is paused until 8 am Taiwan time (power data keeps working).')
+  : tx('空品資料暫時讀不到，稍後會自動恢復。', 'Air-quality data is temporarily unavailable; it will recover automatically.'));
 /** 中繼站給的是備份資料 → 標示資料時間 */
 function StaleNote({ air }) {
   if (!air?.staleAt && !(minutesAgo(air?.asOf) > 120)) return null;
@@ -106,7 +104,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
           <span className="muted">　{sum.region ? tx(`${sum.region.name}供電區`, `${rName(sum.region)} supply region`) : ''}</span>
         </div>
       </div>
-      {sum.unset && <p className="fine">{tx('設定地點後會顯示附近空品、下風側電廠與所屬供電區；只存在這台裝置，不會上傳。', 'Set a location to see nearby air quality, upwind plants and your supply region. It stays on this device and is never uploaded.')}</p>}
+      {sum.unset && <p className="fine">{tx('設定地點後會顯示附近空品、下風側電廠與所屬供電區。位置只存在這台裝置；開啟通知時才會送出測站或鄉鎮名稱（不含座標）。', 'Set a location to see nearby air quality, upwind plants and your supply region. Your location stays on this device; only the station or township name is sent if you turn on notifications (never coordinates).')}</p>}
       <LocationPicker home={home} setHome={setHome} stations={air.stations} onPick={onPick} setMsg={setMsg} />
       {msg && <p className="fine warm">{msg}</p>}
 
@@ -184,7 +182,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
               </li>
             ))}
           </ul>
-        ) : <p className="fine">{tx('預報資料需要更新 Cloudflare 中繼站（v2）後才會出現。', 'The forecast appears after the Cloudflare relay is updated (v2).')}</p>}
+        ) : <p className="fine">{tx('預報資料暫時讀不到。', 'The forecast is temporarily unavailable.')}</p>}
         <p className="fine">{tx('尖峰預估備轉容量率：綠 ≥10%、黃 6–10%、橘 <6%。', 'Forecast peak reserve margin: green ≥10%, yellow 6–10%, orange <6%.')}</p>
       </section>
 
@@ -336,7 +334,6 @@ export function AirPanel({ air, snapshot, home, onClose }) {
       {air.error ? (
         <div className="doc">
           <p className="warm">{airErrText(air.error)}</p>
-          {/金鑰|MOENV_KEY/.test(air.error) && <p className="fine">{tx('需要到環境部資料開放平台免費申請 API 金鑰，貼到 Cloudflare 中繼站的 MOENV_KEY（說明在 README）。', 'Get a free API key from the MOENV open-data platform and set it as MOENV_KEY on the Cloudflare relay (see README).')}</p>}
         </div>
       ) : (
         <>
@@ -353,7 +350,7 @@ export function AirPanel({ air, snapshot, home, onClose }) {
 
       <div className="hl-k" style={{ marginTop: 12 }}>{tx('電廠煙道即時監測', 'Stack monitoring')}　<span className="muted">{tx('環境部 CEMS（1 小時值）', 'MOENV CEMS (hourly)')}</span></div>
       {air.cemsError ? (
-        <p className="fine warm">{tr(air.cemsError)}</p>
+        <p className="fine warm">{tx('煙道監測資料暫時讀不到，稍後會自動恢復。', 'Stack-monitoring data is temporarily unavailable; it will recover automatically.')}</p>
       ) : plants.length ? (
         <ul className="cems">
           {plants.map((p) => {
@@ -378,7 +375,7 @@ export function AirPanel({ air, snapshot, home, onClose }) {
             );
           })}
         </ul>
-      ) : <p className="fine">{tx('目前沒有電廠的 CEMS 資料（或格式尚待確認）。', 'No plant CEMS data right now (or the format is unconfirmed).')}</p>}
+      ) : <p className="fine">{tx('目前沒有電廠的煙道監測資料。', 'No stack-monitoring data right now.')}</p>}
       <p className="fine">{tx('數值為該廠運轉中煙囪的最高值（1 小時平均，環境部約晚 1–2 小時公布）；斜線後為法規或環評承諾標準。只列台電與和平等發電廠本身，不含民營汽電共生廠。', 'Values are the highest among the plant’s running stacks (1-hour average, published 1–2 hours late); the number after the slash is the regulatory or EIA limit. Only Taipower, Ho-Ping and similar power plants are listed, not private co-generation plants.')}</p>
     </Panel>
   );

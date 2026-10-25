@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { APP } from '../config/app.js';
 import { Panel } from './Panels.jsx';
 import { Sparkline, fmtMw, Icon } from './widgets.jsx';
-import { t, tx, isEn, useT } from '../i18n.js';
+import { t, tx, tr, isEn, useT } from '../i18n.js';
 import { billCompare } from '../data/advice.js';
 import { loadStore } from '../data/store.js';
 import { enablePush, disablePush } from '../data/useHome.js';
@@ -59,7 +59,7 @@ export function OutageSection({ home, setHome, line, onMarks }) {
         await disablePush(APP.relayUrl);
       }
       setHome({ ...next, outSig: place ? `${place.key}|${home.outRoad || ''}` : null }); setMsg('');
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(tr(e.message)); }
     setBusy(false);
   };
   // 換了地點或路名 → 重新登記
@@ -128,7 +128,7 @@ export function OutageSection({ home, setHome, line, onMarks }) {
           <label className="switch"><input type="checkbox" disabled={busy} checked={!!home.outD3} onChange={(e) => remind({ outD3: e.target.checked })} /><span>{tx('前 3 天提醒', '3 days before')}</span></label>
           <label className="switch"><input type="checkbox" disabled={busy} checked={!!home.outD1} onChange={(e) => remind({ outD1: e.target.checked })} /><span>{tx('前 1 天提醒', '1 day before')}</span></label>
           {msg && <p className="fine warm">{msg}</p>}
-          <p className="fine">{tx('用 App 通知，每天傍晚 6 點比對一次；只傳你家所在鄉鎮與選填的路名給中繼站，不含門牌。', 'Sent as app notifications, checked daily at 6 pm. Only your township and optional road name are sent to the relay — never a house number.')}</p>
+          <p className="fine">{tx('用 App 通知，每天傍晚 6 點比對一次；只傳你家所在鄉鎮與選填的路名給本站伺服器，不含門牌。', 'Sent as app notifications, checked daily at 6 pm. Only your township and optional road name are sent to our server — never a house number.')}</p>
         </>
       )}
       {data && <Src data={data} extra={tx('路段比對可能有誤差，實際範圍以台電通知為準', 'Road matching may be imperfect; Taipower’s notice is authoritative')} />}

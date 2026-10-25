@@ -89,6 +89,18 @@ export const Icon = {
   info: (
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>
   ),
+  sound: (
+    <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /></svg>
+  ),
+  mute: (
+    <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M16 9.5l5 5M21 9.5l-5 5" /></svg>
+  ),
+  chat: (
+    <svg viewBox="0 0 24 24"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4z" /><path d="M8 9.5h8M8 12.5h5" /></svg>
+  ),
+  vibrate: (
+    <svg viewBox="0 0 24 24"><rect x="8" y="4" width="8" height="16" rx="1.5" /><path d="M4.5 9v6M19.5 9v6M2 10.5v3M22 10.5v3" /></svg>
+  ),
   pylon: (
     <svg viewBox="0 0 24 24"><path d="M12 3 8 21M12 3l4 18M6 8h12M7.5 13h9M9.5 8 14.5 13M14.5 8 9.5 13" /></svg>
   ),

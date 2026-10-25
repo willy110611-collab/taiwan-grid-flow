@@ -17,6 +17,10 @@ import { Guard } from './Guard.jsx';
 import { useT, useLang, tx } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
+import { FeedbackPanel } from './Feedback.jsx';
+import { soundPref, soundSupported, startSound, stopSound, setGridMood } from '../audio/ambient.js';
+import { hapticSupported, hapticPref, setHapticPref, installHaptics } from '../audio/haptics.js';
+import { PLANTS, plantName } from '../config/geo.js';
 
 /**
  * HUD — 絕對乾淨的排版
@@ -53,6 +57,23 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const upd = useUpdate();
   const hasIssue = (snapshot?.diag || []).some((d) => !d.ok);
   const [more, setMore] = useState(false);
+  // 背景音（預設關）：上次開著的話，等使用者第一次點畫面再開始（iPhone 規定）
+  const [sound, setSound] = useState(() => soundPref());
+  const [soundToast, setSoundToast] = useState(false);
+  const [haptic, setHaptic] = useState(() => hapticPref());
+  useEffect(() => {
+    installHaptics();
+    if (!soundPref() || wallpaper) return undefined;
+    const go = () => startSound();
+    addEventListener('pointerdown', go, { once: true, capture: true });
+    return () => removeEventListener('pointerdown', go, { capture: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // 音色跟著電網：綠能比例、備轉容量率
+  useEffect(() => { if (stats) setGridMood({ green: stats.green / 100, reserve: snapshot?.supply?.rate }); }, [stats, snapshot?.supply?.rate]);
+  const toggleSound = () => {
+    if (sound) { stopSound(); setSound(false); return; }
+    if (startSound()) { setSound(true); setSoundToast(true); setTimeout(() => setSoundToast(false), 4500); }
+  };
   // 「更多」選單：按 Esc 或點選單以外的地方就關閉（面板的 Esc 由面板自己處理）
   useEffect(() => {
     if (!more) return undefined;
@@ -73,6 +94,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           <i />
           {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('回放')} ${twHM(snapshot.t)}` : snapshot ? (snapshot.stale ? `${t('讀不到最新 · 顯示')} ${twHM(snapshot.t)}` : snapshot.cached ? `${t('更新中 · 上次')} ${twHM(snapshot.t)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
         </div>
+        {!wallpaper && sound && <button className="lang-btn snd-btn" onClick={toggleSound} aria-label={tx('關閉背景音', 'Turn off background sound')} title={tx('關閉背景音', 'Turn off background sound')}>{Icon.sound}</button>}
         {!wallpaper && (
           <button className="lang-btn" onClick={() => setLang(lang === 'en' ? 'zh' : 'en')} aria-label={`${lang === 'en' ? '中文' : 'EN'}：切換語言 / Language`} title={lang === 'en' ? '切換成中文' : 'Switch to English'}>
             {lang === 'en' ? '中文' : 'EN'}
@@ -184,6 +206,19 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
               <button role="menuitem" onClick={() => setUi({ route: ui.route === 'fiber' ? 'grid' : 'fiber' })} title={t('光流路線：真實輸電線（OpenStreetMap）或示意光纖')}>
                 {Icon.pylon}<b>{t(ui.route === 'fiber' ? '線路：示意' : '線路：真實')}</b>
               </button>
+              {soundSupported() && (
+                <button role="menuitem" onClick={toggleSound}>
+                  {sound ? Icon.sound : Icon.mute}<b>{t(sound ? '背景音：開' : '背景音：關')}</b>
+                </button>
+              )}
+              {hapticSupported() && (
+                <button role="menuitem" onClick={() => { setHapticPref(!haptic); setHaptic(!haptic); }}>
+                  {Icon.vibrate}<b>{t(haptic ? '震動：開' : '震動：關')}</b>
+                </button>
+              )}
+              <button role="menuitem" className={ui.panel === 'feedback' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'feedback' ? null : 'feedback' }); }}>
+                {Icon.chat}<b>{t('意見回饋')}</b>
+              </button>
               <button className="desktop-only" role="menuitem" onClick={() => { setMore(false); toggleFullscreen(); }}>
                 {Icon.full}<b>{t('全螢幕')}</b><small>{t('電腦版')}</small>
               </button>
@@ -233,6 +268,12 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         </>
       )}
 
+      {soundToast && (
+        <div className="badge-toast snd-toast" role="status" onClick={() => setSoundToast(false)}>
+          <span className="snd-ico">{Icon.sound}</span>
+          <div><small>{tx('背景音已開啟', 'Background sound on')}</small><b>{tx('電網的聲音', 'The sound of the grid')}</b><span>{tx('綠能越多音色越亮・供電吃緊時節奏變快', 'Brighter with more renewables · faster when supply is tight')}</span></div>
+        </div>
+      )}
       {!wallpaper && <UpdatePrompt />}
       {!wallpaper && !(upd.available && !upd.dismissed) && <Tour />}
 
@@ -242,6 +283,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'home' && <Guard key={'g-home'} name="home" onClose={() => setUi({ panel: null })}><HomePanel onPick={() => setUi({ pickHome: true })} onMarks={(m) => setUi({ outageMarks: m })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'nuclear' && <Guard key={'g-nuclear'} name="nuclear" onClose={() => setUi({ panel: null })}><NuclearPanel snapshot={snapshot} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'air' && <Guard key={'g-air'} name="air" onClose={() => setUi({ panel: null })}><AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'feedback' && <Guard key={'g-feedback'} name="feedback" onClose={() => setUi({ panel: null })}><FeedbackPanel view={feedbackView(ui)} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'plant' && ui.plantId && <Guard key={'g-plant'} name="plant" onClose={() => setUi({ panel: null })}><PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'finder' && <Guard key={'g-finder'} name="finder" onClose={() => setUi({ panel: null })}><FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'store' && <Guard key={'g-store'} name="store" onClose={() => setUi({ panel: null })}><StorePanel onClose={() => setUi({ panel: null })} /></Guard>}
@@ -280,7 +322,12 @@ function ClockPanel({ snapshot, daylight, replayT }) {
   );
 }
 
-const MORE_PANELS = ['appliance', 'store', 'highlights', 'badges', 'info'];
+const MORE_PANELS = ['appliance', 'store', 'highlights', 'badges', 'info', 'feedback'];
+/** 意見回饋附上的「目前畫面」：開著的電廠卡就寫電廠名稱，否則寫篩選 */
+function feedbackView(ui) {
+  if (ui.plantId) { const p = PLANTS.find((x) => x.id === ui.plantId); if (p) return `${tx('電廠', 'plant')}：${plantName(p)}`; }
+  return ui.filter && ui.filter !== 'all' ? `filter:${ui.filter}` : '';
+}
 
 function toggleFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen?.();

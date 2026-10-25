@@ -5,7 +5,9 @@ import { EVIDENCE } from '../config/energy.js';
 import { Icon, Sparkline, fmtMw, minutesAgo } from './widgets.jsx';
 import { t, tx, tr, useT, isEn } from '../i18n.js';
 
-const srcLabel = (u = '') => (/workers\.dev/.test(u) ? tx(' · 中繼站', ' · relay') : /^\.\/data\//.test(u) ? tx(' · 網站備份', ' · site backup') : /taipower/.test(u) ? tx(' · 本機代理', ' · local proxy') : '');
+/** 診斷列的錯誤：訪客只需要知道「暫時讀不到、何時恢復」（金鑰、原始回應等寫在手冊，原文看 /log） */
+const airDiagText = (err) => (/429|1027/.test(err || '') ? tx('今天使用人數太多，早上 8 點恢復', 'Too many visitors today; back at 8 am Taiwan time') : tx('暫時讀不到，稍後自動恢復', 'Temporarily unavailable; will recover automatically'));
+const srcLabel = (u = '') => (/workers\.dev/.test(u) ? tx(' · 本站伺服器', ' · our server') : /^\.\/data\//.test(u) ? tx(' · 網站備份', ' · site backup') : '');
 const agoLabel = (m) => (m < 1 ? tx('剛剛', 'just now') : m < 60 ? tx(`${m} 分鐘前`, `${m} min ago`) : m < 1440 ? tx(`${Math.floor(m / 60)} 小時前`, `${Math.floor(m / 60)} h ago`) : tx(`${Math.floor(m / 1440)} 天前`, `${Math.floor(m / 1440)} d ago`));
 import { PLANTS, SOLAR_COUNTY_KW, plantName } from '../config/geo.js';
 import { twHM } from '../data/history.js';
@@ -238,7 +240,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
         <div className="doc">
           <div className="status-row">
             <span className={`dot ${live ? 'live' : 'sim'}`} />
-            {live ? tx('目前顯示台電即時資料', 'Showing live Taipower data') : tx('目前顯示模擬資料（無法連到台電）', 'Showing simulated data (cannot reach Taipower)')}
+            {live ? tx('目前顯示台電即時資料', 'Showing live Taipower data') : new URLSearchParams(location.search).has('sim') ? tx('目前是示範用模擬資料', 'Showing demo simulated data') : tx('目前顯示模擬資料（暫時讀不到台電資料）', 'Showing simulated data (Taipower data temporarily unavailable)')}
             {snapshot?.timestamp && <span className="muted">　{tx('資料時間', 'Data time')} {snapshot.timestamp}</span>}
           </div>
           <dl>
@@ -249,8 +251,8 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
               <a href={APP.taipowerPage} target="_blank" rel="noreferrer">{tx('台電原始頁面 ↗', 'Taipower source page ↗')}</a>
             </dd>
             <dt>{tx('電廠座標與機組對應', 'Plant locations & unit mapping')}</dt>
-            <dd>{tx(`本專案整理（src/config/geo.js），以機組名稱比對到 ${PLANTS.length} 個發電節點（含 9 座離岸風場、12 個縣市太陽能群）。離岸風場座標參考維基百科與開發商公開資料。`,
-              `Compiled by this project (src/config/geo.js): unit names are matched to ${PLANTS.length} generation nodes (including 9 offshore wind farms and 12 county solar clusters). Offshore wind locations follow Wikipedia and developers’ public data.`)}</dd>
+            <dd>{tx(`本專案整理，以機組名稱比對到 ${PLANTS.length} 個發電節點（含 9 座離岸風場、12 個縣市太陽能群）。離岸風場座標參考維基百科與開發商公開資料。`,
+              `Compiled by this project: unit names are matched to ${PLANTS.length} generation nodes (including 9 offshore wind farms and 12 county solar clusters). Offshore wind locations follow Wikipedia and developers’ public data.`)}</dd>
             <dt>{tx('太陽能分配', 'Solar allocation')}</dt>
             <dd>
               {tx(`台電「各縣市太陽光電裝置容量」（${SOLAR_COUNTY_KW.version}）＋ 交通部中央氣象署「日射量」O-A0091-001（每小時）。台電即時資料約 86% 的太陽能沒有位置，依縣市容量 × 當地日照分配。`,
@@ -261,11 +263,11 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dt>{tx('未來供電預測', 'Supply forecast')}</dt>
             <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
             <dt>{tx('電廠位置', 'Plant locations')}</dt>
-            <dd><a href="https://www.gem.wiki/" target="_blank" rel="noreferrer">Global Energy Monitor</a>{tx('、維基百科「台灣發電廠列表」、OpenStreetMap（豐德、海湖、新桃、國光、星元、星能等民營燃氣電廠；火力、核能、離島電廠已和 OSM 交叉核對，相差約 1.3 公里內）；太陽能群與風場為所在縣市、風場約略中心。', ', Wikipedia “List of power stations in Taiwan” and OpenStreetMap (private gas plants such as Fong Der, Haihu, Hsintao, Kuokuang, Star Buck and Star Energy; thermal, nuclear and island plants cross-checked against OSM, all within about 1.3 km); solar clusters and wind farms are placed at their county or approximate farm centre.')}</dd>
+            <dd><a href="https://www.gem.wiki/" target="_blank" rel="noreferrer">Global Energy Monitor</a>{tx('、維基百科「台灣發電廠列表」、OpenStreetMap（豐德、海湖、新桃、國光、星元、星能等民營燃氣電廠；主要電廠位置誤差約 1.3 公里內）；太陽能群與風場為所在縣市、風場約略中心。', ', Wikipedia “List of power stations in Taiwan” and OpenStreetMap (private gas plants such as Fong Der, Haihu, Hsintao, Kuokuang, Star Buck and Star Energy; major plant locations are accurate to about 1.3 km); solar clusters and wind farms are placed at their county or approximate farm centre.')}</dd>
             <dt>{tx('核電廠現況', 'Nuclear plant status')}</dt>
             <dd>{NUCLEAR_SOURCES.map((s, i) => <span key={s.url}>{i ? '；' : ''}<a href={s.url} target="_blank" rel="noreferrer">{isEn() ? s.en : s.label}</a></span>)}{tx(`（整理於 ${NUCLEAR_VERIFIED}）。`, ` (as of ${NUCLEAR_VERIFIED}).`)}</dd>
             <dt>{tx('計畫性停電', 'Planned outages')}</dt>
-            <dd><a href="https://data.gov.tw/dataset/26144" target="_blank" rel="noreferrer">{tx('台灣電力公司計畫性工作停電資料', 'Taipower planned work outages')}</a>{tx('（每天 17 時更新；中繼站每天存一份，累積歷史）。', ' (updated daily at 17:00; the relay keeps a daily copy to build history).')}</dd>
+            <dd><a href="https://data.gov.tw/dataset/26144" target="_blank" rel="noreferrer">{tx('台灣電力公司計畫性工作停電資料', 'Taipower planned work outages')}</a>{tx('（台電每天 17 時更新）。', ' (Taipower updates daily at 17:00).')}</dd>
             {APP.typhoon && <>
             <dt>{tx('颱風停電', 'Typhoon outages')}</dt>
             <dd><a href="https://service.taipower.com.tw/psvs1/" target="_blank" rel="noreferrer">{tx('台電「天然災害停復電查詢」', 'Taipower disaster outage map')}</a>{tx('（各縣市、鄉鎮目前／曾經停電戶數）。', ' (homes currently / ever without power by county and district).')}</dd>
@@ -283,13 +285,14 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
               {tx('台電「電價表」（114/10/1 公告，115/4/1 凍漲沿用）：住宅與營業用非時間電價、簡易型二段式／三段式時間電價；碳排以經濟部能源署公告電力排碳係數（0.467 kg/度）為基準，依機組類型細分。假日依行政院人事行政總處「政府行政機關辦公日曆表」。',
                 'Taipower tariff table (announced 2025-10-01, unchanged on 2026-04-01): residential and commercial tiered rates, simple two- and three-period time-of-use rates. Carbon uses the Energy Administration grid factor (0.467 kg/kWh) as a baseline, refined by unit type. Holidays follow the government office calendar (DGPA).')}
             </dd>
-            <dt>{tx('中繼站', 'Relay')}</dt>
-            <dd>{tx('Cloudflare Workers：轉送台電、環境部、氣象署資料（解決跨網域、編碼與金鑰），並負責 App 推播通知與同時在線人數。', 'Cloudflare Workers: relays Taipower, MOENV and CWA data (handling CORS, encoding and API keys), sends app push notifications and counts who is online.')}</dd>
+            <dt>{tx('本站伺服器與你的資料', 'Our server & your data')}</dt>
+            <dd>{tx('本站伺服器（Cloudflare）替網頁向台電、環境部、氣象署取得資料，並處理 App 通知、同時在線人數與意見回饋。只保存你主動提供的內容：開啟通知時的瀏覽器通知地址、測站、鄉鎮與選填路名（關閉通知即刪除）；意見回饋保存 180 天。同時在線人數只用每個分頁隨機產生的代碼，12 分鐘後刪除；網站錯誤回報不含個人資料，保存約一個月。IP 位址不會寫入資料庫；送出意見回饋時只暫存 60 秒，用來防止重複送出。',
+              'Our server (on Cloudflare) fetches Taipower, MOENV and CWA data for the site and handles app notifications, the online count and feedback. It keeps only what you choose to give: your browser’s notification address, station, township and optional road when you turn on notifications (deleted when you turn them off); feedback is kept for 180 days. The online count uses a random code per tab, deleted after 12 minutes; error reports contain no personal data and are kept about a month. IP addresses are not saved; when you send feedback it is held for 60 seconds only to prevent repeat submissions.')}</dd>
             <dt>{tx('縣市界、海岸線', 'County borders & coastline')}</dt>
             <dd>{tx('內政部國土測繪中心開放資料（經 taiwan-atlas 整理）。', 'Ministry of the Interior NLSC open data (via taiwan-atlas).')}</dd>
             <dt>{tx('電廠過去發電量', 'Past plant generation')}</dt>
-            <dd><a href="https://data.gov.tw/dataset/37331" target="_blank" rel="noreferrer">{tx('台電「各機組過去發電量」', 'Taipower past generation by unit')}</a>{tx('（2026-03-01～05-31，每 10 分鐘）：只有台電自有機組，加總成每座電廠每天的發電量與最高出力；原檔 4 月 1 日每筆重複出現，已去除。',
-              ' (2026-03-01 to 05-31, every 10 min): Taipower-owned units only, summed into each plant’s daily output and peak; duplicate rows on 1 April were removed.')}</dd>
+            <dd><a href="https://data.gov.tw/dataset/37331" target="_blank" rel="noreferrer">{tx('台電「各機組過去發電量」', 'Taipower past generation by unit')}</a>{tx('（2026-03-01～05-31，每 10 分鐘）：只有台電自有機組，加總成每座電廠每天的發電量與最高出力；已修正原始資料的重複筆數。',
+              ' (2026-03-01 to 05-31, every 10 min): Taipower-owned units only, summed into each plant’s daily output and peak; duplicate rows in the source were removed.')}</dd>
             <dt>{tx('國際比較', 'International comparison')}</dt>
             <dd><a href="https://ember-energy.org/data/yearly-electricity-data/" target="_blank" rel="noreferrer">Ember, Yearly Electricity Data</a>{tx('（CC BY 4.0）：各國電力碳強度與發電組成，每年更新。', ' (CC BY 4.0): carbon intensity and generation mix by country, updated yearly.')}</dd>
             <dt>{tx('輸電線路', 'Transmission lines')}</dt>
@@ -314,7 +317,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
                     <li key={d.name} className={d.ok ? (ago != null && ago > 40 && !/昨日|預測/.test(d.name) ? 'stale' : 'ok') : 'fail'}>
                       <span className={`dot ${d.ok ? 'live' : 'sim'}`} />
                       <b>{t(d.name)}</b>
-                      <small>{d.ok ? `${t('正常')}${srcLabel(d.url)}${d.detail ? ` · ${d.detail}` : ''}${ago != null && !/昨日|預測/.test(d.name) ? ` · ${agoLabel(ago)}` : ''}` : d.tries.map((x) => `${x.url.replace(/^.*\//, '')}：${x.msg}`).slice(-1)[0] || tx('未嘗試', 'not tried')}</small>
+                      <small>{d.ok ? `${t('正常')}${srcLabel(d.url)}${ago != null && !/昨日|預測/.test(d.name) ? ` · ${agoLabel(ago)}` : ''}` : d.tries?.length ? tx('暫時讀不到，通常幾分鐘內恢復', 'Temporarily unavailable; usually back within minutes') : tx('未嘗試', 'not tried')}</small>
                     </li>
                   );
                 })}
@@ -328,16 +331,12 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
                     <li key={name} className={ok ? (staleAt ? 'stale' : 'ok') : 'fail'}>
                       <span className={`dot ${ok ? 'live' : 'sim'}`} />
                       <b>{t(name)}</b>
-                      <small>{ok && name === '氣象署日射量' && sun?.night ? tx('正常 · 夜間或日出日落，日照太弱', 'OK · night or low sun') : ok ? `${staleAt ? tx('環境部暫時故障，顯示備份', 'MOENV down — showing backup') : t('正常')}${ago != null ? ` · ${agoLabel(ago)}` : ''}` : tr(err) || t('讀取中…')}</small>
+                      <small>{ok && name === '氣象署日射量' && sun?.night ? tx('正常 · 夜間或日出日落，日照太弱', 'OK · night or low sun') : ok ? `${staleAt ? tx('環境部暫時故障，顯示備份', 'MOENV down — showing backup') : t('正常')}${ago != null ? ` · ${agoLabel(ago)}` : ''}` : err ? airDiagText(err) : t('讀取中…')}</small>
                     </li>
                   );
                 })}
               </ul>
-              {!live && (
-                <p className="fine">
-                  {tx('本機版請用「啟動.bat」或桌布伺服器開啟（直接開 HTML 檔無法連到台電）；手機版需等 GitHub Actions 抓到資料。', 'On a PC, open it with 啟動.bat or the wallpaper server (opening the HTML file directly cannot reach Taipower); the mobile site needs GitHub Actions to fetch data first.')}
-                </p>
-              )}
+              {!live && <p className="fine">{tx('台電資料暫時讀不到，通常幾分鐘內會自動恢復；這段時間顯示的是模擬畫面。', 'Taipower data is temporarily unavailable and usually returns within minutes; a simulation is shown meanwhile.')}</p>}
             </>
           )}
         </div>

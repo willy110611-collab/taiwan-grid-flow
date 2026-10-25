@@ -78,8 +78,8 @@ export const BADGES = [
   },
   {
     id: 'island-tour', name: '全島巡禮', kind: 'explore', rarity: '常見', color: [200, 210, 255],
-    desc: `放空巡航看完全部 ${SHOTS.length} 個場景。`, hint: '打開「放空」慢慢看',
-    nameEn: 'Island Tour', descEn: `Watch all ${SHOTS.length} cruise scenes in Drift mode.`, hintEn: 'Open Drift and take your time',
+    desc: `放空巡航看完全部 ${SHOTS.length} 個場景（其中「${SHOTS.filter((x) => x.day).map((x) => x.name).join('、')}」只在白天出現）。`, hint: '白天打開「放空」慢慢看',
+    nameEn: 'Island Tour', descEn: `Watch all ${SHOTS.length} cruise scenes in Drift mode (one of them only appears in daytime).`, hintEn: 'Open Drift in the daytime and take your time',
     glyph: 'M12 3l3 6.5 6.5 2.5-6.5 2.5L12 21l-3-6.5L2.5 12 9 9.5z',
     check: ({ progress }) => (progress.shots || []).length >= SHOTS.length,
     progress: (p) => `${(p.shots || []).length} / ${SHOTS.length}`

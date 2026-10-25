@@ -98,12 +98,12 @@ export function pushSupport() {
 export async function enablePush(relayUrl, vapidPublic, site, { test = true, extra = {} } = {}) {
   const sup = pushSupport();
   if (!sup.ok) throw new Error(sup.why);
-  if (!vapidPublic) throw new Error('中繼站尚未更新到 v4，暫時無法開啟');
+  if (!vapidPublic) throw new Error('通知服務暫時無法使用，請稍後再試');
   if ((await Notification.requestPermission()) !== 'granted') throw new Error('通知權限未允許（可到手機設定 → 通知 開啟）');
   const reg = await navigator.serviceWorker.ready;
   const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(vapidPublic) }));
   const r = await fetch(`${relayUrl}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), site, test, ...extra }) });
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `中繼站回應 ${r.status}`);
+  if (!r.ok) throw new Error('通知服務暫時無法使用，請稍後再試'); // 原因（KV 未綁定、格式等）寫在手冊，訪客只需要知道暫時無法使用
 }
 
 export async function disablePush(relayUrl) {

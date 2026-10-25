@@ -955,3 +955,23 @@ button:not(:disabled):active { transform: scale(0.95); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cardIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .upd-wrap, .upd-card { animation: none; } }
+/* 背景音：上方喇叭鈕與開啟提示 */
+.snd-btn { color: var(--green); border-color: rgba(110, 240, 190, 0.45); padding: 0 9px; display: inline-flex; align-items: center; }
+.snd-btn svg, .snd-ico svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.4; }
+.snd-ico { color: var(--green); display: flex; }
+.snd-toast b { font-size: 14px; letter-spacing: 0.12em; }
+/* 意見回饋 */
+.fb-intro { margin-top: 0; }
+.fb-text, .fb-input { width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--ink); font: inherit; font-size: 13px; }
+.fb-text { margin: 8px 0 2px; padding: 10px 12px; resize: vertical; min-height: 96px; line-height: 1.6; }
+.fb-input { padding: 9px 12px; font-size: 12.5px; }
+.fb-text:focus, .fb-input:focus { outline: none; border-color: rgba(110, 240, 190, 0.5); }
+.fb-count { text-align: right; margin: 0 0 6px; }
+.fb-ctx { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; cursor: pointer; }
+.fb-ctx input { margin-top: 3px; accent-color: #6ef0be; }
+.fb-btns { justify-content: flex-end; }
+.fb-btns button:disabled { opacity: 0.45; cursor: default; }
+.fb-err { color: #ffb08a; }
+.fb-done { text-align: center; padding: 10px 0; }
+.fb-done b { display: block; color: var(--ink); font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+.fb-done .upd-btns { justify-content: center; }

@@ -173,7 +173,7 @@ export async function loadGridSnapshot({ forceSim = false, onFirst } = {}) {
     }
     return { ...buildSnapshot(parseGenary(mockGenary()), { source: 'simulated' }), diag };
   }
-  return buildSnapshot(parseGenary(mockGenary()), { source: 'simulated', diag: [{ name: '強制模擬（網址帶 ?sim=1）', ok: false, tries: [] }] });
+  return buildSnapshot(parseGenary(mockGenary()), { source: 'simulated', diag: [{ name: '示範模式（模擬資料）', ok: false, tries: [] }] });
 }
 
 /**

@@ -111,7 +111,7 @@ export function DataIssue({ snapshot, air, onOpen }) {
   ];
   if (!snapshot || (snapshot.cached && !snapshot.stale) || !bad.length) return null;
   if (snapshot.source !== 'live') {
-    if (!snapshot.diag?.length) return null; // 刻意開模擬模式（?sim=1）不算問題
+    if (!snapshot.diag?.length || new URLSearchParams(location.search).has('sim')) return null; // 刻意開示範模式（?sim=1）不算問題
     return <button className="data-issue" onClick={onOpen}>⚠ {t('連不到台電資料，目前是模擬畫面')} ›</button>;
   }
   return (
