@@ -895,10 +895,20 @@ export class GridFlowEngine {
     }));
 
     // ⑧ 融入地圖的文字：負載點名稱（極淡） + hover 電廠標籤（淡入）
+    // 手機的用電視角只標主要城市（離島與小負載點只留名字），避免數字擠成一團
+    let loadData = window.innerWidth < 700 && dm > 0.5 ? this.loads.filter((l) => !l.island && (l.demand || 0) >= 0.1) : this.loads;
+    // 一般視角選取電廠時：標籤附近（畫面 150 px 內）的地名先不標，避免和電廠標籤疊字
+    const hpl = dm < 0.5 && this.hover.id && this.plants.find((p) => p.id === this.hover.id);
+    if (hpl) {
+      const c = this.map.getCenter(), base = loadData;
+      loadData = this.memo('loadShown', `${hpl.id}|${this.map.getZoom().toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${this.map.getBearing().toFixed(0)}|${this.map.getPitch().toFixed(0)}`, () => {
+        const a = this.map.project(hpl.pos);
+        return base.filter((d) => { const b = this.map.project(d.pos); return Math.hypot(a.x - b.x, a.y - b.y) > 150; });
+      });
+    }
     layers.push(new TextLayer({
       id: 'load-names',
-      // 手機的用電視角只標主要城市（離島與小負載點只留名字），避免數字擠成一團
-      data: window.innerWidth < 700 && dm > 0.5 ? this.loads.filter((l) => !l.island && (l.demand || 0) >= 0.1) : this.loads,
+      data: loadData,
       getPosition: (d) => d.pos,
       getText: (d) => { const nm = isEn() ? (window.innerWidth < 700 && d.enShort) || d.en : d.name; /* 手機英文用短名，避免互相重疊 */ return dm > 0.5 && Math.round(d.mw / 10) * 10 > 0 ? `${nm}\n${tx('約', '~')} ${(Math.round(d.mw / 10) * 10).toLocaleString()} MW` : nm; },
       getColor: [190 + 50 * dm, 205 + 30 * dm, 235, 70 + 150 * dm],
