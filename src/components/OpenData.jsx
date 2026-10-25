@@ -221,6 +221,9 @@ export function SupplyHistory({ hl, live }) {
   const rank = todayPeak && cur.length ? cur.filter((d) => d[1] > todayPeak).length + 1 : null;
   const yearMax = (ys) => (data.days || []).filter((d) => d[0].startsWith(ys)).reduce((a, d) => (!a || d[1] > a[1] ? d : a), null);
   const top = yearMax(thisYear), prevTop = yearMax(String(Number(thisYear) - 1));
+  // 去年同一天的尖峰（2/29 沒有對應就不顯示）
+  const lastYearDay = (data.days || []).find((d) => d[0] === `${Number(thisYear) - 1}${twToday().slice(4)}`);
+  const wd = (iso) => new Date(`${iso}T12:00:00Z`).getUTCDay();
   const tight = days.filter((d) => d[2] < 10).length;
   const s = sel && byDate.get(sel);
   return (
@@ -237,6 +240,7 @@ export function SupplyHistory({ hl, live }) {
       ) : null}
       <ul className="hl-list compact">
         {top && <li><span className="hl-k">{tx(`${thisYear} 最高`, `${thisYear} peak`)}</span><span className="hl-v">{md(top[0])}</span><span className="hl-n">{fmtMw(top[1])} <small>MW</small></span></li>}
+        {lastYearDay && <li><span className="hl-k">{tx('去年今天', 'This day last year')}</span><span className="hl-v">{md(lastYearDay[0])}{tx(`（週${'日一二三四五六'[wd(lastYearDay[0])]}）`, ` (${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][wd(lastYearDay[0])]})`)}</span><span className="hl-n">{fmtMw(lastYearDay[1])} <small>MW</small></span></li>}
         {prevTop && <li><span className="hl-k">{tx(`${Number(thisYear) - 1} 最高`, `${Number(thisYear) - 1} peak`)}</span><span className="hl-v">{md(prevTop[0])}</span><span className="hl-n">{fmtMw(prevTop[1])} <small>MW</small></span></li>}
       </ul>
 
