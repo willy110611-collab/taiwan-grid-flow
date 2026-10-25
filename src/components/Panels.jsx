@@ -12,6 +12,7 @@ import { twHM } from '../data/history.js';
 import { setPowerPref } from '../power.js';
 import { SupplyHistory, RenewTab } from './OpenData.jsx';
 import { NUCLEAR_SOURCES, NUCLEAR_VERIFIED } from '../config/nuclear.js';
+import { FuelStack } from './FuelStack.jsx';
 
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
 export function Panel({ title, meta, onClose, children }) {
@@ -47,7 +48,7 @@ const REC_ROWS = [
   ['load', '全台用電', 'MW', '']
 ];
 
-export function HighlightsPanel({ hl, live, records, onPlant, onClose }) {
+export function HighlightsPanel({ hl, live, records, dayRows, yRows, onPlant, onClose }) {
   useT();
   return (
     <Panel title="今日亮點" onClose={onClose}>
@@ -108,10 +109,14 @@ export function HighlightsPanel({ hl, live, records, onPlant, onClose }) {
               </ul>
             </div>
           )}
-          <div className="hl-chart">
-            <div className="hl-k">{t('今日綠能佔比')}</div>
-            <Sparkline values={hl.spark} />
-          </div>
+          {dayRows?.length >= 3 || yRows?.length >= 3 ? (
+            <FuelStack today={dayRows} yesterday={yRows} />
+          ) : (
+            <div className="hl-chart">
+              <div className="hl-k">{t('今日綠能佔比')}</div>
+              <Sparkline values={hl.spark} />
+            </div>
+          )}
           {records && REC_ROWS.some(([k]) => records[k]) && (
             <div className="hl-rec">
               <div className="hl-k">{t('我的紀錄')}<small className="muted">　{t('這台裝置看過的最高值')}{records.since ? tx(`（${md(records.since).split(' ')[0]} 起）`, ` (since ${md(records.since).split(' ')[0]})`) : ''}</small></div>

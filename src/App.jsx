@@ -292,6 +292,8 @@ export default function App() {
         badges={badges}
         anomaly={anomaly}
         rows={rRows}
+        dayRows={rows}
+        yRows={yRows}
         hasYesterday={yRows.length > 0}
         records={records}
         sun={sun}

@@ -75,7 +75,7 @@ const EN = {
   // 燃料
   '太陽能': 'Solar', '風力': 'Wind', '水力': 'Hydro', '其他再生': 'Other RE', '燃氣': 'LNG', '燃煤': 'Coal', '汽電共生': 'Co-gen', '燃油': 'Oil', '儲能': 'Storage',
   // 面板標題
-  '今日亮點': "Today's highlights", '徽章簿': 'Badges',
+  '今日亮點': "Today's highlights", '發電組成': 'Generation mix', '徽章簿': 'Badges',
   '資料來源': 'Data sources', '準確度': 'Accuracy', '關於': 'About', '連線診斷': 'Connection check', '正常': 'OK',
   // 巡航場景
   '全島能量網': 'Island energy web', '北部負載中心': 'Northern load center', '中部火力走廊': 'Central thermal corridor', '西部能量動脈': 'Western energy artery',
