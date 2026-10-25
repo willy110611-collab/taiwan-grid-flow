@@ -561,8 +561,15 @@ export class GridFlowEngine {
         const subNames = this.memo('subNames', net, () => net.subs
           .map((d) => ({ pos: d.pos, text: (d.name || '').replace(/\(E\/S\)|\s/g, '').replace('超高壓變電所', '變電所').replace('超高壓開閉所', '開閉所') }))
           .filter((d) => /變電所|開閉所/.test(d.text)));
+        // 選取中的電廠標籤附近（畫面 150 px 內）不標變電所，避免字疊在一起
+        const hp = this.hover.id && this.plants.find((p) => p.id === this.hover.id);
+        const c = this.map.getCenter();
+        const shownSubs = !hp ? subNames : this.memo('subShown', `${hp.id}|${z.toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${this.map.getBearing().toFixed(0)}|${this.map.getPitch().toFixed(0)}`, () => {
+          const a = this.map.project(hp.pos);
+          return subNames.filter((d) => { const b = this.map.project(d.pos); return Math.hypot(a.x - b.x, a.y - b.y) > 150; });
+        });
         layers.push(new TextLayer({
-          id: 'net-sub-names', data: subNames, getPosition: (d) => d.pos, getText: (d) => d.text,
+          id: 'net-sub-names', data: shownSubs, getPosition: (d) => d.pos, getText: (d) => d.text,
           getColor: [200, 220, 255, 150], getSize: 10, getPixelOffset: [0, -9], getAlignmentBaseline: 'bottom',
           fontFamily: FONT, fontWeight: 300, characterSet: 'auto', fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
           outlineWidth: 3, outlineColor: [3, 5, 10, 180], opacity: a * Math.min(1, (z - 8.3) / 0.5), parameters: NO_DEPTH
