@@ -11,6 +11,16 @@ for (let i = 0; i < 40; i++) { try { if ((await fetch(`http://127.0.0.1:${PORT}/
 
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
 const errors = [];
+// 靜態資料檔：壞掉時功能會直接隱藏、不會報錯，所以在這裡先檢查格式
+const STATIC = {
+  'grid-lines.json': (d) => d.lines?.length > 100 && d.subs?.length > 5,
+  'unit-history.json': (d) => Object.values(d.plants || {}).length > 5 && Object.values(d.plants).every((p) => p.e.length === p.pk.length),
+  'ember.json': (d) => d.areas?.some((a) => a.id === 'Taiwan') && d.taiwan?.length > 5
+};
+for (const [f, ok] of Object.entries(STATIC)) {
+  try { if (!ok(await (await fetch(`http://127.0.0.1:${PORT}/${f}`)).json())) throw new Error('格式不符'); } catch (e) { errors.push(`靜態資料 ${f}：${e.message}`); }
+}
+
 const LABELS = { zh: ['電廠', '我的家', '家電', '店家', '亮點', '徽章', '資訊'], en: ['Plants', 'Home', 'Appliances', 'Shop', 'Peaks', 'Badges', 'Info'] };
 try {
   for (const [vp, lang] of [[{ width: 402, height: 874 }, 'zh'], [{ width: 402, height: 874 }, 'en'], [{ width: 1440, height: 900 }, 'zh']]) {
