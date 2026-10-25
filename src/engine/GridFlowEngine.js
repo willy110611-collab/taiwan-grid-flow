@@ -1090,7 +1090,7 @@ function clearPadding(map) {
  */
 export function fitPadding() {
   const w = window.innerWidth, h = window.innerHeight;
-  if (w >= 700) return { top: 20, bottom: 20, left: 40, right: 40 };
+  if (w >= 700) return { top: 20, bottom: 56, left: 40, right: 40 }; // 底部讓出資料來源列（蘭嶼的地名原本壓在底下）
   const box = (sel) => document.querySelector(sel)?.getBoundingClientRect();
   const visible = (r) => r && r.height > 0;
   const tops = ['.mix', '.brand'].map(box).filter(visible).map((r) => r.bottom);
