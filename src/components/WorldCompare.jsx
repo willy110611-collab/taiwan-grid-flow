@@ -15,7 +15,8 @@ const load = () => (loading ||= fetch('./ember.json').then((r) => (r.ok ? r.json
 const METRICS = [
   { k: 'co2', zh: '碳強度', en: 'Carbon intensity', unit: 'g/kWh', low: true },
   { k: 'renew', zh: '再生能源', en: 'Renewables', unit: '%' },
-  { k: 'coal', zh: '燃煤', en: 'Coal', unit: '%', low: true }
+  { k: 'coal', zh: '燃煤', en: 'Coal', unit: '%', low: true },
+  { k: 'perCap', zh: '人均用電', en: 'Use per person', unit: 'MWh' }
 ];
 
 export function WorldCompare() {
@@ -31,7 +32,8 @@ export function WorldCompare() {
   const rank = tw ? rows.filter((a) => a.id !== 'World').findIndex((a) => a.id === 'Taiwan') + 1 : 0;
   const n = rows.filter((a) => a.id !== 'World').length;
   const series = (data.taiwan || []).filter((y) => y[m] != null);
-  const fmt = (v) => (metric.unit === '%' ? `${v.toFixed(1)}%` : `${Math.round(v)}`);
+  const fmt = (v) => (metric.unit === '%' ? `${v.toFixed(1)}%` : metric.unit === 'MWh' ? v.toFixed(1) : `${Math.round(v)}`);
+  const unitText = metric.unit === '%' ? '' : ` ${metric.unit === 'MWh' ? tx('MWh（千度）／人・年', 'MWh per person a year') : 'g/kWh'}`;
   const years = [...new Set(rows.map((a) => a.year))];
 
   return (
@@ -53,8 +55,8 @@ export function WorldCompare() {
       </ul>
       {tw && (
         <p className="fs-read">
-          {tx(`台灣 ${fmt(tw[m])}${metric.unit === '%' ? '' : ' g/kWh'}：${metric.low ? '由低到高' : '由高到低'}排第 ${rank}（共 ${n} 個國家）。`,
-            `Taiwan ${fmt(tw[m])}${metric.unit === '%' ? '' : ' g/kWh'}: ranks ${rank} of ${n} (${metric.low ? 'lowest first' : 'highest first'}).`)}
+          {tx(`台灣 ${fmt(tw[m])}${unitText}：${metric.low ? '由低到高' : '由高到低'}排第 ${rank}（共 ${n} 個國家）。${m === 'perCap' ? '人均用電＝全國用電 ÷ 人口，含工業與商業，不只家裡。' : ''}`,
+            `Taiwan ${fmt(tw[m])}${unitText}: ranks ${rank} of ${n} (${metric.low ? 'lowest first' : 'highest first'}).${m === 'perCap' ? ' Per person = national demand ÷ population, including industry and business, not just homes.' : ''}`)}
         </p>
       )}
       {series.length > 3 && (
