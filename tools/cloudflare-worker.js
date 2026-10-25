@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.3
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.4
+//  v8.4：訂閱資料（App 通知 p:、LINE 好友 u:）同時存成 KV list metadata → 排程列出時不用逐筆讀（原本每 10 分鐘讀「人數」次，約 690 人就用完每天 10 萬次免費讀取）
 //  v8.3：/bundle.json?x=air 順便帶空品（aqi）、煙道（cems）、日照（sun）→ 網頁每人每小時請求從約 16 次降到 6 次
 //  v8.2：/open/unit-history.json 轉送台電「各機組過去發電量」（data.gov.tw 37331，每月更新）
 //  v8.1：名稱改「台灣光脈動」；颱風停電暫停（/typhoon.json 直接回 503，不再等台電逾時）
@@ -241,20 +242,38 @@ async function pushRoute(req, env, name) {
   const road = String(body.road || '').replace(/\s+/g, '').slice(0, 20) || null;
   const outage = { d3: !!body.o3, d1: !!body.o1 };
   const alerts = body.alerts !== false; // false＝只要停電提醒，不收空品／供電
-  await env.NOTIFY.put(key, JSON.stringify({ sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, since: twDate() }));
+  await kvPutJson(env, key, { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, since: twDate() });
   if (body.test) await pushOne(env, sub, { title: '台灣光脈動', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
   return json({ ok: true, site, town, outage });
 }
 
-async function listPushSubs(env) {
+/* v8.4：KV 值同時放進 list metadata（上限 1024 bytes）→ list() 一次拿到內容，不用逐筆 get()
+ *  舊資料沒有 metadata：讀一次後補寫（每筆只會發生一次）；太大放不進 metadata 的就照舊逐筆讀 */
+const META_MAX = 1000;
+async function kvPutJson(env, key, obj) {
+  const text = JSON.stringify(obj);
+  await env.NOTIFY.put(key, text, new TextEncoder().encode(text).length <= META_MAX ? { metadata: obj } : undefined);
+}
+async function kvListJson(env, prefix) {
   const out = [];
   let cursor;
   do {
-    const r = await env.NOTIFY.list({ prefix: 'p:', cursor });
-    for (const k of r.keys) { const v = await env.NOTIFY.get(k.name, 'json'); if (v) out.push({ key: k.name, ...v }); }
+    const r = await env.NOTIFY.list({ prefix, cursor });
+    for (const k of r.keys) {
+      let v = k.metadata;
+      if (!v) {
+        v = await env.NOTIFY.get(k.name, 'json');
+        if (v && new TextEncoder().encode(JSON.stringify(v)).length <= META_MAX) await kvPutJson(env, k.name, v);
+      }
+      if (v) out.push([k.name, v]);
+    }
     cursor = r.list_complete ? null : r.cursor;
   } while (cursor);
   return out;
+}
+
+async function listPushSubs(env) {
+  return (await kvListJson(env, 'p:')).map(([key, v]) => ({ key, ...v }));
 }
 
 /* ───────── LINE ───────── */
@@ -262,16 +281,7 @@ const twDate = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10
 const norm = (t) => String(t || '').trim().replace(/臺/g, '台').replace(/\s+/g, '');
 
 async function listUsers(env) {
-  const out = [];
-  let cursor;
-  do {
-    const r = await env.NOTIFY.list({ prefix: 'u:', cursor });
-    for (const k of r.keys) {
-      const v = await env.NOTIFY.get(k.name, 'json');
-      if (v) out.push({ id: k.name.slice(2), ...v });
-    }
-    cursor = r.list_complete ? null : r.cursor;
-  } while (cursor);
+  const out = (await kvListJson(env, 'u:')).map(([key, v]) => ({ id: key.slice(2), ...v }));
   // 管理者（LINE_TO）沒傳過訊息也算登記
   if (env.LINE_TO && !out.some((u) => u.id === env.LINE_TO)) out.push({ id: env.LINE_TO, site: env.HOME_SITE || '西屯' });
   return out;
@@ -340,7 +350,7 @@ async function handleEvent(env, ev) {
   if (!id || !env.NOTIFY) return;
   const key = `u:${id}`;
   const user = (await env.NOTIFY.get(key, 'json')) || (id === env.LINE_TO ? { site: env.HOME_SITE || '西屯' } : {});
-  const save = (patch) => env.NOTIFY.put(key, JSON.stringify({ ...user, ...patch }));
+  const save = (patch) => kvPutJson(env, key, { ...user, ...patch });
 
   if (ev.type === 'unfollow') return env.NOTIFY.delete(key);
   if (ev.type === 'follow') {
