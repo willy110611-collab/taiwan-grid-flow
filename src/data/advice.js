@@ -92,7 +92,7 @@ export function usageAdvice(snap, rows = [], yRows = null, { touUser = false } =
   else { score -= touUser ? 2 : 1; reasons.push(`${tou.label}${touUser ? '，電價較高' : ''}（${tou.next}）`); }
   if (rel <= 0.35) { score += 1; reasons.push('碳排接近今日低點'); }
   else if (rel >= 0.7) { score -= 1; reasons.push('碳排接近今日高點'); }
-  const lvl = snap.supply?.level ?? 0;
+  const lvl = snap.supply?.old ? 0 : (snap.supply?.level ?? 0); // 前一天發布的燈號不算
   if (lvl >= 1) { score -= 2; reasons.push(`供電${snap.supply.label}`); }
 
   const level = score >= 2 ? 'good' : score >= 0 ? 'ok' : 'bad';

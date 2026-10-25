@@ -83,6 +83,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 介面的錯誤一律只寫「暫時讀不到／暫時無法使用、何時恢復」。原始原因看中繼站 `/aqi.json`、`/cems.json`、`/sun.json` 的 error 欄位，或 /log 的錯誤紀錄（31 天）；通知開不起來多半是 KV（NOTIFY）沒綁或 `/config.json` 沒有 vapidPublic。
 - 連線診斷的檔名、筆數、HTTP 碼只給開發看（本機 `?debug=1`）；`?sim=1` 是示範模式；`/taipower/...` 只有本機 vite 代理才有。
 - 計畫停電原始 ZIP 每天存 KV `outage:raw:日期`（沒有期限）累積歷史，注意 KV 容量。
+- 回饋的「同 IP 60 秒一則」與每日 100 則計數都用 KV，KV 最終一致（同機房可能 60 秒內讀不到剛寫的值）→ 只是概略限制；被灌爆再改用 Durable Object 計數。
 - 中繼站開了 observability（Workers Logs）：尚未確認是否記錄 IP；介面目前寫「IP 位址不會寫入資料庫；送回饋時只暫存 60 秒防重複」。
 - 開放 LINE 給所有好友（`LINE_FRIENDS=1`）前，先在「本站伺服器與你的資料」補 LINE 使用者 ID 的保存說明（封鎖即刪）。
 - 待改：App 通知內文只有中文（更新提示已有 notesEn）。`public/donate-qr.png` 仍在 repo 會公開，待使用者決定是否移除。

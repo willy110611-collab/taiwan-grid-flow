@@ -189,7 +189,10 @@ function loadCached() {
   if (new URLSearchParams(location.search).has('sim')) return null;
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY));
-    return c && Date.now() - c.t < CACHE_MAX_AGE ? { ...c, cached: true } : null;
+    if (!c || Date.now() - c.t >= CACHE_MAX_AGE) return null;
+    // 快取的燈號：依「現在」的日期重算是不是前一天發布的
+    if (c.supply?.date) c.supply.old = c.supply.date !== new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+    return { ...c, cached: true };
   } catch { return null; }
 }
 function saveCached(snap) {

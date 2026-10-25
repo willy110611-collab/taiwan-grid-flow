@@ -166,7 +166,8 @@ export class GridFlowEngine {
       onClick: (info) => {
         let id = info.layer?.id === 'pick' ? info.object?.id : null;
         // 手機在全島視角：手指底下常疊著好幾個節點（台中、星能、台中太陽能群）→ 選出力最大的那座
-        if (id && !CAN_HOVER && this.map?.getZoom() < 9) {
+        const exact = id && info.object?.pos && (() => { const q = this.map.project(info.object.pos); return Math.hypot(q.x - info.x, q.y - info.y) < 8; })();
+        if (id && !exact && !CAN_HOVER && this.map?.getZoom() < 9) { // 正好點在某個光點上就尊重使用者的選擇
           const hits = this.overlay.pickMultipleObjects({ x: info.x, y: info.y, radius: 4, layerIds: ['pick'] });
           const best = hits.map((h) => h.object).filter(Boolean).sort((a, b) => (b.mw || 0) - (a.mw || 0))[0];
           if (best) id = best.id;
@@ -218,7 +219,7 @@ export class GridFlowEngine {
       L.targetLoadMw = rl ? rl * share : LOADS[L.idx].demand * snapshot.total; // 用設定的比例（L.demand 下一行會被改成 MW）
       L.demand = L.targetLoadMw;
     }
-    this.tension = snapshot.supply?.level ?? 0;
+    this.tension = snapshot.supply?.old ? 0 : (snapshot.supply?.level ?? 0);
     this.updateRegionHeat(true);
 
     const sources = this.plants.map((p) => ({ pos: p.pos, mw: p.targetMw, mix: p.mix }));

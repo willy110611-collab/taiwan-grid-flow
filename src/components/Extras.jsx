@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { BADGES } from '../data/badges.js';
-import { REGION_KEYS } from '../config/geo.js';
+import { REGION_KEYS, PLANTS, plantName } from '../config/geo.js';
 import { EVIDENCE } from '../config/energy.js';
 import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
 import { twHM } from '../data/history.js';
-import { t, tx, useT } from '../i18n.js';
+import { t, tx, tr, useT } from '../i18n.js';
 
 /* ───────────── 供電燈號 ───────────── */
 export function SupplyChip({ supply }) {
@@ -189,7 +189,7 @@ export function AlertBanner({ alert, onClose }) {
     <div className="alert-banner" role="status">
       <i />
       <div>
-        <b>{alert.plant || alert.unit} {tx('出力驟降', 'output drop')}</b>
+        <b>{plantName(PLANTS.find((p) => p.id === alert.plantId)) || tr(alert.unit)} {tx('出力驟降', 'output drop')}</b>
         <span>{alert.unit}　{fmtMw(alert.from)} → {fmtMw(alert.to)} MW　{tx(`（${alert.time}，偵測）`, `(${alert.time}, detected)`)}</span>
       </div>
       <button className="icon-btn" onClick={onClose} aria-label={tx('關閉', 'Close')}>{Icon.close}</button>
@@ -227,7 +227,7 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
   // Esc 結束回放（有面板開著時先關面板）
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key !== 'Escape' || e.isComposing || document.querySelector('.panel, .upd-wrap, [role="menu"]')) return;
+      if (e.key !== 'Escape' || e.isComposing || document.querySelector('.panel, .upd-wrap, [role="menu"], .pick-banner')) return;
       setReplay((r) => ({ ...r, on: false, playing: false }));
     };
     addEventListener('keydown', onKey);

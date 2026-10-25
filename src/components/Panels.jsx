@@ -30,13 +30,14 @@ export function Panel({ title, meta, onClose, children }) {
   const ref = useRef(null);
   // 關閉時焦點回到打開它的按鈕（從「更多」選單打開的，選單已收起 → 回到「更多」）
   useEffect(() => {
-    const opener = document.activeElement;
+    const fromMenu = Date.now() - (window.__tgfFromMenu || 0) < 1000;
+    const opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
     if (ref.current && !ref.current.contains(opener)) ref.current.focus({ preventScroll: true });
     return () => {
-      if (!document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected) {
-        const back = opener?.isConnected && opener !== document.body ? opener : document.querySelector('.toolbar [aria-expanded]');
-        back?.focus?.({ preventScroll: true });
-      }
+      if (document.activeElement && document.activeElement !== document.body && document.activeElement.isConnected) return;
+      // 只還原到「真的打開它的按鈕」；從「更多」選單打開的（選單已收起）回到「更多」；點地圖開的不動
+      const back = opener?.isConnected ? opener : fromMenu ? document.querySelector('.toolbar [aria-expanded]') : null;
+      back?.focus?.({ preventScroll: true });
     };
   }, []);
   title = t(title);

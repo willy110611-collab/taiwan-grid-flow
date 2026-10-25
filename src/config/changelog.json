@@ -1,16 +1,18 @@
 {
-  "version": "0.8.47",
+  "version": "0.8.48",
   "notesEn": [
+    "Map plant labels use larger small text; Tab stays inside the tour and update dialogs",
+    "A supply signal published the previous day no longer triggers alerts or affects advice and map tension",
+    "The anomaly banner shows English plant names; tapping exactly on a small plant on a phone opens that plant",
     "On phones, tapping a crowded spot on the island view now picks the biggest plant under your finger; closing a plant card also clears its map label",
     "Picking Home on the map is cancelled when you open something else (or press Esc), so a later tap can’t set Home by mistake",
     "Keyboard: focus returns to the button that opened a panel; arrow keys move through the More menu; Esc exits Replay",
-    "Desktop source line no longer runs under the toolbar; Highlights jump buttons show the current section; plant search shows English names",
-    "Background sound: if you left it on, one tap now brings it back (it sometimes took two)",
-    "Feedback only includes the plant you were viewing when you opened it",
-    "Plant cards open from search even without WebGL; today’s anomaly list resets after midnight",
-    "Screen-reader labels fixed for badge pop-ups, replay and the tour in English"
+    "Desktop source line no longer runs under the toolbar; Highlights jump buttons show the current section; plant search shows English names"
   ],
   "notes": [
+    "地圖電廠標籤的小字放大，比較好讀；導覽與更新提示用 Tab 時不會跑到後面的地圖",
+    "前一天發布的供電燈號不再觸發提醒、不影響用電建議與地圖的緊張程度",
+    "異常橫幅在英文介面顯示英文電廠名；手機正好點在小光點上時會開那一座",
     "手機在全島畫面點電廠，會選到手指底下出力最大的那座（之前常點到旁邊的小節點）；關掉電廠卡時地圖標籤一起收起",
     "「在地圖上點選我的家」途中去開別的面板會自動取消，不會再誤把點到的電廠位置設成家；按 Esc 也能取消",
     "鍵盤：關閉面板後焦點回到原本的按鈕；「更多」選單可用方向鍵選；回放可按 Esc 結束",

@@ -66,7 +66,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
     installHaptics();
     if (!soundPref() || wallpaper) return undefined;
     // 觸控要到 pointerup 才算使用者操作（pointerdown 時瀏覽器不讓聲音開始）；真的出聲後才移除
-    const go = () => { if (startSound() && soundRunning()) off(); else setTimeout(() => soundRunning() && off(), 400); };
+    const go = () => { if (!soundPref()) return off(); if (startSound() && soundRunning()) off(); else setTimeout(() => soundRunning() && off(), 400); };
     const off = () => { removeEventListener('pointerup', go, true); removeEventListener('keydown', go, true); };
     addEventListener('pointerup', go, true);
     addEventListener('keydown', go, true);
@@ -93,6 +93,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       if (e.key === 'Escape') { e.stopPropagation(); setMore(false); document.querySelector('.toolbar [aria-expanded]')?.focus(); return; }
       // 方向鍵在選單項目間移動（role="menu" 的標準操作）
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      if (!document.activeElement?.closest?.('.more-menu, .toolbar [aria-expanded]')) return; // 焦點在別處（例如面板裡的滑桿）不攔截
       const items = [...document.querySelectorAll('.toolbar [role="menuitem"]')];
       if (!items.length) return;
       e.preventDefault();
@@ -213,7 +214,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
             {Icon.more}<span>{t('更多')}</span>{hasIssue && <i className="tb-dot" />}
           </button>
           {more && (
-            <div className="more-menu" role="menu">
+            <div className="more-menu" role="menu" onClickCapture={() => { window.__tgfFromMenu = Date.now(); }}>
               {[
                 ['appliance', Icon.plug, '家電', '電費試算・小手冊'],
                 ['store', Icon.store, '店家', '店家用電試算'],
