@@ -37,7 +37,7 @@ export function WorldCompare() {
   const years = [...new Set(rows.map((a) => a.year))];
 
   return (
-    <div className="world">
+    <div className="world" data-jump="world">
       <div className="hl-k">{tx('台灣在世界的位置', 'Taiwan vs the world')}<small className="muted">　Ember {years.length === 1 ? years[0] : `${Math.min(...years)}–${Math.max(...years)}`}</small></div>
       <div className="fs-tabs" role="tablist">
         {METRICS.map((x) => (

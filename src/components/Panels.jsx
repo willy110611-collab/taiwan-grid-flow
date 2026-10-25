@@ -49,6 +49,24 @@ const REC_ROWS = [
   ['load', '全台用電', 'MW', '']
 ];
 
+/** 亮點內容很長：頂端一排跳到各段的按鈕（只在面板內捲動） */
+const JUMPS = [['today', '今日', 'Today'], ['fuel', '發電組成', 'Mix'], ['history', '歷年供需', 'History'], ['world', '國際比較', 'World']];
+function JumpBar() {
+  const go = (e, k) => {
+    const body = e.currentTarget.closest('.panel-body');
+    const el = body?.querySelector(`[data-jump="${k}"]`);
+    if (!el) return;
+    const bar = e.currentTarget.closest('.hl-jump').offsetHeight;
+    const top = el.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - bar - 8;
+    body.scrollTo({ top: Math.max(0, top), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
+  return (
+    <nav className="hl-jump" aria-label={tx('跳到', 'Jump to')}>
+      {JUMPS.map(([k, zh, en]) => <button key={k} onClick={(e) => go(e, k)}>{tx(zh, en)}</button>)}
+    </nav>
+  );
+}
+
 export function HighlightsPanel({ hl, live, records, dayRows, yRows, onPlant, onClose }) {
   useT();
   return (
@@ -57,7 +75,8 @@ export function HighlightsPanel({ hl, live, records, dayRows, yRows, onPlant, on
         <p className="muted">{t('資料讀取中…')}</p>
       ) : (
         <>
-          <ul className="hl-list">
+          <JumpBar />
+          <ul className="hl-list" data-jump="today">
             {hl.topPlant && (
               <li className="clickable" role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && hl.topPlant.id && onPlant?.(hl.topPlant.id)} onClick={() => hl.topPlant.id && onPlant?.(hl.topPlant.id)} title={tx('看這座電廠的機組', 'See this plant’s units')}>
                 <span className="hl-k">{t('目前出力最大')}</span>

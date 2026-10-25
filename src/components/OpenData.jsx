@@ -213,7 +213,7 @@ export function SupplyHistory({ hl, live }) {
   const y = year || years[years.length - 1];
   const days = useMemo(() => (data?.days || []).filter((d) => d[0].startsWith(y || '????')), [data, y]);
   const byDate = useMemo(() => new Map(days.map((d) => [d[0], d])), [days]);
-  if (!data) return <section className="life-sec"><div className="hl-k">{tx('歷年供需', 'Supply history')}</div><Loading error={error} /></section>;
+  if (!data) return <section className="life-sec" data-jump="history"><div className="hl-k">{tx('歷年供需', 'Supply history')}</div><Loading error={error} /></section>;
   const thisYear = twToday().slice(0, 4);
   const cur = (data.days || []).filter((d) => d[0].startsWith(thisYear));
   const last = data.days[data.days.length - 1];
@@ -227,7 +227,7 @@ export function SupplyHistory({ hl, live }) {
   const tight = days.filter((d) => d[2] < 10).length;
   const s = sel && byDate.get(sel);
   return (
-    <section className="life-sec">
+    <section className="life-sec" data-jump="history">
       <div className="hl-k">{tx('今天在今年排第幾', 'How today ranks this year')}</div>
       {todayPeak ? (
         <div className="rank-card">

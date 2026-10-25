@@ -55,7 +55,7 @@ export function FuelStack({ today, yesterday }) {
   };
 
   return (
-    <div className="fuel-stack">
+    <div className="fuel-stack" data-jump="fuel">
       <div className="hl-k">{t('發電組成')}<small className="muted">　{tx('台電各燃料別曲線（每 10 分鐘）', 'Taipower generation by fuel (every 10 min)')}</small></div>
       {yesterday?.length > 0 && (
         <div className="fs-tabs" role="tablist">

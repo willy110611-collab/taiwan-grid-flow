@@ -923,3 +923,7 @@ html:lang(en) .world-bars li { grid-template-columns: 6.6em 1fr 3.6em; }
 .fs-chart:focus, .ph-chart:focus { outline: none; }
 .fs-chart:focus-visible, .ph-chart:focus-visible { outline: 1px solid rgba(110, 240, 190, 0.6); outline-offset: 3px; border-radius: 4px; }
 .world .fs-tabs { flex-wrap: wrap; }
+/* 亮點：跳到各段 */
+.hl-jump { display: flex; gap: 6px; flex-wrap: wrap; margin: -4px -18px 10px; padding: 6px 18px 8px; position: sticky; top: -4px; z-index: 2; background: rgb(9, 13, 23); box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.6); }
+.hl-jump button { font: inherit; font-size: 11px; letter-spacing: 0.04em; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); color: var(--ink-dim); cursor: pointer; }
+.hl-jump button:hover { color: var(--ink); border-color: rgba(110, 240, 190, 0.4); }
