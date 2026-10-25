@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.1
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.2
+//  v8.2：/open/unit-history.json 轉送台電「各機組過去發電量」（data.gov.tw 37331，每月更新）
 //  v8.1：名稱改「台灣光脈動」；颱風停電暫停（/typhoon.json 直接回 503，不再等台電逾時）
 //  v8：/bundle.json 一次給網頁 7 份台電資料（每人每 10 分鐘 1 次請求，原本 7 次）並回報同時在線人數（Durable Object「Presence」）；
 //      台電讀不到時改給最後一份成功的資料（不讓大家同時失敗）；LINE 主動推播（供電／空品）預設只發給管理者 LINE_TO，好友不推（省免費額度）；台電資料問題連續 30 分鐘才通知；格式檢查不再把裝置容量「-」當錯誤
@@ -18,6 +19,7 @@
 //  /sun.json                氣象署 署屬氣象站日射量 O-A0091-001（需 CWA_KEY）
 //  /bundle.json?sid=        給網頁：台電 7 份資料一次給＋同時在線人數（sid＝每個分頁隨機產生，不含個資）
 //  /config.json             給網頁：LINE 加好友連結（v8：LINE_FRIENDS=1 才提供）
+//  /open/unit-history.json 台電各機組過去發電量（每 10 分鐘，每月更新三個月前的資料）
 //  /open/outage.zip 等      台電開放資料原檔（計畫停電、鄉鎮用電、過去供需、縣市再生能源），不解析、只轉送
 //  /typhoon.json            台電「天然災害停復電」各縣市目前停電／曾經停電戶數（免金鑰）
 //  /typhoon/county.json?gid= 同上，某縣市各鄉鎮市區
@@ -700,7 +702,7 @@ async function alertRoute(url, env) {
 /* ───────── v7：台電開放資料原檔轉送（給 GitHub Actions 建置用，GitHub 主機直連台電會被擋）─────────
  *  只轉送固定幾個檔案；不解析（避免超過 Worker CPU 限制），解析在建置時做 */
 const OPEN = 'https://service.taipower.com.tw/data/opendata/apply/file/';
-const OPEN_FILES = { 'outage.zip': ['d077004/001.zip', 3600], 'supply-history.csv': ['d006005/001.csv', 6 * 3600], 'renew.csv': ['d007011/001.csv', 12 * 3600] };
+const OPEN_FILES = { 'unit-history.json': ['d006010/001.json', 12 * 3600], 'outage.zip': ['d077004/001.zip', 3600], 'supply-history.csv': ['d006005/001.csv', 6 * 3600], 'renew.csv': ['d007011/001.csv', 12 * 3600] };
 async function openRoute(ctx, file) {
   const kwh = file.match(/^kwh-(\d{3})\.csv$/);
   const hit = OPEN_FILES[file] || (kwh ? [`d007025/dist_kwh_${kwh[1]}.csv`, 12 * 3600] : null);
