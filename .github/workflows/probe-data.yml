@@ -1,0 +1,28 @@
+# 一次性：抓 OSM 超高壓線路、查台電「機組歷史發電量」資料集下載網址（預覽用，確認後刪除）
+name: Probe data
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['.github/workflows/probe-data.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: OSM 輸電線（Overpass）
+        run: |
+          mkdir -p out
+          Q='[out:json][timeout:180];area["ISO3166-1"="TW"][admin_level=2]->.tw;(way["power"="line"]["voltage"~"345000|161000"](area.tw);node["power"="substation"]["voltage"~"345000"](area.tw);way["power"="substation"]["voltage"~"345000"](area.tw););out geom;'
+          for host in https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru/osm/tools/overpass; do
+            if curl -fsS --max-time 240 -X POST --data-urlencode "data=$Q" "$host/api/interpreter" -o out/osm-lines.json; then echo "ok $host"; break; fi
+          done
+          ls -la out; head -c 300 out/osm-lines.json || true
+      - name: data.gov.tw 37331 資料集
+        run: |
+          curl -sS --max-time 60 "https://data.gov.tw/api/v2/rest/dataset/37331" -o out/ds37331.json -w "HTTP %{http_code}\n" || true
+          head -c 2000 out/ds37331.json || true
+          curl -sS --max-time 60 "https://data.gov.tw/dataset/37331" -o out/ds37331.html -w "HTML %{http_code}\n" || true
+          grep -oE 'https?://[^"<> ]+\.(csv|zip|json|xml)' out/ds37331.html | sort -u | head -40 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: probe
+          path: out
