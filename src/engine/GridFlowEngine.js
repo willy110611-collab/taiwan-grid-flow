@@ -559,7 +559,7 @@ export class GridFlowEngine {
       const z = this.map.getZoom();
       if (z >= 8.3 && !isEn()) {
         const subNames = this.memo('subNames', net, () => net.subs
-          .map((d) => ({ pos: d.pos, text: d.name.replace(/\(E\/S\)|\s/g, '').replace('超高壓變電所', '變電所').replace('超高壓開閉所', '開閉所') }))
+          .map((d) => ({ pos: d.pos, text: (d.name || '').replace(/\(E\/S\)|\s/g, '').replace('超高壓變電所', '變電所').replace('超高壓開閉所', '開閉所') }))
           .filter((d) => /變電所|開閉所/.test(d.text)));
         layers.push(new TextLayer({
           id: 'net-sub-names', data: subNames, getPosition: (d) => d.pos, getText: (d) => d.text,

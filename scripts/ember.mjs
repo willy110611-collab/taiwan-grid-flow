@@ -15,7 +15,7 @@ const AREAS = {
   Philippines: ['菲律賓', 'Philippines'], World: ['全球', 'World']
 };
 
-const lines = fs.readFileSync(process.argv[2], 'utf8').split(/\r?\n/).filter(Boolean);
+const lines = fs.readFileSync(process.argv[2], 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
 const head = lines[0].split(',');
 const col = (n) => head.indexOf(n);
 const [cA, cY, cC, cS, cV, cU, cVal] = ['Area', 'Year', 'Category', 'Subcategory', 'Variable', 'Unit', 'Value'].map(col);

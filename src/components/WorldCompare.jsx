@@ -68,8 +68,8 @@ export function WorldCompare() {
       )}
       <TaiwanMix series={data.taiwan || []} />
       <p className="fine">
-        {tx('碳強度＝每發一度電的二氧化碳排放。Ember 用同一套方法估算各國，適合國與國之間比較；和網站上依能源署電力排碳係數算的即時數字算法不同。',
-          'Carbon intensity = CO₂ per kWh generated. Ember estimates every country the same way, so it suits cross-country comparison; it differs from the live figure on this site, which uses the Energy Administration grid factor.')}
+        {tx('碳強度＝Ember 估算的每度電排放量。Ember 用同一套方法估算各國，適合國與國之間比較；網站上的即時數字是依各機組型式的係數推算，算法不同，不能直接相比。',
+          'Carbon intensity = emissions per kWh as estimated by Ember. Ember uses one method for every country, so it suits cross-country comparison; this site’s live figure is estimated from per-unit-type factors, so the two are not directly comparable.')}
         {' '}<a href={data.url} target="_blank" rel="noreferrer">Ember, Yearly Electricity Data（CC BY 4.0）</a>
       </p>
     </div>

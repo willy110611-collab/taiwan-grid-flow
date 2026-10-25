@@ -29,12 +29,14 @@ for (const r of rec.NET_P) {
   const key = `${r.UNIT_NAME}|${r.DATETIME}|${r.NET_P}`;
   if (seen.has(key)) { dup++; continue; }
   seen.add(key);
+  const di = dayIdx(r.DATETIME);
+  if (di < 0 || di >= days) continue; // 超出 START_DATE～END_DATE 的資料不算
   const p = PLANTS.find((x) => x.match && x.match.test(r.UNIT_NAME));
   if (!p) { unmatched.add(r.UNIT_NAME); continue; }
   const P = (plants[p.id] ||= { units: new Set(), e: new Array(days).fill(0), at: new Map(), f: {} });
   P.units.add(r.UNIT_NAME);
   P.f[r.FUEL_TYPE] = (P.f[r.FUEL_TYPE] || 0) + v / 6; // 各燃料別合計（例如核能電廠裡的燃油氣渦輪機、太陽能）
-  P.e[dayIdx(r.DATETIME)] += v / 6; // 10 分鐘 → MWh
+  P.e[di] += v / 6; // 10 分鐘 → MWh
   P.at.set(r.DATETIME, (P.at.get(r.DATETIME) || 0) + v);
 }
 
