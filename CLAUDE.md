@@ -46,7 +46,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 部署 curl 注意：檔案欄位要寫 `filename=worker.js`，否則回 10021「No such module」。
 - KV 讀取：Cron 每 10 分鐘逐筆讀所有訂閱（約 144×人數 次/天，約 690 人達免費 10 萬上限）→ 改存 list metadata（需部署）。
 ### 其他
-- 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。可評估精簡 deck.gl 圖層、延後載入；回訪有 service worker 快取很快。
+- 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
 - CEMS：中繼站沒有漏資料，環境部 aqx_p_187 本身時常缺台中、興達、麥寮汽電（2026-10-25 02:00 查證）。
 - 右下資料來源列與「蘭嶼鄉」地名重疊（已加陰影）。（東部供電區標籤已移到台東外側；電腦版「全島」按鈕在面板打開時移到面板左邊）
 - CEMS、日射量一開頁就下載（CEMS 也用在地圖電廠標籤，所以沒改成延後）。
