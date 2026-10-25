@@ -931,7 +931,7 @@ export class GridFlowEngine {
     //  不常駐：選到離岸風場、切到「綠能」、或放大到彰化外海時才淡入
     {
       const ow = this.plants.filter((p) => p.offshore && p.pos[1] < 24.35);
-      const owMw = ow.reduce((a, p) => a + (p.mw || 0), 0);
+      const owMw = ow.reduce((a, p) => a + (p.targetMw || 0), 0); // 文字用目標值
       const want = this.filterId === 'green' || ow.some((p) => p.id === this.hover.id) || this.map.getZoom() >= 8.6;
       this.owMix = (this.owMix || 0) + ((want ? 1 : 0) - (this.owMix || 0)) * 0.12;
       if (ow.length && dm < 0.5 && this.owMix > 0.02) {
@@ -992,12 +992,12 @@ export class GridFlowEngine {
         .slice(0, 2)
         .map(([f, mw]) => `${(isEn() ? FUELS[f]?.en : FUELS[f]?.label) ?? f} ${Math.round((mw / (hp.targetMw || 1)) * 100)}%`)
         .join(' · ');
-      const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.mw)}|${fuelText}|${isEn()}|${this.source}|${this.cems?.[hp.id]?.time || ''}|${Object.values(this.cems?.[hp.id]?.items || {}).map((it) => it.max).join()}|${!!solarSun()}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
+      const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.targetMw)}|${fuelText}|${isEn()}|${this.source}|${this.cems?.[hp.id]?.time || ''}|${Object.values(this.cems?.[hp.id]?.items || {}).map((it) => it.max).join()}|${!!solarSun()}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
         { pos: hp.pos, text: isEn() ? hp.en : hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
         { pos: hp.pos, text: isEn() ? hp.name : hp.en.toUpperCase(), size: 9, off: [22, 7], font: isEn() ? FONT : MONO, color: [150, 165, 195], weight: 300 },
         {
           pos: hp.pos,
-          text: hp.targetMw > 1 ? `${Math.round(hp.mw).toLocaleString()} MW${fuelText ? '   ' + fuelText : ''}` : tx('— 停機 · 0 MW', '— offline · 0 MW'),
+          text: hp.targetMw > 1 ? `${Math.round(hp.targetMw).toLocaleString()} MW${fuelText ? '   ' + fuelText : ''}` : tx('— 停機 · 0 MW', '— offline · 0 MW'),
           size: 12, off: [22, 23], font: MONO, color: hp.color, weight: 400
         },
         { pos: hp.pos, text: evidenceText(hp, this.source), size: 9.5, off: [22, 39], font: FONT, color: [150, 165, 195], weight: 300 },
@@ -1020,7 +1020,7 @@ export class GridFlowEngine {
         fontSettings: { sdf: true, fontSize: 64, buffer: 8 },
         outlineWidth: 4,
         outlineColor: [3, 5, 10, 200 * a],
-        updateTriggers: { getColor: a, getPixelOffset: a, getText: [Math.round(hp.mw), isEn()] },
+        updateTriggers: { getColor: a, getPixelOffset: a, getText: [Math.round(hp.targetMw), isEn()] }, // 文字直接用目標值（光暈才做漸變）：數字立刻正確，也不用每幀重排
         parameters: NO_DEPTH
       }));
     }
