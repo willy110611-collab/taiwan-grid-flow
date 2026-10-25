@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { APP } from '../config/app.js';
 import { PLANTS } from '../config/geo.js';
 import { setSolarSun } from './parseGenary.js';
+import { firstExtra, freshExtra, onExtra } from './extras.js';
 
 /**
  * 空氣品質（環境部 AQI，每小時）與電廠煙道排放（環境部 CEMS 1 小時值）
@@ -9,6 +10,11 @@ import { setSolarSun } from './parseGenary.js';
  * 中繼站尚未設定環境部金鑰時，error 會說明原因，畫面顯示設定提示。
  */
 const REFRESH = 15 * 60 * 1000;
+
+/** 先用資料包裡的（中繼站 v8.3），沒有才另外打中繼站 */
+async function getPart(key, path) {
+  return freshExtra(key) ?? getJson(path);
+}
 
 async function getJson(path) {
   const r = await fetch(`${APP.relayUrl}/${path}?_=${Date.now()}`, { cache: 'no-store' });
@@ -26,21 +32,22 @@ export function useAir() {
       first = false;
       const next = { stations: [], cems: {}, error: null, cemsError: null, loading: false };
       try {
-        const j = await getJson('aqi.json');
+        const j = await getPart('aqi', 'aqi.json');
         next.stations = j.stations || [];
         // 中繼站 v5：環境部故障時改給最後一次成功的資料（stale）
         if (j.stale) next.staleAt = j.savedAt || null;
         next.asOf = next.stations.map((x) => x.time).filter(Boolean).sort().pop() || null;
       } catch (e) { next.error = e.message; }
-      try { next.cems = groupCems((await getJson('cems.json')).records || []); next.cemsAsOf = Object.values(next.cems).map((c) => c.time).filter(Boolean).sort().pop() || null; } catch (e) { next.cemsError = e.message; }
+      try { next.cems = groupCems((await getPart('cems', 'cems.json')).records || []); next.cemsAsOf = Object.values(next.cems).map((c) => c.time).filter(Boolean).sort().pop() || null; } catch (e) { next.cemsError = e.message; }
       if (alive) setAir(next);
     };
     let first = true;
-    tick();
-    const id = setInterval(tick, REFRESH);
-    const onVis = () => { if (!document.hidden) tick(); };
+    firstExtra().then(() => alive && tick());
+    const off = onExtra(() => { if (!first) tick(); }); // 資料包每 10 分鐘帶來新的
+    const id = setInterval(() => { if (freshExtra('aqi') === undefined) tick(); }, REFRESH); // 備援：資料包沒帶時自己抓
+    const onVis = () => { if (!document.hidden && freshExtra('aqi') === undefined) tick(); };
     document.addEventListener('visibilitychange', onVis);
-    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
+    return () => { alive = false; off(); clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
   }, []);
   return air;
 }
@@ -135,7 +142,7 @@ export function useSun() {
     let alive = true;
     const tick = async () => {
       try {
-        const { stations } = await getJson('sun.json');
+        const { stations } = await getPart('sun', 'sun.json');
         // 用「最新一天」的資料（氣象署可能是逐時，也可能是隔天公布的日總量）；超過 3 天前就不用
         const day = (x) => String(x.time || '').replace(/\//g, '-').slice(0, 10);
         const latest = stations.map(day).filter(Boolean).sort().pop();
@@ -163,9 +170,11 @@ export function useSun() {
         if (alive) setSun({ factors: null, error: e.message });
       }
     };
-    tick();
-    const id = setInterval(tick, 30 * 60 * 1000);
-    return () => { alive = false; clearInterval(id); };
+    firstExtra().then(() => alive && tick());
+    let lastSun = Date.now();
+    const off = onExtra(() => { if (Date.now() - lastSun > 25 * 60e3) { lastSun = Date.now(); tick(); } }); // 日照 30 分鐘更新一次就夠
+    const id = setInterval(() => { if (freshExtra('sun') === undefined) { lastSun = Date.now(); tick(); } }, 30 * 60 * 1000);
+    return () => { alive = false; off(); clearInterval(id); };
   }, []);
   return sun;
 }

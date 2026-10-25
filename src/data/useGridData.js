@@ -5,6 +5,7 @@ import { parseGenLoadAreas, parseLoadAreasCurve, parseFuelCurve, parseLoadPara, 
 import { computeRegions } from './regions.js';
 import { unitFactors } from './carbon.js';
 import { APP } from '../config/app.js';
+import { putExtra } from './extras.js';
 
 /**
  * 資料來源：台電「今日電力資訊」公開資料（政府公開、免申請、每 10 分鐘更新）
@@ -61,7 +62,8 @@ function parseYesterday(text) {
 if (import.meta.env.VITE_GENARY_URL) FILES.genary.urls.unshift(import.meta.env.VITE_GENARY_URL);
 
 const LIVE_REFRESH_MS = 10 * 60 * 1000; // 台電每 10 分鐘更新
-const SIM_REFRESH_MS = 60 * 1000;       // 模擬模式每分鐘推進一次，讓畫面有生命
+const SIM_REFRESH_MS = 60 * 1000;
+const BUSY_ONLINE = 400; // 同時在線超過這個數字：改每 20 分鐘更新一次（不擋人，只省中繼站免費額度）       // 模擬模式每分鐘推進一次，讓畫面有生命
 
 async function fetchText(url, ms = 5000) {
   const ctrl = new AbortController();
@@ -107,7 +109,10 @@ const SID = (() => { // 每個分頁一組隨機代碼（只用來算在線人�
   try { let v = sessionStorage.getItem('tgf-sid'); if (!v) { v = Math.random().toString(36).slice(2, 12); sessionStorage.setItem('tgf-sid', v); } return v; } catch { return Math.random().toString(36).slice(2, 12); }
 })();
 async function fetchBundle() {
-  try { return JSON.parse(await fetchText(`${R}/bundle.json?sid=${SID}`, 9000)); } catch { return null; }
+  let pre = null;
+  try { pre = JSON.parse(await fetchText(`${R}/bundle.json?sid=${SID}&x=air`, 9000)); } catch { /* 改走個別網址 */ }
+  putExtra(pre?.extra); // 空品、煙道、日照（中繼站 v8.3）
+  return pre;
 }
 function fromBundle(pre, key) {
   const text = pre?.files?.[key];
@@ -233,7 +238,7 @@ export function useGridData() {
       // 即時模式：對齊台電的 10 分鐘更新（整 10 分後 1 分鐘再抓）
       // 再加 0–2 分鐘隨機延遲：大家不要同一秒湧進中繼站
       const wait = snap.source === 'live' || lastLive.current
-        ? Math.min(LIVE_REFRESH_MS, 10 * 60000 - (Date.now() % (10 * 60000)) + 60000 + Math.random() * 120000)
+        ? Math.min(LIVE_REFRESH_MS, 10 * 60000 - (Date.now() % (10 * 60000)) + 60000 + Math.random() * 120000) + (snap.online > BUSY_ONLINE ? 10 * 60000 : 0)
         : SIM_REFRESH_MS;
       timer.current = setTimeout(tick, wait);
     };
