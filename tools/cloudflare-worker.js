@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.2
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.3
+//  v8.3：/bundle.json?x=air 順便帶空品（aqi）、煙道（cems）、日照（sun）→ 網頁每人每小時請求從約 16 次降到 6 次
 //  v8.2：/open/unit-history.json 轉送台電「各機組過去發電量」（data.gov.tw 37331，每月更新）
 //  v8.1：名稱改「台灣光脈動」；颱風停電暫停（/typhoon.json 直接回 503，不再等台電逾時）
 //  v8：/bundle.json 一次給網頁 7 份台電資料（每人每 10 分鐘 1 次請求，原本 7 次）並回報同時在線人數（Durable Object「Presence」）；
@@ -17,7 +18,7 @@
 //  /aqi.json                環境部 空氣品質指標 AQI（需 MOENV_KEY）
 //  /cems.json               環境部 固定污染源 CEMS 1 小時值，只保留電廠（需 MOENV_KEY）
 //  /sun.json                氣象署 署屬氣象站日射量 O-A0091-001（需 CWA_KEY）
-//  /bundle.json?sid=        給網頁：台電 7 份資料一次給＋同時在線人數（sid＝每個分頁隨機產生，不含個資）
+//  /bundle.json?sid=&x=air  給網頁：台電 7 份資料一次給＋同時在線人數（sid＝每個分頁隨機產生，不含個資）；x=air 另帶 aqi、cems、sun
 //  /config.json             給網頁：LINE 加好友連結（v8：LINE_FRIENDS=1 才提供）
 //  /open/unit-history.json 台電各機組過去發電量（每 10 分鐘，每月更新三個月前的資料）
 //  /open/outage.zip 等      台電開放資料原檔（計畫停電、鄉鎮用電、過去供需、縣市再生能源），不解析、只轉送
@@ -826,6 +827,18 @@ async function bundle(req, env, ctx) {
       if (r.headers.get('X-Stale')) errors[k] = 'stale';
     } catch (e) { errors[k] = e.message; }
   }));
+  // v8.3：?x=air → 一起帶空品、煙道、日照（各自沿用原本的快取時間；某一份失敗只放 error，不影響其他）
+  let extra;
+  if ((new URL(req.url).searchParams.get('x') || '').split(',').includes('air')) {
+    extra = {};
+    const EXTRA = { aqi: ['aqi.json', 600, () => aqi(env)], cems: ['cems.json', 900, () => cems(env)], sun: ['sun.json', 1800, () => sun(env)] };
+    await Promise.all(Object.entries(EXTRA).map(async ([k, [f, ttl, fn]]) => {
+      try {
+        const r = await cached(ctx, f, ttl, fn);
+        extra[k] = JSON.parse(await r.text());
+      } catch (e) { extra[k] = { error: e.message }; }
+    }));
+  }
   let online = null;
   if (sid && env.PRESENCE) {
     try {
@@ -833,7 +846,7 @@ async function bundle(req, env, ctx) {
       online = (await (await stub.fetch(`https://presence/hit?sid=${sid}`)).json()).online;
     } catch { /* 在線人數讀不到不影響資料 */ }
   }
-  return new Response(JSON.stringify({ t: Date.now(), online, files, errors }), { headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+  return new Response(JSON.stringify({ t: Date.now(), online, files, errors, ...(extra ? { extra } : {}) }), { headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
 
 /* ───────── v8：同時在線人數（Durable Object，全台只有一個實例）─────────
