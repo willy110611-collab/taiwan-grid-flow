@@ -16,7 +16,7 @@
 - `tools/cloudflare-worker.js`：中繼站（`taiwan-grid-flow-data.willy110611.workers.dev`，module `worker.js`，KV 綁定 NOTIFY，Cron `*/10 * * * *`）。台電擋海外 IP，所以網頁、GitHub Actions 都經中繼站拿台電資料。
 - `scripts/opendata.mjs`（`npm run build` 會先跑）：建置時從中繼站 `/open/…` 抓台電開放資料 → `public/data/*.json`（計畫停電、鄉鎮用電、歷年供需、縣市綠電）。`SKIP_OPENDATA=1` 可略過。
 - `.github/workflows/`：`deploy.yml`（push 與每 10 分鐘建置部署，上線前跑 `npm run check` 與冒煙測試）、`health.yml`（每小時健康檢查，有問題才通知）、`rollback.yml`（一鍵回到上一版）。
-- 版本號：`package.json`、`public/sw.js` 的 CACHE、`src/config/changelog.json` 三處一起改。
+- 版本號：`package.json`、`public/sw.js` 的 CACHE、`src/config/changelog.json` 三處一起改。changelog 的 `notes` 往前累加；`notesEn` 只放最近幾版的英文說明（英文介面的更新提示用，沒有就不列）。
 
 ## 測試
 - `npm run check`（英文翻譯、電廠設定：供電區、座標、機組對應不重複）、`npm run build`、`npm run smoke`（無頭瀏覽器，用模擬資料開每個面板）。
@@ -45,6 +45,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 用量（2026-10-24）：Workers 一天 5,496 次（免費 10 萬的 5.5%）。v0.8.20 起每個前景分頁每小時約 6 次（原本約 16 次）→ 免費額度約可撐全天平均 690 人同時在線；同時在線 > 400（`BUSY_ONLINE`）時網頁改每 20 分鐘更新。超過免費額度會回 1027 到台灣早上 8 點；要更多就升級 Workers Paid（$5／月含 1,000 萬次，超過每百萬 $0.30）。
 - 部署 curl 注意：檔案欄位要寫 `filename=worker.js`，否則回 10021「No such module」。
 - v8.5 已部署（2026-10-25，commit c293723，SHA-256 952fca18…441e）：意見回饋 POST /feedback（KV `fb:日期` 存 180 天、全站每天上限 100 則、同 IP 60 秒一則；每天前 10 則 LINE 通知管理者；管理者在 LINE 傳「回饋」看最近 7 天）。
+- v8.6 已部署（2026-10-26 01:41，commit 81a3845，SHA-256 d81f0de2…6c9e）：回饋改為每則一個鍵 `fb:日期:時間-亂數`（v8.5 的 `fb:日期` 陣列仍可查）、每日計數 `fbn:日期`、60 秒限制改 KV `fbip:IP雜湊`（60 秒 TTL；workers.dev 上 Cache API 無效）、滿 100 則回 503 `full`、body 非物件回 400。
 - v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
 ### 其他
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
@@ -55,6 +56,11 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 小水力、石門、陸域小風場等對不到節點的機組依比例分配到同燃料電廠（量小）。
 - 2026-10-25 已用 OSM power=plant 交叉核對：火力、核能、離島電廠位置都在 1.3 km 內（綠島 OSM 沒有）；新增豐德、海湖、新桃、國光、星元、星能節點（原本豐德沒對應、海湖／新桃／國光併在大潭、星元併在麥寮、星彰併在彰濱風電）。PLANTS 的 `fuel` 欄位＝電廠主燃料（麥寮 coal、澎湖／金門 oil），電廠卡用來說明主要機組不在資料裡。台電即時資料目前沒有麥寮燃煤機組，麥寮節點只剩雲林風力（CEMS 仍有麥寮汽電煙道資料）。仍對不到的：汽電共生（627 MW）、其它購電太陽能／風力、中威大安、創維風、小水力、電池。
 - 詳細待辦另見 claude.ai「APP」專案的《台灣光脈搏_待辦清單》（舊名）。
+
+### 其他國家（2026-10-26 用一次性 Actions 實測，待使用者決定）
+- 澳洲 AEMO：`visualisations.aemo.com.au/aemo/apps/api/report/ELEC_NEM_SUMMARY`（5 州需求、價格、互聯線，CORS *，瀏覽器可直接讀）；逐機組 `nemweb.com.au/Reports/Current/Dispatch_SCADA/` 每 5 分鐘一個 ZIP（約 3.7 KB、約 520 個 DUID，無 CORS → 要中繼站解壓）。機組座標要另外對（GEM，CC BY）。
+- 英國 Elexon：`data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST`（燃料別 5 分鐘）、`PN/stream`（逐機組計畫值，40 分鐘約 1.1 MB）、`B1610`（實測，約晚 5 天）、`reference/bmunits/all`（有 GSP 區，無座標）；全部 CORS *。NESO `api.carbonintensity.org.uk/regional` 有 14 區發電組成。
+- 法國 RTE éCO2mix（odre.opendatasoft.com）CORS *。
 
 ### 可加的資料（2026-10-25 研究，免費優先；網址待在台灣網路確認）
 1. ~~台電各機組過去發電量（37331）~~（只有台電自有機組，v0.8.22 用在電廠卡「過去發電量」）。
@@ -79,7 +85,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 計畫停電原始 ZIP 每天存 KV `outage:raw:日期`（沒有期限）累積歷史，注意 KV 容量。
 - 中繼站開了 observability（Workers Logs）：尚未確認是否記錄 IP；介面目前寫「IP 位址不會寫入資料庫；送回饋時只暫存 60 秒防重複」。
 - 開放 LINE 給所有好友（`LINE_FRIENDS=1`）前，先在「本站伺服器與你的資料」補 LINE 使用者 ID 的保存說明（封鎖即刪）。
-- 待改：App 通知內文、更新提示的 notes 只有中文（英文介面也是中文）。`public/donate-qr.png` 仍在 repo 會公開，待使用者決定是否移除。
+- 待改：App 通知內文只有中文（更新提示已有 notesEn）。`public/donate-qr.png` 仍在 repo 會公開，待使用者決定是否移除。
 - 使用者看得到的「本站伺服器與你的資料」（資訊 → 資料來源）要和中繼站實際保存的內容一致：通知訂閱（關閉即刪）、回饋 180 天、在線代碼 12 分鐘、錯誤回報約 30 天、不存 IP。改中繼站保存方式時要一起改這段文字。
 
 ## 資料需定期更新
