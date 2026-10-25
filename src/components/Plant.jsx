@@ -49,6 +49,9 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
   const wind = cfg.offshore || s?.mix?.wind > 0 ? nearestWind(air?.stations || [], cfg.pos) : null;
   const pump = id === 'mingtan' ? snapshot?.charging?.pump : 0;
   const cems = air?.cems?.[id];
+  // 裝置容量與目前利用率：只在出力幾乎都來自自己的機組時顯示（太陽能群等依比例分攤的節點不算）
+  const cap = units.reduce((a, u) => a + (u.capacity || 0), 0);
+  const showCap = cap > 0 && s && !s.estimated && (s.allocatedMw || 0) <= mw * 0.05 + 1;
 
   return (
     <Panel title={plantName(cfg)} onClose={onClose}>
@@ -56,6 +59,12 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
         <div><b>{fmtMw(mw)}</b> <small>MW</small></div>
         <span className="muted">{isEn() ? cfg.name : cfg.en}</span>
       </div>
+      {showCap && (
+        <p className="fine plant-cap">
+          {tx(`裝置容量 ${fmtMw(cap)} MW・目前運轉 ${Math.round((mw / cap) * 100)}%`, `Capacity ${fmtMw(cap)} MW · running at ${Math.round((mw / cap) * 100)}%`)}
+          <span className="cap-bar"><i style={{ width: `${Math.min(100, (mw / cap) * 100)}%` }} /></span>
+        </p>
+      )}
 
       {mix.length > 0 && (
         <div className="plant-mix">

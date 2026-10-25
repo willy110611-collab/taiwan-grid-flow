@@ -927,3 +927,7 @@ html:lang(en) .world-bars li { grid-template-columns: 6.6em 1fr 3.6em; }
 .hl-jump { display: flex; gap: 6px; flex-wrap: wrap; margin: -4px -18px 10px; padding: 6px 18px 8px; position: sticky; top: -4px; z-index: 2; background: rgb(9, 13, 23); box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.6); }
 .hl-jump button { font: inherit; font-size: 11px; letter-spacing: 0.04em; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); color: var(--ink-dim); cursor: pointer; }
 .hl-jump button:hover { color: var(--ink); border-color: rgba(110, 240, 190, 0.4); }
+/* 電廠卡：裝置容量與利用率 */
+.plant-cap { display: flex; align-items: center; gap: 10px; margin: -2px 0 8px; }
+.cap-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.cap-bar i { display: block; height: 100%; background: rgba(232, 238, 252, 0.55); border-radius: 2px; }
