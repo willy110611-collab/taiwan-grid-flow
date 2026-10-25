@@ -8,15 +8,19 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: OSM 輸電線（Overpass）
+      - name: OSM 輸電線（Overpass，台灣本島範圍）
         run: |
           mkdir -p out
-          Q='[out:json][timeout:180];area["ISO3166-1"="TW"][admin_level=2]->.tw;(way["power"="line"]["voltage"~"345000|161000"](area.tw);node["power"="substation"]["voltage"~"345000"](area.tw);way["power"="substation"]["voltage"~"345000"](area.tw););out geom;'
-          for host in https://overpass-api.de https://overpass.kumi.systems https://maps.mail.ru/osm/tools/overpass; do
-            if curl -fsS --max-time 240 -X POST --data-urlencode "data=$Q" "$host/api/interpreter" -o out/osm-lines.json; then echo "ok $host"; break; fi
+          Q='[out:json][timeout:300][bbox:21.8,119.9,25.4,122.1];(way["power"="line"]["voltage"~"345000"];way["power"="line"]["voltage"~"161000"];node["power"="substation"]["voltage"~"345000"];way["power"="substation"]["voltage"~"345000"];);out geom;'
+          UA="taiwan-grid-flow/1.0 (https://github.com/willy110611-collab/taiwan-grid-flow)"
+          for host in https://overpass-api.de https://overpass.private.coffee https://maps.mail.ru/osm/tools/overpass https://overpass.kumi.systems; do
+            echo "try $host"
+            if curl -fsS --max-time 320 -A "$UA" -H "Accept: application/json" -X POST --data-urlencode "data=$Q" "$host/api/interpreter" -o out/osm-lines.json; then echo "ok $host"; break; fi
+            sleep 5
           done
           ls -la out; head -c 300 out/osm-lines.json || true
       - name: data.gov.tw 37331 資料集
+        if: false
         run: |
           curl -sS --max-time 60 "https://data.gov.tw/api/v2/rest/dataset/37331" -o out/ds37331.json -w "HTTP %{http_code}\n" || true
           head -c 2000 out/ds37331.json || true
