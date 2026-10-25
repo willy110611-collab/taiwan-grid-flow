@@ -208,7 +208,7 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
   const n = rows.length;
 
   useEffect(() => {
-    if (!replay.playing) return;
+    if (!replay.playing || n < 2) return; // 資料不到 2 筆不算播完（避免一按回放就頒「時光旅人」）
     last.current = performance.now();
     const step = (now) => {
       const dt = Math.max(0, (now - last.current) / 1000); // rAF 時間戳可能早於 performance.now() → 不可為負

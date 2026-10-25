@@ -89,16 +89,16 @@ export const BADGES = [
     desc: `放空巡航看完全部 ${SHOTS.length} 個場景（其中「${SHOTS.filter((x) => x.day).map((x) => x.name).join('、')}」只在白天出現）。`, hint: '白天打開「放空」慢慢看',
     nameEn: 'Island Tour', descEn: `Watch all ${SHOTS.length} cruise scenes in Drift mode (one of them only appears in daytime).`, hintEn: 'Open Drift in the daytime and take your time',
     glyph: 'M12 3l3 6.5 6.5 2.5-6.5 2.5L12 21l-3-6.5L2.5 12 9 9.5z',
-    check: ({ progress }) => (progress.shots || []).length >= SHOTS.length,
-    progress: (p) => `${(p.shots || []).length} / ${SHOTS.length}`
+    check: ({ progress }) => seenShots(progress) >= SHOTS.length,
+    progress: (p) => `${seenShots(p)} / ${SHOTS.length}`
   },
   {
     id: 'plant-dex', name: '電廠圖鑑', kind: 'explore', rarity: '常見', color: [214, 228, 255],
     desc: `點過（或滑過）${DEX_GOAL} 座不同的電廠或風場。`, hint: '把亮著的光球都摸一遍',
     nameEn: 'Plant Dex', descEn: `Tap (or hover) ${DEX_GOAL} different plants or wind farms.`, hintEn: 'Touch every glowing plant',
     glyph: 'M5 4h9a5 5 0 0 1 5 5v11H10a5 5 0 0 1-5-5zM10 4v16',
-    check: ({ progress }) => (progress.plants || []).length >= DEX_GOAL,
-    progress: (p) => `${Math.min(DEX_GOAL, (p.plants || []).length)} / ${DEX_GOAL}`
+    check: ({ progress }) => seenPlants(progress) >= DEX_GOAL,
+    progress: (p) => `${Math.min(DEX_GOAL, seenPlants(p))} / ${DEX_GOAL}`
   },
   {
     id: 'time-traveler', name: '時光旅人', kind: 'explore', rarity: '常見', color: [180, 150, 255],
@@ -116,6 +116,10 @@ export const BADGES = [
     progress: (p) => `${Math.min(7, streak(p.days || []))} / 7`
   }
 ];
+
+// 只算現在還存在的場景／電廠（以後改名或改 id，舊紀錄不會灌水）
+const seenShots = (p) => SHOTS.filter((x) => (p.shots || []).includes(x.name)).length;
+const seenPlants = (p) => PLANTS.filter((x) => (p.plants || []).includes(x.id)).length;
 
 function streak(days) {
   const set = new Set(days);

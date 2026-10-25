@@ -191,7 +191,7 @@ export default function App() {
         }
         e.focusPlant(p.pos, { padding: MOBILE ? { bottom: Math.round(innerHeight * 0.5), top: 140 } : { right: 420 } });
       }
-      if (p) setUiState((s) => ({ ...s, panel: 'plant', plantId: p.id, fly: true, cruise: false }));
+      if (p) { recordRef.current('plant', p.id); setUiState((s) => ({ ...s, panel: 'plant', plantId: p.id, fly: true, cruise: false })); }
       return;
     }
     if (patch.resetView) {
