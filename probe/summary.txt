@@ -1,0 +1,13 @@
+aemo-scada-list 200 126204 1.601904 https://nemweb.com.au/Reports/Current/Dispatch_SCADA/
+aemo-summary 200 12741 0.936213 https://visualisations.aemo.com.au/aemo/apps/api/report/ELEC_NEM_SUMMARY
+aemo-dispatchis-list 200 125064 1.391357 https://nemweb.com.au/Reports/Current/DispatchIS_Reports/
+latest scada PUBLIC_DISPATCHSCADA_202610240355_0000000544538148.zip
+-rw-r--r-- 1 runner runner 3676 Oct 25 17:25 /tmp/s.zip
+520
+elexon-fuelinst 200 29415 0.579581 https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST?publishDateTimeFrom=2026-10-25T16:45:49Z&publishDateTimeTo=2026-10-25T17:25:49Z&format=json
+elexon-pn 200 1159549 1.302234 https://data.elexon.co.uk/bmrs/api/v1/datasets/PN/stream?from=2026-10-25T16:45:49Z&to=2026-10-25T17:25:49Z
+elexon-b1610 200 2152891 1.804386 https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream?from=2026-10-18T17:25:51Z&to=2026-10-18T17:55:51Z
+elexon-bmunits 200 2167142 1.575597 https://data.elexon.co.uk/bmrs/api/v1/reference/bmunits/all
+uk-carbon 200 334 0.580400 https://api.carbonintensity.org.uk/generation
+uk-regional 200 6944 0.537989 https://api.carbonintensity.org.uk/regional
+rte-eco2mix 200 2000 0.543713 https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-national-tr/records?limit=2&order_by=date_heure%20desc
