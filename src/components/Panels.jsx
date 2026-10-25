@@ -13,6 +13,7 @@ import { setPowerPref } from '../power.js';
 import { SupplyHistory, RenewTab } from './OpenData.jsx';
 import { NUCLEAR_SOURCES, NUCLEAR_VERIFIED } from '../config/nuclear.js';
 import { FuelStack } from './FuelStack.jsx';
+import { WorldCompare } from './WorldCompare.jsx';
 
 /** 面板外框：桌面為浮動卡片，手機為底部抽屜（CSS 依螢幕寬度切換） */
 export function Panel({ title, meta, onClose, children }) {
@@ -135,6 +136,7 @@ export function HighlightsPanel({ hl, live, records, dayRows, yRows, onPlant, on
             {hl.partial ? tx(`今日紀錄從 ${hl.since} 開始（打開頁面後才開始累計）。`, `Today’s records start at ${hl.since} (counted only while the page is open).`) : t('統計範圍：今日 00:00 至現在。')}
           </p>
           <SupplyHistory hl={hl} live={live} />
+          <WorldCompare />
         </>
       )}
     </Panel>
@@ -252,6 +254,8 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dt>{tx('電廠過去發電量', 'Past plant generation')}</dt>
             <dd><a href="https://data.gov.tw/dataset/37331" target="_blank" rel="noreferrer">{tx('台電「各機組過去發電量」', 'Taipower past generation by unit')}</a>{tx('（2026-03-01～05-31，每 10 分鐘）：只有台電自有機組，加總成每座電廠每天的發電量與最高出力；原檔 4 月 1 日每筆重複出現，已去除。',
               ' (2026-03-01 to 05-31, every 10 min): Taipower-owned units only, summed into each plant’s daily output and peak; duplicate rows on 1 April were removed.')}</dd>
+            <dt>{tx('國際比較', 'International comparison')}</dt>
+            <dd><a href="https://ember-energy.org/data/yearly-electricity-data/" target="_blank" rel="noreferrer">Ember, Yearly Electricity Data</a>{tx('（CC BY 4.0）：各國電力碳強度與發電組成，每年更新。', ' (CC BY 4.0): carbon intensity and generation mix by country, updated yearly.')}</dd>
             <dt>{tx('輸電線路', 'Transmission lines')}</dt>
             <dd>{tx('© OpenStreetMap 貢獻者（ODbL 授權）：345kV、161kV 線路與超高壓變電所，2026-10-25 擷取。光流沿線路的最短路徑跑，實際電力潮流以台電調度為準；可在「更多 → 線路」改回示意光纖。',
               '© OpenStreetMap contributors (ODbL): 345 kV and 161 kV lines and EHV substations, extracted 2026-10-25. Particles follow the shortest path along the lines; real power flows follow Taipower dispatch. Switch back to schematic routes under More → Lines.')}</dd>
