@@ -218,6 +218,9 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <li>{tx('資料每 10 分鐘更新一次（台電公布頻率），左下角顯示資料時間。', 'Data refreshes every 10 minutes (Taipower’s publishing interval); the data time is shown at bottom-left.')}</li>
             <li>{tx('iPhone：Safari 開啟 → 分享 → 加入主畫面，就像 App 一樣。', 'iPhone: open in Safari → Share → Add to Home Screen to use it like an app.')}</li>
             <li>{tx('「電廠」可以搜尋電廠或機組，也能看今天哪些機組在歲修、降載；電廠卡下方可以分享連結。', '“Plants” lets you search plants or units and see which are under maintenance today; share a link from the bottom of a plant card.')}</li>
+            <li>{tx('電廠卡也有裝置容量、運轉比例，以及台電自有機組過去三個月每天的發電量。', 'Plant cards also show capacity, how hard the plant is running, and daily output of Taipower-owned units over three months.')}</li>
+            <li>{tx('「更多 → 線路」：光流沿真實輸電線（預設）或示意光纖；放大地圖可看到超高壓變電所名稱。', '“More → Lines” switches particles between real transmission lines (default) and schematic routes; zoom in to see EHV substation names.')}</li>
+            <li>{tx('「亮點」：今天的紀錄、發電組成、去年今天、歷年供需，以及台灣和各國的碳強度、再生能源比較。', '“Peaks”: today’s records, generation mix, this day last year, supply history, and how Taiwan compares with other countries.')}</li>
           </ul>
           <div className="hl-k" style={{ marginTop: 12 }}>{tx('省電模式', 'Power saving')}　<span className="muted">{powerSave ? tx('目前開啟', 'on now') : tx('目前關閉', 'off now')}</span></div>
           <div className="seg seg-wrap">
