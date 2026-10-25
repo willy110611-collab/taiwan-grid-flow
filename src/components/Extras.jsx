@@ -136,13 +136,13 @@ export function BadgePanel({ badges, live, onClose }) {
                 >
                   <Medal badge={b} earned={!!e} size={58} />
                   <b>{tx(b.name, b.nameEn)}</b>
-                  <small>{e ? new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US')) : b.progress ? b.progress(progress) : t(b.rarity)}</small>
+                  <small>{e ? new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US'), { timeZone: 'Asia/Taipei' }) : b.progress ? b.progress(progress) : t(b.rarity)}</small>
                 </li>
               )];
               if (sel === b.id) {
                 items.push(
                   <li key={`${b.id}-detail`} className="badge-detail" ref={detailRef} aria-live="polite">
-                    <b>{tx(b.name, b.nameEn)}</b>{e && <small>　{tx('已取得', 'Earned')} {new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US'))}</small>}
+                    <b>{tx(b.name, b.nameEn)}</b>{e && <small>　{tx('已取得', 'Earned')} {new Date(e.at).toLocaleDateString(tx('zh-TW', 'en-US'), { timeZone: 'Asia/Taipei' })}</small>}
                     <p>{tx(b.desc, b.descEn)}</p>
                     {!e && <p className="muted">{tx('提示：', 'Hint: ')}{tx(b.hint, b.hintEn)}</p>}
                   </li>

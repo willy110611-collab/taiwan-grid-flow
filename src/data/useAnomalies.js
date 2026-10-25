@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PLANTS } from '../config/geo.js';
 import { twDateKey } from './history.js';
+import { dataTime } from './badges.js';
 
 /**
  * 機組異常偵測（仿軌島營運異常橫幅）
@@ -13,6 +14,7 @@ import { twDateKey } from './history.js';
 const WATCH = new Set(['coal', 'gas', 'nuclear', 'oil', 'cogen']);
 const DROP_MW = 300;
 const BANNER_MS = 15 * 60 * 1000;
+const GAP_MS = 25 * 60 * 1000; // 台電約 10 分鐘更新一次，容許漏掉一兩次
 
 export function useAnomalies(snapshot) {
   const prev = useRef(null);
@@ -27,8 +29,10 @@ export function useAnomalies(snapshot) {
     if ((snapshot.source !== 'live' || snapshot.cached) && !demo) return;
     if (prev.current?.timestamp === snapshot.timestamp && !demo) return;
 
-    const before = prev.current;
+    let before = prev.current;
     prev.current = snapshot;
+    // 前後兩筆相隔太久（例如分頁在背景幾小時後回來）就不比較，避免把正常的日夜變化當成驟降
+    if (before && !demo && !(Math.abs(dataTime(snapshot) - dataTime(before)) <= GAP_MS)) before = null;
     let found = [];
     if (demo && !before) {
       found = [{ unit: '興達#2', fuel: 'coal', from: 520, to: 40 }];
@@ -37,18 +41,18 @@ export function useAnomalies(snapshot) {
       for (const u of snapshot.units) {
         if (!WATCH.has(u.fuel)) continue;
         const o = old.get(`${u.fuel}|${u.unit}`);
-        if (o && o.mw - u.mw >= DROP_MW && u.mw < o.mw * 0.5) found.push({ unit: u.unit, fuel: u.fuel, from: o.mw, to: u.mw });
+        if (o && o.mw > 0 && o.mw - u.mw >= DROP_MW && u.mw < o.mw * 0.5) found.push({ unit: u.unit, fuel: u.fuel, from: o.mw, to: u.mw });
       }
     }
     if (!found.length) return;
 
     const items = found.map((f) => {
       const plant = PLANTS.find((p) => p.match?.test(f.unit));
-      return { ...f, plant: plant?.name || null, plantId: plant?.id || null, time: snapshot.timestamp?.slice(-5) || '', at: Date.now() };
+      return { ...f, demo, plant: plant?.name || null, plantId: plant?.id || null, time: snapshot.timestamp?.slice(-5) || '', at: Date.now() };
     });
     setList((l) => {
       const next = [...l, ...items].slice(-30);
-      try { localStorage.setItem(`tgf-anomaly-${twDateKey()}`, JSON.stringify(next)); } catch { /* 略 */ }
+      if (!demo) try { localStorage.setItem(`tgf-anomaly-${twDateKey()}`, JSON.stringify(next)); } catch { /* 略 */ }
       return next;
     });
     setActive(items[0]);

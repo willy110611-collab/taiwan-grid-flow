@@ -14,13 +14,21 @@ import { SHOTS } from '../engine/cruise.js';
  * 「探索徽章」：與資料無關的操作成就。
  * 進度存在 localStorage（每台裝置各自收集）。
  */
+/** 資料時間（台電快照時間，台灣時間 "YYYY-MM-DD HH:mm"）；解析不了才用抓取時間 */
+export const dataTime = (snap) => {
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/.exec(snap?.timestamp || '');
+  const t = m ? Date.parse(`${m[1]}T${m[2]}:00+08:00`) : NaN;
+  return Number.isFinite(t) ? t : snap?.t;
+};
+// 資料超過 30 分鐘就不頒電網徽章（例如切回前景時還沒更新的舊畫面）
+const FRESH_MS = 30 * 60 * 1000;
 const twHour = (t = Date.now()) => ((new Date(t).getUTCHours() + 8) % 24) + new Date(t).getUTCMinutes() / 60;
 
 export const BADGES = [
   {
-    id: 'noon-sea', name: '午間光海', kind: 'grid', rarity: '常見', color: [255, 198, 92],
-    desc: '太陽能佔全台發電 30% 以上時在線。', hint: '晴天中午打開看看',
-    nameEn: 'Noon Light Sea', descEn: `Online when solar is 30%+ of Taiwan’s generation.`, hintEn: 'Open it at noon on a sunny day',
+    id: 'noon-sea', name: '午間光海', kind: 'grid', rarity: '少見', color: [255, 198, 92],
+    desc: '太陽能佔全台發電 30% 以上時在線。', hint: '春天到初夏的晴天中午（秋冬太陽能比例較低，不容易達到）',
+    nameEn: 'Noon Light Sea', descEn: `Online when solar is 30%+ of Taiwan’s generation.`, hintEn: 'A sunny noon in spring or early summer (harder in autumn and winter)',
     glyph: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2',
     check: ({ snap }) => (snap.totals.solar || 0) / snap.total >= 0.3
   },
@@ -29,7 +37,7 @@ export const BADGES = [
     desc: '入夜後風力發電超過 2,500 MW。', hint: '東北季風強勁的夜晚',
     nameEn: 'North Wind Night', descEn: `Wind tops 2,500 MW after dark.`, hintEn: 'A night of strong northeast monsoon',
     glyph: 'M3 9h11a3 3 0 1 0-3-3M3 15h14a3 3 0 1 1-3 3M3 12h7',
-    check: ({ snap }) => (snap.totals.wind || 0) >= 2500 && sunElevation(new Date(snap.t)) < -6
+    check: ({ snap }) => (snap.totals.wind || 0) >= 2500 && sunElevation(new Date(dataTime(snap))) < -6
   },
   {
     id: 'green-half', name: '綠能過半', kind: 'grid', rarity: '稀有', color: [110, 240, 190],
@@ -43,14 +51,14 @@ export const BADGES = [
     desc: '清晨太陽能剛開始爬升（0–2,000 MW）時在線。', hint: '早起看日出',
     nameEn: 'Dawn Shift', descEn: `Online as solar starts to climb in the morning (0–2,000 MW).`, hintEn: 'Get up for the sunrise',
     glyph: 'M3 17h18M7 17a5 5 0 0 1 10 0M12 6v3M5 10l1.5 1.5M19 10l-1.5 1.5',
-    check: ({ snap }) => { const h = twHour(snap.t); const s = snap.totals.solar || 0; return h >= 5 && h < 8 && s > 1 && s < 2000; }
+    check: ({ snap }) => { const t = dataTime(snap); const h = twHour(t); const s = snap.totals.solar || 0; return h >= 5 && h < 8 && s > 1 && s < 2000 && sunElevation(new Date(t)) > -1; }
   },
   {
     id: 'night-valley', name: '深夜低谷', kind: 'grid', rarity: '常見', color: [150, 160, 255],
     desc: '凌晨 2–5 點，全台用電最低的時段在線。', hint: '夜貓子專屬',
     nameEn: 'Midnight Valley', descEn: `Online at 2–5 am, Taiwan’s lowest-demand hours.`, hintEn: 'For night owls',
     glyph: 'M3 19l5-5 3 3 4-4 6 6M16 4a4 4 0 1 0 4 5 3 3 0 0 1-4-5z',
-    check: ({ snap }) => { const h = twHour(snap.t); return h >= 2 && h < 5; }
+    check: ({ snap }) => { const h = twHour(dataTime(snap)); return h >= 2 && h < 5; }
   },
   {
     id: 'peak-watch', name: '尖峰守望者', kind: 'grid', rarity: '少見', color: [255, 122, 58],
@@ -58,7 +66,7 @@ export const BADGES = [
     nameEn: 'Peak Watcher', descEn: `Online the moment daytime generation hits today’s high.`, hintEn: 'Afternoon demand peak',
     glyph: 'M13 3L5 14h6l-1 7 8-11h-6z',
     check: ({ snap, rows }) => {
-      const h = twHour(snap.t);
+      const h = twHour(dataTime(snap));
       return h >= 10 && h < 21 && rows.length >= 6 && rows.every((r) => r.total <= snap.total + 1);
     }
   },
@@ -122,7 +130,7 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 export function useBadges(snapshot, rows, { replaying = false } = {}) {
   const [earned, setEarned] = useState(() => load('tgf-badges', {}));
   const [progress, setProgress] = useState(() => load('tgf-progress', {}));
-  const [toast, setToast] = useState(null);
+  const [toasts, setToasts] = useState([]); // 一次拿到多枚 → 依序顯示
   const earnedRef = useRef(earned);
   earnedRef.current = earned;
 
@@ -135,18 +143,23 @@ export function useBadges(snapshot, rows, { replaying = false } = {}) {
     earnedRef.current = next;
     setEarned(next);
     save('tgf-badges', next);
-    setToast({ badge: fresh[0], key: now });
+    setToasts((q) => [...q, ...fresh.map((badge) => ({ badge, key: `${now}-${badge.id}` }))]);
   }, []);
 
-  // 記錄今天有打開（連續觀測）
+  // 記錄今天有打開（連續觀測）：開頁、回到前景、每次新資料都記一次（開著跨過午夜也算新的一天）
   useEffect(() => {
-    record('day', twDateKey());
+    const mark = () => { if (!document.hidden) record('day', twDateKey()); };
+    mark();
+    document.addEventListener('visibilitychange', mark);
+    return () => document.removeEventListener('visibilitychange', mark);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => { if (snapshot && !document.hidden) record('day', twDateKey()); }, [snapshot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 電網徽章：只在真實即時資料、且不在回放時檢查
   useEffect(() => {
-    if (!snapshot || replaying || snapshot.source !== 'live' || snapshot.cached) return; // 快取的舊資料不頒電網徽章
+    if (!snapshot || replaying || snapshot.source !== 'live' || snapshot.cached || snapshot.stale) return; // 快取的舊資料不頒電網徽章
+    if (!(Date.now() - dataTime(snapshot) < FRESH_MS)) return;
     award({ snap: snapshot, rows, progress });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, rows]);
@@ -168,7 +181,8 @@ export function useBadges(snapshot, rows, { replaying = false } = {}) {
     });
   }, [award]);
 
-  return { earned, progress, toast, clearToast: () => setToast(null), record };
+  const clearToast = useCallback(() => setToasts((q) => q.slice(1)), []);
+  return { earned, progress, toast: toasts[0] || null, clearToast, record };
 }
 
 function safe(fn) { try { return fn(); } catch { return false; } }

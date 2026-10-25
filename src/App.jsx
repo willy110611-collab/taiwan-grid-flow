@@ -102,7 +102,7 @@ export default function App() {
   const recordRef = useRef(badges.record);
   recordRef.current = badges.record;
 
-  useEffect(() => { if (anomaly.active) badges.record('anomaly'); }, [anomaly.active]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (anomaly.active && !anomaly.active.demo) badges.record('anomaly'); }, [anomaly.active]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { engine.current?.setClock(replay.on && shown ? new Date(shown.t) : null); }, [replay.on, shown?.t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const options = useMemo(() => ({
