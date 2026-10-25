@@ -1,4 +1,4 @@
-import { feature, mesh } from 'topojson-client';
+import { feature, mesh, merge } from 'topojson-client';
 import counties from 'taiwan-atlas/counties-10t.json';
 import { countyRegion } from '../config/geo.js';
 
@@ -27,14 +27,13 @@ for (const f of land.features) f.properties.region = countyRegion(f.properties.C
 const countyLines = mesh(counties, counties.objects.counties, (a, b) => a !== b);
 const coastLines = mesh(counties, counties.objects.counties, (a, b) => a === b);
 
-/** 一個覆蓋整個視野的大矩形，挖掉所有陸地多邊形 → 海洋遮罩 */
+/** 一個覆蓋整個視野的大矩形，挖掉陸地 → 海洋遮罩
+ *  先把所有縣市合併成島嶼輪廓再挖：若每個縣市各挖一個洞，相鄰的洞共用邊界，
+ *  三角化時會在縣市交界切出錯誤的深色色塊（例如嘉義、台南交界） */
 function buildSeaMask() {
-  const holes = [];
-  for (const f of land.features) {
-    const g = f.geometry;
-    const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
-    for (const p of polys) holes.push(p[0]);
-  }
+  const merged = merge(counties, counties.objects.counties.geometries);
+  const holes = merged.coordinates.map((poly) => poly[0]); // 每座島的外框
+
   return {
     type: 'Feature',
     properties: {},
