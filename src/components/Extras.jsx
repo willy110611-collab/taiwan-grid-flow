@@ -224,12 +224,22 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
     return () => cancelAnimationFrame(raf.current);
   }, [replay.playing, n, setReplay]);
 
+  // Esc 結束回放（有面板開著時先關面板）
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.isComposing || document.querySelector('.panel, .upd-wrap, [role="menu"]')) return;
+      setReplay((r) => ({ ...r, on: false, playing: false }));
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [setReplay]);
+
   if (!n) return null;
   const cur = rows[Math.max(0, Math.min(n - 1, Math.floor(replay.idx) || 0))];
   if (!cur) return null;
   return (
     <div className="replay">
-      <button className="icon-btn play" onClick={() => setReplay((r) => ({ ...r, playing: !r.playing, idx: r.idx >= n - 1 ? 0 : r.idx }))}>
+      <button className="icon-btn play" aria-label={replay.playing ? tx('暫停', 'Pause') : tx('播放', 'Play')} onClick={() => setReplay((r) => ({ ...r, playing: !r.playing, idx: r.idx >= n - 1 ? 0 : r.idx }))}>
         {replay.playing ? <svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" /></svg> : <svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" /></svg>}
       </button>
       <div className="replay-time">

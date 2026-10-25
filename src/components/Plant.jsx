@@ -74,7 +74,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
       {mix.length > 0 && (
         <div className="plant-mix">
           {mix.map(([f, v]) => (
-            <span key={f} style={{ flexGrow: v, background: rgb(FUELS[f]?.color || [200, 200, 200]) }} title={FUELS[f]?.label} />
+            <span key={f} style={{ flexGrow: v, background: rgb(FUELS[f]?.color || [200, 200, 200]) }} title={t(FUELS[f]?.label || f)} />
           ))}
         </div>
       )}
@@ -83,7 +83,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
           <Sparkline values={series.map((x) => x.mw)} color={rgb(FUELS[mix[0]?.[0]]?.color || [110, 240, 190])} w={300} h={40} />
           <p className="fine">
             {tx('今日', 'Today')} {series[0].hm}–{series[series.length - 1].hm}{'　'}
-            {tx('最高', 'High')} <b>{fmtMw(peak.mw)}</b> MW（{peak.hm}）{'　'}{tx('最低', 'Low')} {fmtMw(low.mw)} MW（{low.hm}）
+            {tx('最高', 'High')} <b>{fmtMw(peak.mw)}</b> MW{tx(`（${peak.hm}）`, ` (${peak.hm})`)}{'　'}{tx('最低', 'Low')} {fmtMw(low.mw)} MW{tx(`（${low.hm}）`, ` (${low.hm})`)}
             {series.some((x) => x.est) ? tx('　＊打開 App 前的時段依燃料曲線推估', '　* hours before you opened the app are estimated from fuel curves') : ''}
           </p>
         </div>
@@ -101,7 +101,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
           <div className="hl-k">{t('附近風況')}</div>
           {wind ? (
             <p className="fine">
-              {wind.site}{t('測站')}（{t('岸邊')}，{wind.d.toFixed(0)} km）：{windText(wind.dir)} <b>{wind.speed} m/s</b>
+              {wind.site}{t('測站')}{tx(`（岸邊，${wind.d.toFixed(0)} km）：`, ` (coast, ${wind.d.toFixed(0)} km): `)}{windText(wind.dir)} <b>{wind.speed} m/s</b>
               {' · '}{wind.speed < 3 ? t('風太小，風機轉不太動') : wind.speed > 20 ? t('風太大，風機可能停機保護') : mw < 1 ? t('有風但沒發電：可能是檢修、測試或尚未商轉') : t('風況正常')}
             </p>
           ) : <p className="fine">{t('附近測站的風速資料讀取中')}</p>}
@@ -114,7 +114,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
       <PlantHistory id={id} fuel={cfg.fuel || mix[0]?.[0]} />
 
       <div className="life-sec">
-        <div className="hl-k">{units.length ? `${t('台電即時機組')}（${units.length}）` : t('資料來源')}</div>
+        <div className="hl-k">{units.length ? `${t('台電即時機組')}${tx(`（${units.length}）`, ` (${units.length})`)}` : t('資料來源')}</div>
         {units.length ? (
           <ul className="units">
             {units.map((u) => {

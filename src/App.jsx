@@ -142,6 +142,12 @@ export default function App() {
 
   const setUi = useCallback((patch) => {
     const e = engine.current;
+    // 正在「點地圖選家」時改做別的事（開面板、電廠、回放、放空…）→ 先結束選點，避免之後點電廠被當成設定家
+    if (pickCancel.current && !patch.pickHome && !patch.cancelPick && (patch.panel !== undefined || patch.openPlant || patch.toggleReplay || patch.toggleCruise || patch.resumeCruise || patch.resetView || patch.filter)) {
+      pickCancel.current();
+      pickCancel.current = null;
+      setUiState((s) => ({ ...s, picking: false }));
+    }
     if (patch.unlock) {
       e?.cruise.stop();
       e?.setLocked(false);
@@ -240,6 +246,7 @@ export default function App() {
   // 從清單、搜尋打開電廠卡時，地圖上的電廠標籤也換成這一座（不要留著上一座的標籤）
   useEffect(() => {
     if (ui.panel === 'plant' && ui.plantId) engine.current?.setHover(ui.plantId);
+    else engine.current?.setHover(null); // 關掉電廠卡：標籤一起收（手機沒有「滑出」可以清掉）
   }, [ui.panel, ui.plantId]);
 
   // 手機：底部抽屜打開時，把地圖移到抽屜上方看得到的區域；關閉時回到原本的視角

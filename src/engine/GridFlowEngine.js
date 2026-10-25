@@ -162,9 +162,15 @@ export class GridFlowEngine {
       interleaved: true,
       layers: [],
       pickingRadius: 6,
-      onHover: (info) => this.setHover(info.layer?.id === 'pick' ? info.object?.id : null),
+      onHover: (info) => { if (CAN_HOVER) this.setHover(info.layer?.id === 'pick' ? info.object?.id : null); }, // 觸控：標籤只跟著「點」走
       onClick: (info) => {
-        const id = info.layer?.id === 'pick' ? info.object?.id : null;
+        let id = info.layer?.id === 'pick' ? info.object?.id : null;
+        // 手機在全島視角：手指底下常疊著好幾個節點（台中、星能、台中太陽能群）→ 選出力最大的那座
+        if (id && !CAN_HOVER && this.map?.getZoom() < 9) {
+          const hits = this.overlay.pickMultipleObjects({ x: info.x, y: info.y, radius: 4, layerIds: ['pick'] });
+          const best = hits.map((h) => h.object).filter(Boolean).sort((a, b) => (b.mw || 0) - (a.mw || 0))[0];
+          if (best) id = best.id;
+        }
         this.setHover(id);
         if (id && this.mode !== 'wallpaper') this.onPlantSelect?.(id); // 點電廠 → 打開電廠詳細卡
       },

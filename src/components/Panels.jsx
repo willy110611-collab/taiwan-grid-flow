@@ -28,7 +28,17 @@ export function Panel({ title, meta, onClose, children }) {
   }, [onClose]);
   // 鍵盤：打開時把焦點移進面板（Tab 從面板開始），不捲動頁面
   const ref = useRef(null);
-  useEffect(() => { if (ref.current && !ref.current.contains(document.activeElement)) ref.current.focus({ preventScroll: true }); }, []);
+  // 關閉時焦點回到打開它的按鈕（從「更多」選單打開的，選單已收起 → 回到「更多」）
+  useEffect(() => {
+    const opener = document.activeElement;
+    if (ref.current && !ref.current.contains(opener)) ref.current.focus({ preventScroll: true });
+    return () => {
+      if (!document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected) {
+        const back = opener?.isConnected && opener !== document.body ? opener : document.querySelector('.toolbar [aria-expanded]');
+        back?.focus?.({ preventScroll: true });
+      }
+    };
+  }, []);
   title = t(title);
   return (
     <section className="panel" role="dialog" aria-label={title} tabIndex={-1} ref={ref}>
@@ -68,6 +78,20 @@ function JumpBar() {
     const id = setInterval(check, 1500);
     return () => clearInterval(id);
   }, []);
+  // 捲動時標出目前所在的段落
+  const [cur, setCur] = useState(null);
+  useEffect(() => {
+    const body = ref.current?.closest('.panel-body');
+    if (!body) return undefined;
+    const onScroll = () => {
+      const lim = body.getBoundingClientRect().top + (ref.current?.offsetHeight || 0) + 24;
+      let k = null;
+      for (const el of body.querySelectorAll('[data-jump]')) if (el.getBoundingClientRect().top <= lim) k = el.dataset.jump;
+      setCur(k);
+    };
+    body.addEventListener('scroll', onScroll, { passive: true });
+    return () => body.removeEventListener('scroll', onScroll);
+  }, []);
   const go = (e, k) => {
     const body = e.currentTarget.closest('.panel-body');
     const el = body?.querySelector(`[data-jump="${k}"]`);
@@ -78,7 +102,7 @@ function JumpBar() {
   };
   return (
     <nav className="hl-jump" ref={ref} aria-label={tx('跳到', 'Jump to')}>
-      {JUMPS.filter(([k]) => avail.includes(k)).map(([k, zh, en]) => <button key={k} onClick={(e) => go(e, k)}>{tx(zh, en)}</button>)}
+      {JUMPS.filter(([k]) => avail.includes(k)).map(([k, zh, en]) => <button key={k} className={cur === k ? 'on' : ''} aria-current={cur === k ? 'true' : undefined} onClick={(e) => go(e, k)}>{tx(zh, en)}</button>)}
     </nav>
   );
 }
@@ -199,9 +223,9 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
   const live = snapshot?.source === 'live';
   return (
     <Panel title="資訊" onClose={onClose}>
-      <nav className="tabs">
+      <nav className="tabs" role="tablist">
         {TABS.map(([id, label]) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{t(label)}</button>
+          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={(e) => { setTab(id); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); }}>{t(label)}</button>
         ))}
       </nav>
 
@@ -247,7 +271,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dt>{tx('各機組發電量', 'Unit output')}</dt>
             <dd>
               {tx('台灣電力公司「今日電力資訊」公開資料，每 10 分鐘更新：各機組發電量、各區發電／用電、今日燃料別發電曲線、今日區域用電曲線、供電狀況（備轉容量率與燈號）。',
-                'Taipower “Today’s Power Information” open data, updated every 10 minutes: output of each unit, generation/demand by region, today’s generation by fuel, today’s regional demand curve, and supply status (operating reserve and signal).')}
+                'Taipower “Today’s Power Information” open data, updated every 10 minutes: output of each unit, generation/demand by region, today’s generation by fuel, today’s regional demand curve, and supply status (operating reserve and signal). ')}
               <a href={APP.taipowerPage} target="_blank" rel="noreferrer">{tx('台電原始頁面 ↗', 'Taipower source page ↗')}</a>
             </dd>
             <dt>{tx('電廠座標與機組對應', 'Plant locations & unit mapping')}</dt>

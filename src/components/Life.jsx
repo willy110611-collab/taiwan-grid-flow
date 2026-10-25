@@ -70,7 +70,7 @@ export function HomeCard({ sum, advice, onOpen, className = '' }) {
         {st && (
           <>
             <em style={{ color: rgb(aqiLevel(st.aqi).color) }}>AQI {st.aqi ?? '—'}</em>
-            <small>{st.site}</small>
+            <small className="hc-site">{st.site}</small>
           </>
         )}
       </span>

@@ -78,10 +78,28 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
     if (sound) { stopSound(); setSound(false); return; }
     if (startSound()) { setSound(true); setSoundToast(true); setTimeout(() => setSoundToast(false), 4500); }
   };
+  // 選家模式按 Esc 取消
+  useEffect(() => {
+    if (!ui.picking) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing) setUi({ cancelPick: true }); };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [ui.picking]); // eslint-disable-line react-hooks/exhaustive-deps
   // 「更多」選單：按 Esc 或點選單以外的地方就關閉（面板的 Esc 由面板自己處理）
   useEffect(() => {
     if (!more) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing) { e.stopPropagation(); setMore(false); } };
+    const onKey = (e) => {
+      if (e.isComposing) return;
+      if (e.key === 'Escape') { e.stopPropagation(); setMore(false); document.querySelector('.toolbar [aria-expanded]')?.focus(); return; }
+      // 方向鍵在選單項目間移動（role="menu" 的標準操作）
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const items = [...document.querySelectorAll('.toolbar [role="menuitem"]')];
+      if (!items.length) return;
+      e.preventDefault();
+      const i = items.indexOf(document.activeElement);
+      const next = i < 0 ? (e.key === 'ArrowDown' ? 0 : items.length - 1) : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[next].focus();
+    };
     const onDown = (e) => { if (!e.target.closest?.('.toolbar')) setMore(false); };
     addEventListener('keydown', onKey, true);
     addEventListener('pointerdown', onDown, true);

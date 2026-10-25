@@ -303,7 +303,7 @@ export function AppliancePanel({ home, onClose }) {
       </div>
       <div className="calc-out">
         <div><small>{tx('每月約', 'About')}</small><b>{n0(kwh)}</b><small>{tx('度', 'kWh / month')}</small></div>
-        <div><small>{tx('電費約多', 'Adds about')}</small><b className="gold">NT$ {n0(extra)}</b><small>{tx('／月', '/ month')}</small></div>
+        <div><small>{tx('電費約多', 'Adds about')}</small><b className="gold">NT$ {n0(extra)}</b><small>{tx('／月', '/mo')}</small></div>
       </div>
       <label className="switch"><input type="checkbox" checked={summer} onChange={(e) => setSummer(e.target.checked)} /><span>{tx('夏月電價（6–9 月）', 'Summer rates (Jun–Sep)')}</span></label>
       <p className="fine">{tx(`以${baseFrom}每月 ${n0(base)} 度為基準，用住宅累進電價算「多用這些電」會多付多少（越用越貴，所以同一台家電在用電多的家庭比較貴）。功率是常見參考值，請以家電銘牌或能源效率標示為準。`, `Based on ${baseFrom} using ${n0(base)} kWh a month: the extra cost on the residential tiered tariff (each extra kWh costs more in a high-use home). Wattages are typical values; check the appliance’s label.`)}{preset.note ? ` ${en ? preset.note.en : preset.note.zh}` : ''}</p>

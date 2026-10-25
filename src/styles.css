@@ -148,7 +148,7 @@ a:hover { text-decoration: underline; }
 
 /* ── 右下：圖例與來源 ── */
 .legend {
-  bottom: calc(46px + var(--safe-b)); right: var(--gutter);
+  bottom: calc(60px + var(--safe-b)); right: var(--gutter);
   list-style: none; margin: 0; padding: 0; display: grid; gap: 7px;
   font-size: 10px; letter-spacing: 0.2em; color: var(--ink-dim);
 }
@@ -156,6 +156,7 @@ a:hover { text-decoration: underline; }
 .legend i { width: 5px; height: 5px; border-radius: 50%; }
 .sourceline {
   bottom: calc(22px + var(--safe-b)); right: var(--gutter);
+  max-width: calc(50% - 180px); text-align: right; line-height: 1.6; /* 不伸到置中的工具列底下，太長就換行 */
   font-size: 9.5px; letter-spacing: 0.12em; color: var(--ink-faint);
   text-shadow: 0 0 3px var(--bg), 0 0 8px var(--bg); /* 壓在地名上時仍讀得清楚 */
 }
@@ -240,7 +241,7 @@ a:hover { text-decoration: underline; }
 /* ── 桌布模式：只留最必要的資訊，字體稍大、透明度更低 ── */
 .is-wallpaper .brand { opacity: 0.75; }
 .is-wallpaper .clock { background: none; border-left-color: rgba(160, 180, 220, 0.08); }
-.is-wallpaper .sourceline { opacity: 0.8; }
+.is-wallpaper .sourceline { opacity: 0.8; max-width: none; }
 .is-wallpaper .cruise-caption { top: auto; bottom: calc(40px + var(--safe-b)); }
 
 /* ── 桌布鎖頭：很淡，滑過才亮，避免誤觸 ── */
@@ -484,7 +485,7 @@ a:hover { text-decoration: underline; }
 .donate-link { border: 0; background: none; padding: 0; font: inherit; color: var(--gold); cursor: pointer; pointer-events: auto; }
 
 .lang-btn {
-  margin-top: 10px; pointer-events: auto; cursor: pointer; font: inherit; font-size: 10px; letter-spacing: 0.18em;
+  margin-top: 10px; margin-left: 8px; pointer-events: auto; cursor: pointer; font: inherit; font-size: 10px; letter-spacing: 0.18em;
   color: var(--ink-dim); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
 }
 .lang-btn:hover { color: var(--ink); }
@@ -571,13 +572,14 @@ a:hover { text-decoration: underline; }
   }
   /* 英文字串較長：縮小字距、限制寬度，不壓到左邊的時鐘列 */
   html:lang(en) .home-card.hc-mobile { max-width: 46%; }
+  html:lang(en) .clock-sun { flex-wrap: wrap; max-width: 52vw; row-gap: 3px; } /* 「Data 01:40」換到下一行，不被小卡蓋住 */
   html:lang(en) .home-card.hc-mobile .hc-advice, html:lang(en) .home-card.hc-mobile .hc-set { letter-spacing: 0.04em; }
   .reset-view { bottom: calc(226px + var(--safe-b)) !important; } /* 在「我的家」小卡上方，不重疊 */
   /* 抽屜打開時收起上方的篩選列與小卡，讓出看地圖的空間 */
   .hud:has(.panel) .filters, .hud:has(.panel) .home-card, .hud:has(.panel) .cruise-caption, .hud:has(.panel) .alert-banner { opacity: 0; pointer-events: none; }
   .pick-banner { top: calc(186px + var(--safe-t)); width: max-content; max-width: calc(100% - 32px); }
   .loc-search, .loc-select { font-size: 16px; }
-  .hc-row small:last-child { display: none; }
+  .hc-row small.hc-site { display: none; }
   .forecast b { font-size: 9.5px; }
 
   /* 面板改為底部抽屜 */
@@ -883,7 +885,7 @@ a:hover { text-decoration: underline; }
 }
 
 /* 資訊分頁變 5 個：手機可左右滑 */
-.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs { overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: 24px; } /* 右邊淡出：提示還能往右滑 */
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button { flex: none; white-space: nowrap; }
 @media (max-width: 600px) { .tabs button { padding: 8px 7px; letter-spacing: 0.08em; } }
@@ -927,6 +929,7 @@ html:lang(en) .world-bars li { grid-template-columns: 6.6em 1fr 3.6em; }
 .hl-jump { display: flex; gap: 6px; flex-wrap: wrap; margin: -4px -18px 10px; padding: 6px 18px 8px; position: sticky; top: -4px; z-index: 2; background: rgb(9, 13, 23); box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.6); }
 .hl-jump button { font: inherit; font-size: 11px; letter-spacing: 0.04em; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); color: var(--ink-dim); cursor: pointer; }
 .hl-jump button:hover { color: var(--ink); border-color: rgba(110, 240, 190, 0.4); }
+.hl-jump button.on { color: var(--ink); border-color: rgba(110, 240, 190, 0.55); background: rgba(110, 240, 190, 0.08); }
 /* 電廠卡：裝置容量與利用率 */
 .plant-cap { display: flex; align-items: center; gap: 10px; margin: -2px 0 8px; }
 .cap-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }

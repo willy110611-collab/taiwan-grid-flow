@@ -1,18 +1,20 @@
 {
-  "version": "0.8.46",
+  "version": "0.8.47",
   "notesEn": [
+    "On phones, tapping a crowded spot on the island view now picks the biggest plant under your finger; closing a plant card also clears its map label",
+    "Picking Home on the map is cancelled when you open something else (or press Esc), so a later tap can’t set Home by mistake",
+    "Keyboard: focus returns to the button that opened a panel; arrow keys move through the More menu; Esc exits Replay",
+    "Desktop source line no longer runs under the toolbar; Highlights jump buttons show the current section; plant search shows English names",
     "Background sound: if you left it on, one tap now brings it back (it sometimes took two)",
     "Feedback only includes the plant you were viewing when you opened it",
     "Plant cards open from search even without WebGL; today’s anomaly list resets after midnight",
-    "Screen-reader labels fixed for badge pop-ups, replay and the tour in English",
-    "Update notes now appear in English in the English interface",
-    "If Taipower's supply signal hasn't been refreshed for today yet, its date is shown and it is no longer used as current demand",
-    "Badge fixes: several badges earned at once now show one after another; keeping the page open past midnight counts as a new day",
-    "Time-based badges now use Taipower's data time, and stale data no longer awards them; Dawn Shift needs the sun to be up",
-    "Anomaly Spotter no longer fires after a tab sat in the background for hours, and demo mode never awards it",
-    "Time Traveler requires actually finishing a replay; plants opened from search or a shared link count toward Plant Dex"
+    "Screen-reader labels fixed for badge pop-ups, replay and the tour in English"
   ],
   "notes": [
+    "手機在全島畫面點電廠，會選到手指底下出力最大的那座（之前常點到旁邊的小節點）；關掉電廠卡時地圖標籤一起收起",
+    "「在地圖上點選我的家」途中去開別的面板會自動取消，不會再誤把點到的電廠位置設成家；按 Esc 也能取消",
+    "鍵盤：關閉面板後焦點回到原本的按鈕；「更多」選單可用方向鍵選；回放可按 Esc 結束",
+    "電腦版右下資料來源不再壓到底部工具列；亮點的跳段落按鈕會標出目前段落；英文介面電廠搜尋改顯示英文名",
     "背景音：上次開著的話，手機點一下畫面就會恢復（之前有時要按兩次）；iPhone 切回 App 後點一下也會繼續",
     "意見回饋附上的「目前畫面」只寫打開回饋前正在看的電廠，不會帶到更早看過的",
     "沒有 WebGL 的裝置也能從搜尋打開電廠卡；今日異常清單過了午夜會重新開始",

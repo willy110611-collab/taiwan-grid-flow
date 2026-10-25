@@ -46,7 +46,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
       const kind = noteKind(u.note);
       if (!kind) continue;
       const key = u.plantId || `x:${u.sub || u.fuel}`;
-      const g = by.get(key) || { id: u.plantId, name: plantName(PLANTS.find((p) => p.id === u.plantId)) || u.sub || u.unit, list: [], cap: 0 };
+      const g = by.get(key) || { id: u.plantId, name: plantName(PLANTS.find((p) => p.id === u.plantId)) || tr(u.sub || u.unit), list: [], cap: 0 };
       g.list.push({ ...u, kind });
       g.cap += u.capacity || 0;
       by.set(key, g);
@@ -56,7 +56,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
   const counts = KINDS.map((k) => ({ ...k, n: issues.reduce((a, g) => a + g.list.filter((u) => u.kind.key === k.key).length, 0), cap: issues.reduce((a, g) => a + g.list.filter((u) => u.kind.key === k.key).reduce((b, u) => b + (u.capacity || 0), 0), 0) })).filter((k) => k.n);
 
   const top = (snapshot?.plants || []).filter((p) => p.mw > 0).sort((a, b) => b.mw - a.mw).slice(0, 5);
-  const name = (id) => PLANTS.find((p) => p.id === id)?.name || id;
+  const name = (id) => plantName(PLANTS.find((p) => p.id === id)) || id;
   const share = async () => {
     const v = getView?.();
     if (!v) return;
@@ -71,7 +71,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={tx('搜尋電廠或機組，例如 台中、大潭、海洋竹南', 'Search a plant or unit, e.g. 台中, Taichung, Formosa')}
+        placeholder={tx('搜尋電廠或機組，例如 台中、大潭、海洋竹南', 'Search, e.g. Taichung or 台中')}
         enterKeyHint="search"
       />
       {q.trim() && (
@@ -81,7 +81,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
               <li key={r.id}>
                 <button onClick={() => onOpen(r.id)}>
                   <b>{name(r.id)}</b>
-                  <small>{r.why || PLANTS.find((p) => p.id === r.id)?.en}</small>
+                  <small>{r.why || tx(PLANTS.find((p) => p.id === r.id)?.en, PLANTS.find((p) => p.id === r.id)?.name)}</small>
                   <span>{fmtMw(plantsById[r.id]?.mw || 0)} <small>MW</small></span>
                 </button>
               </li>
@@ -107,7 +107,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
                     <span className="issue-units">
                       {g.list.map((u) => (
                         <em key={u.unit} className={`note ${u.kind.tone}`}>
-                          {u.unit} <small>{fmtMw(u.mw)}/{fmtMw(u.capacity || 0)} MW</small> {tr(u.note)}
+                          {tr(u.unit)} <small>{fmtMw(u.mw)}/{fmtMw(u.capacity || 0)} MW</small> {tr(u.note)}
                         </em>
                       ))}
                     </span>

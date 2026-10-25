@@ -60,7 +60,7 @@ export function useLang() {
 const EN = {
   // 台電機組備註（今日電力資訊第 7 欄）
   '歲修': 'Annual overhaul', '部分歲修': 'Partial overhaul', '檢修': 'Maintenance', '部分檢修': 'Partial maintenance',
-  '故障': 'Fault', '部分故障': 'Partial fault', '合約限制': 'Contract limit', '環保停機': 'Shut for emissions', '計劃停機': 'Planned outage',
+  '故障': 'Fault', '部分故障': 'Partial fault', '合約限制': 'Contract limit', '環保停機': 'Shut for emissions', '計劃停機': 'Planned outage', '停機': 'Shut down', '太陽能購電': 'Purchased solar', '風力購電': 'Purchased wind', '台電自有': 'Taipower-owned',
   '新機組試俥': 'New unit testing', '新增設備測試運轉': 'New equipment trial', '通訊異常': 'Comms fault', '水力排砂': 'Sediment flushing',
   '降載': 'Derated', '配合降載': 'Derated on request', '友善降載': 'Voluntary derating', '環保降載': 'Derated for emissions',
   // HUD
