@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { FUELS } from '../config/energy.js';
-import { fmtMw, rgb } from './widgets.jsx';
+import { fmtMw, rgb, chartKeys } from './widgets.jsx';
 import { t, tx, isEn } from '../i18n.js';
 
 // 由下往上：基載火力 → 其他火力 → 儲能 → 再生能源（太陽能在最上面，白天的起伏一眼看得出來）
@@ -64,7 +64,7 @@ export function FuelStack({ today, yesterday }) {
           ))}
         </div>
       )}
-      <svg className="fs-chart" viewBox={`0 0 ${W} ${H + 16}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} role="img"
+      <svg className="fs-chart" viewBox={`0 0 ${W} ${H + 16}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} tabIndex={0} onKeyDown={chartKeys(pick ?? chart.pts.length - 1, chart.pts.length, setPick)} role="img"
         aria-label={tx(`${hm} 全台發電 ${fmtMw(tot)} MW，綠能 ${((green / tot) * 100).toFixed(1)}%`, `${hm} total ${fmtMw(tot)} MW, green ${((green / tot) * 100).toFixed(1)}%`)}>
         {chart.grid.map((g) => (
           <g key={g.v}>

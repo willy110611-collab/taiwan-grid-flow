@@ -62,6 +62,14 @@ export const fmtDate = (d) => {
   return `${p.year}-${p.month}-${p.day}（${p.weekday}）`;
 };
 export const fmtMw = (mw) => `${Math.round(mw).toLocaleString()}`;
+/** 圖表鍵盤操作：← → 一次一格、Shift 一次 7 格、Home／End 到頭尾（cur＝目前選的索引，n＝總數） */
+export const chartKeys = (cur, n, set) => (e) => {
+  const step = e.shiftKey ? 7 : 1;
+  const next = e.key === 'ArrowLeft' ? cur - step : e.key === 'ArrowRight' ? cur + step : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : null;
+  if (next == null) return;
+  e.preventDefault();
+  set(Math.max(0, Math.min(n - 1, next)));
+};
 export const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
 /** 線條圖示（不用 emoji，保持高冷科技感） */

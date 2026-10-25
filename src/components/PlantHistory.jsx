@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FUELS } from '../config/energy.js';
-import { fmtMw, rgb } from './widgets.jsx';
+import { fmtMw, rgb, chartKeys } from './widgets.jsx';
 import { tx } from '../i18n.js';
 import { NUCLEAR_IDS } from '../config/nuclear.js';
 
@@ -55,7 +55,7 @@ export function PlantHistory({ id, fuel }) {
   return (
     <div className="life-sec plant-hist">
       {head}
-      <svg className="ph-chart" viewBox={`0 0 ${W} ${H + 14}`} onPointerMove={onMove} onPointerDown={onMove} role="img"
+      <svg className="ph-chart" viewBox={`0 0 ${W} ${H + 14}`} onPointerMove={onMove} onPointerDown={onMove} tabIndex={0} onKeyDown={chartKeys(sel, h.e.length, setPick)} role="img"
         aria-label={tx(`${h.e.length} 天合計 ${gwh(total)}`, `${h.e.length}-day total ${gwh(total)}`)}>
         {h.e.map((v, i) => {
           const bh = (v / max) * H;

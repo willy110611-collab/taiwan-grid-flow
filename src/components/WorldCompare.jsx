@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sparkline, rgb } from './widgets.jsx';
+import { Sparkline, rgb, chartKeys } from './widgets.jsx';
 import { FUELS } from '../config/energy.js';
 import { tx, isEn } from '../i18n.js';
 
@@ -108,7 +108,7 @@ function TaiwanMix({ series }) {
   return (
     <div className="world-mix">
       <div className="hl-k">{tx(`台灣發電結構 ${ys[0].year}–${ys[ys.length - 1].year}`, `Taiwan’s generation mix ${ys[0].year}–${ys[ys.length - 1].year}`)}</div>
-      <svg className="fs-chart" viewBox={`0 0 ${MW} ${MH + 14}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} role="img"
+      <svg className="fs-chart" viewBox={`0 0 ${MW} ${MH + 14}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} tabIndex={0} onKeyDown={chartKeys(si, ys.length, setPick)} role="img"
         aria-label={tx(`${sel.year} 年燃煤 ${sel.coal}%、燃氣 ${sel.gas}%、核能 ${sel.nuclear}%、再生能源 ${sel.renew}%`, `${sel.year}: coal ${sel.coal}%, gas ${sel.gas}%, nuclear ${sel.nuclear}%, renewables ${sel.renew}%`)}>
         {layers.map((l) => <polygon key={l.k} points={l.points} fill={rgb(FUELS[l.c]?.color || [200, 200, 200], 0.8)} />)}
         <line x1={x(si)} x2={x(si)} y1="0" y2={MH} className="fs-cursor" />

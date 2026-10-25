@@ -919,3 +919,6 @@ html:lang(en) .world-bars li { grid-template-columns: 6.6em 1fr 3.6em; }
 .world-mix { margin-top: 14px; }
 .world-mix .fs-read { line-height: 1.8; }
 .wm-dot { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 4px; vertical-align: 1px; }
+/* 圖表可用鍵盤 ← → 選時間點 */
+.fs-chart:focus, .ph-chart:focus { outline: none; }
+.fs-chart:focus-visible, .ph-chart:focus-visible { outline: 1px solid rgba(110, 240, 190, 0.6); outline-offset: 3px; border-radius: 4px; }
