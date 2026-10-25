@@ -932,3 +932,26 @@ html:lang(en) .world-bars li { grid-template-columns: 6.6em 1fr 3.6em; }
 .cap-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
 .cap-bar i { display: block; height: 100%; background: rgba(232, 238, 252, 0.55); border-radius: 2px; }
 .plant-op { margin: -4px 0 6px; }
+/* 不支援 WebGL：地圖位置顯示說明 */
+.map-fallback { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(340px, calc(100% - 48px)); padding: 18px 20px; border-radius: 16px; background: var(--glass-strong); border: 1px solid var(--line); color: var(--ink-dim); font-size: 12.5px; line-height: 1.7; text-align: center; z-index: 1; }
+.map-fallback b { display: block; color: var(--ink); font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+
+/* ── 按鈕按壓回饋：手機關掉了點擊高亮，按下去要立刻有反應 ── */
+button { transition: transform 0.12s ease, background-color 0.25s, color 0.25s, border-color 0.25s, opacity 0.25s; }
+button:not(:disabled):active { transform: scale(0.95); }
+.more-menu button:not(:disabled):active, .panel-body button:not(:disabled):active, .hl-list li.clickable:active { transform: scale(0.98); }
+.hl-list li.clickable { transition: transform 0.12s ease; }
+/* 鍵盤操作時的焦點框（滑鼠點擊不顯示） */
+:focus-visible { outline: 1.5px solid rgba(110, 240, 190, 0.7); outline-offset: 2px; }
+.panel:focus-visible { outline: none; }
+@media (prefers-reduced-motion: reduce) { button:not(:disabled):active, .hl-list li.clickable:active { transform: none; } }
+/* 「更多」選單：從按鈕位置浮出 */
+.more-menu { animation: menuIn 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: bottom right; }
+@keyframes menuIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .more-menu { animation: none; } }
+/* 更新提示、導覽：背景淡入、卡片浮起 */
+.upd-wrap { animation: fadeIn 0.25s ease; }
+.upd-card { animation: cardIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cardIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .upd-wrap, .upd-card { animation: none; } }

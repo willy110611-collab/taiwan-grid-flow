@@ -53,6 +53,15 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const upd = useUpdate();
   const hasIssue = (snapshot?.diag || []).some((d) => !d.ok);
   const [more, setMore] = useState(false);
+  // 「更多」選單：按 Esc 或點選單以外的地方就關閉（面板的 Esc 由面板自己處理）
+  useEffect(() => {
+    if (!more) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing) { e.stopPropagation(); setMore(false); } };
+    const onDown = (e) => { if (!e.target.closest?.('.toolbar')) setMore(false); };
+    addEventListener('keydown', onKey, true);
+    addEventListener('pointerdown', onDown, true);
+    return () => { removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onDown, true); };
+  }, [more]);
   const typhoon = useTyphoon(APP.typhoon && !wallpaper);
 
   return (
@@ -65,7 +74,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('回放')} ${twHM(snapshot.t)}` : snapshot ? (snapshot.stale ? `${t('讀不到最新 · 顯示')} ${twHM(snapshot.t)}` : snapshot.cached ? `${t('更新中 · 上次')} ${twHM(snapshot.t)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
         </div>
         {!wallpaper && (
-          <button className="lang-btn" onClick={() => setLang(lang === 'en' ? 'zh' : 'en')} aria-label="切換語言 / Language">
+          <button className="lang-btn" onClick={() => setLang(lang === 'en' ? 'zh' : 'en')} aria-label={`${lang === 'en' ? '中文' : 'EN'}：切換語言 / Language`} title={lang === 'en' ? '切換成中文' : 'Switch to English'}>
             {lang === 'en' ? '中文' : 'EN'}
           </button>
         )}

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { tx } from '../i18n.js';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GridFlowEngine } from '../engine/GridFlowEngine.js';
 
@@ -9,10 +10,9 @@ import { GridFlowEngine } from '../engine/GridFlowEngine.js';
 export default function GridFlowMap({ snapshot, options, onReady }) {
   const container = useRef(null);
   const engine = useRef(null);
+  const [noGl, setNoGl] = useState(false);
 
   useEffect(() => {
-    engine.current = new GridFlowEngine(container.current, options);
-    onReady?.(engine.current);
     // 地圖畫好就收起 index.html 的開機畫面（最多等 6 秒）
     const hide = () => {
       const el = document.getElementById('splash');
@@ -22,6 +22,17 @@ export default function GridFlowMap({ snapshot, options, onReady }) {
       el.classList.add('out');
       setTimeout(() => el.remove(), 600);
     };
+    // 瀏覽器不支援或關閉了 WebGL（部分公司電腦、舊手機、關掉硬體加速）：地圖建不起來 → 收起開機畫面、顯示說明，數字與面板照常可用
+    try {
+      if (!hasWebGl()) throw new Error('no webgl');
+      engine.current = new GridFlowEngine(container.current, options);
+    } catch {
+      engine.current = null;
+      setNoGl(true);
+      hide();
+      return undefined;
+    }
+    onReady?.(engine.current);
     engine.current.onFirstDraw(hide);
     const safety = setTimeout(hide, 6000);
     if (import.meta.env.DEV) window.__gridEngine = engine.current; // 方便在 console 調參
@@ -38,5 +49,22 @@ export default function GridFlowMap({ snapshot, options, onReady }) {
     if (snapshot && engine.current) engine.current.setSnapshot(snapshot);
   }, [snapshot]);
 
-  return <div ref={container} className="map" />;
+  return (
+    <div ref={container} className="map">
+      {noGl && (
+        <div className="map-fallback" role="alert">
+          <b>{tx('這個瀏覽器無法畫出地圖', 'This browser can’t draw the map')}</b>
+          <p>{tx('地圖需要 WebGL（3D 繪圖）。請開啟瀏覽器的「硬體加速」，或改用最新版 Chrome、Safari、Edge。上方的發電、用電數字和各個面板仍然可以使用。',
+            'The map needs WebGL (3D graphics). Turn on hardware acceleration in your browser, or use a recent Chrome, Safari or Edge. The figures above and all panels still work.')}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function hasWebGl() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch { return false; }
 }

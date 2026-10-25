@@ -5,9 +5,20 @@ import { useUpdate, applyUpdate, dismissUpdate, checkUpdate } from '../update.js
 import { useT, tx } from '../i18n.js';
 
 /* ───────────── 新版：詢問視窗 + 左上角 ⟳ ───────────── */
+/** 對話框按 Esc 關閉（輸入法選字中不算） */
+function useEsc(active, fn) {
+  useEffect(() => {
+    if (!active) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing) fn(); };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [active, fn]);
+}
+
 export function UpdatePrompt() {
   const u = useUpdate();
   const t = useT();
+  useEsc(!!u.available && !u.dismissed, dismissUpdate);
   if (!u.available || u.dismissed) return null;
   return (
     <div className="upd-wrap" role="dialog" aria-label="有新版本">
@@ -18,7 +29,7 @@ export function UpdatePrompt() {
         )}
         <div className="upd-btns">
           <button onClick={dismissUpdate}>{t('稍後')}</button>
-          <button className="primary" onClick={applyUpdate}>{t('立即更新')}</button>
+          <button className="primary" onClick={applyUpdate} autoFocus>{t('立即更新')}</button>
         </div>
         <small className="muted">{t('按「稍後」之後，左上角的 ⟳ 隨時可以更新。')}</small>
       </div>
@@ -63,7 +74,7 @@ export const GUIDE = [
   [Icon.home, '我的家', '設定地點後：計畫性停電提醒、現在適不適合用電、你家 vs 鄉鎮平均用電、附近空氣品質、下風側電廠、電費試算。', 'After setting a location: planned-outage reminders, whether now is a good time to use power, your use vs the township average, nearby air quality, upwind plants, and a bill calculator.'],
   [Icon.plug, '家電', '算一台家電一個月多少度、多付多少電費；電費小手冊整理台電的省電與電價說明，每篇附原始連結。', 'Work out an appliance’s monthly kWh and extra cost; the handbook summarises Taipower’s tips and tariff notes, each linked to the original.'],
   [Icon.store, '店家', '匯入店家智慧電表的用電明細：每月尖峰／離峰圖表、哪種電價最省、把工作移到離峰能再省多少。', 'Import a shop’s smart-meter data: monthly peak/off-peak charts, which tariff is cheapest, and how much more you save by shifting work off-peak.'],
-  [Icon.medal, '亮點', '今天太陽能尖峰、綠能最高的時刻、你看過的最高紀錄；今天用電在今年排第幾、每日備轉容量率年曆。', 'Today’s solar peak and greenest moment, your highest records, how today’s demand ranks this year, and a calendar of daily reserve margins.'],
+  [Icon.medal, '亮點', '今天太陽能尖峰、綠能最高的時刻、發電組成；今天用電在今年排第幾、去年今天；台灣和各國的碳強度、再生能源比較。', 'Today’s solar peak, greenest moment and generation mix; how today’s demand ranks this year and this day last year; how Taiwan compares with other countries.'],
   [Icon.replay, '回放', '把今天（或昨天）一整天快轉播放，看太陽能如何撐起白天。', 'Fast-forward through today (or yesterday) to see solar carry the daytime.'],
   [Icon.cruise, '放空', '自動巡航各地電廠，適合當桌布；按「全島」回到俯視圖。', 'Auto-cruise between plants — great as a wallpaper; tap “Overview” to return to the full view.'],
   [Icon.info, '資訊', '資料來源、準確度、連線狀況、各縣市綠電；資料讀不到時看這裡。', 'Data sources, accuracy, connection status and renewables by county — check here when data won’t load.']
@@ -72,8 +83,9 @@ export const GUIDE = [
 export function Tour({ onDone }) {
   const t = useT();
   const [show, setShow] = useState(() => { try { return !localStorage.getItem(TOUR_KEY); } catch { return false; } });
-  if (!show) return null;
   const close = () => { try { localStorage.setItem(TOUR_KEY, '1'); } catch { /* 略 */ } setShow(false); onDone?.(); };
+  useEsc(show, close);
+  if (!show) return null;
   return (
     <div className="upd-wrap tour" role="dialog" aria-label="功能導覽">
       <div className="upd-card">
@@ -83,7 +95,7 @@ export function Tour({ onDone }) {
             <li key={k}><span className="g-ico">{ico}</span><div><b>{t(k)}</b><p>{tx(v, en)}</p></div></li>
           ))}
         </ul>
-        <div className="upd-btns"><button className="primary" onClick={close}>{t('開始')}</button></div>
+        <div className="upd-btns"><button className="primary" onClick={close} autoFocus>{t('開始')}</button></div>
         <small className="muted">{t('之後可以在「資訊 → 使用說明」再看一次。')}</small>
       </div>
     </div>
