@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.4
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.5
+//  v8.5：意見回饋（POST /feedback）：存 KV fb:日期（180 天），每天前 10 則 LINE 通知管理者；管理者在 LINE 傳「回饋」看最近 7 天
 //  v8.4：訂閱資料（App 通知 p:、LINE 好友 u:）同時存成 KV list metadata → 排程列出時不用逐筆讀（原本每 10 分鐘讀「人數」次，約 690 人就用完每天 10 萬次免費讀取）
 //  v8.3：/bundle.json?x=air 順便帶空品（aqi）、煙道（cems）、日照（sun）→ 網頁每人每小時請求從約 16 次降到 6 次
 //  v8.2：/open/unit-history.json 轉送台電「各機組過去發電量」（data.gov.tw 37331，每月更新）
@@ -62,6 +63,7 @@ export default {
     if (req.method === 'POST' && name === 'line') return lineWebhook(req, env, ctx);
     if (req.method === 'POST' && (name === 'push/subscribe' || name === 'push/unsubscribe')) return pushRoute(req, env, name);
     if (req.method === 'POST' && name === 'log') return logRoute(req, env);
+    if (req.method === 'POST' && name === 'feedback') return feedbackRoute(req, env, ctx);
     if (name === 'alert') return alertRoute(new URL(req.url), env);
     try {
       if (name === 'config.json') {
@@ -364,6 +366,7 @@ async function handleEvent(env, ev) {
 
   if (/^(說明|help|\?|？|使用說明)$/i.test(t)) return reply(env, ev.replyToken, HELP);
   if (id === env.LINE_TO && /^錯誤紀錄$/.test(t)) return reply(env, ev.replyToken, await errorSummary(env, 7));
+  if (id === env.LINE_TO && /^(意見)?回饋$/.test(t)) return reply(env, ev.replyToken, await feedbackSummary(env, 7));
   if (/^(停止|關閉|取消)(通知)?$/.test(t)) { await save({ supply: false, aqi: false }); return reply(env, ev.replyToken, '已停止所有通知。想恢復請傳「全部通知」。'); }
   if (/^只要供電$/.test(t)) { await save({ supply: true, aqi: false }); return reply(env, ev.replyToken, '好的，只會通知供電吃緊。'); }
   if (/^(全部通知|開啟|開啟通知)$/.test(t)) { await save({ supply: true, aqi: true }); return reply(env, ev.replyToken, `供電與空品通知都已開啟${user.site ? `（測站：${user.site}）` : '，請再傳你家附近的測站名稱'}。`); }
@@ -676,6 +679,53 @@ async function errorAlerts(env) {
     const ok = await send(env, [env.LINE_TO], `⚠ 台灣光脈動 網站錯誤（今天 ${g.n} 次）\n版本 v${g.v}・${g.where}・${g.device}\n${g.msg}\n\n傳「錯誤紀錄」看最近 7 天`);
     if (ok) await env.NOTIFY.put(flag, '1', { expirationTtl: 2 * 86400 });
   }
+}
+
+/* ───────── v8.5：意見回饋 ─────────
+ *  網頁「更多 → 意見回饋」送來：類別、文字（≤500 字）、選填聯絡方式、選填的版本與目前畫面
+ *  不存 IP；同一個 IP 60 秒內只能送一則（只用機房快取判斷）、全站每天最多 100 則 */
+const FB_KIND = { bug: '問題回報', data: '資料有誤', idea: '功能建議', other: '其他' };
+async function feedbackRoute(req, env, ctx) {
+  const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
+  if (!env.NOTIFY) return json({ error: 'not configured' }, 503);
+  let j;
+  try { j = JSON.parse((await req.text()).slice(0, 6000)); } catch { return json({ error: 'bad request' }, 400); }
+  const text = String(j.text || '').trim().slice(0, 500);
+  if (text.length < 2) return json({ error: 'empty' }, 400);
+  const ip = req.headers.get('CF-Connecting-IP') || '';
+  const gate = new Request(`https://cache.local/fb-ip/${encodeURIComponent(ip)}`);
+  if (ip && typeof caches !== 'undefined' && await caches.default.match(gate)) return json({ error: 'too fast' }, 429);
+  const c = j.ctx && typeof j.ctx === 'object' ? j.ctx : null;
+  const e = {
+    t: Date.now(), kind: FB_KIND[j.kind] ? j.kind : 'other', text,
+    contact: String(j.contact || '').trim().slice(0, 80) || null,
+    ctx: c ? { v: String(c.v || '').slice(0, 12), device: c.device === 'mobile' ? 'mobile' : 'desktop', lang: c.lang === 'en' ? 'en' : 'zh', view: String(c.view || '').slice(0, 40) } : null
+  };
+  const key = `fb:${twDate()}`;
+  const list = (await env.NOTIFY.get(key, 'json')) || [];
+  if (list.length >= 100) return json({ error: 'busy' }, 429);
+  list.push(e);
+  await env.NOTIFY.put(key, JSON.stringify(list), { expirationTtl: 180 * 86400 });
+  if (ip && typeof caches !== 'undefined') ctx.waitUntil(caches.default.put(gate, new Response('1', { headers: { 'Cache-Control': 'max-age=60' } })));
+  // 每天前 10 則用 LINE 通知管理者（主動推播有每月上限，其餘傳「回饋」查）
+  if (env.LINE_TOKEN && env.LINE_TO && list.length <= 10) {
+    const info = e.ctx ? `\nv${e.ctx.v}・${e.ctx.device === 'mobile' ? '手機' : '電腦'}・${e.ctx.lang === 'en' ? '英文' : '中文'}${e.ctx.view ? `・${e.ctx.view}` : ''}` : '';
+    ctx.waitUntil(send(env, [env.LINE_TO], `💬 台灣光脈動 意見回饋（${FB_KIND[e.kind]}）\n${text}${e.contact ? `\n聯絡：${e.contact}` : ''}${info}\n\n傳「回饋」看最近 7 天`).catch(() => {}));
+  }
+  return json({ ok: true });
+}
+
+async function feedbackSummary(env, days) {
+  const out = [];
+  for (let i = 0; i < days && out.length < 15; i++) {
+    const day = new Date(Date.now() + 8 * 3600e3 - i * 864e5).toISOString().slice(0, 10);
+    const list = (await env.NOTIFY.get(`fb:${day}`, 'json')) || [];
+    for (const e of list.slice().reverse()) {
+      if (out.length >= 15) break;
+      out.push(`${day.slice(5)}［${FB_KIND[e.kind] || '其他'}］${e.text.slice(0, 120)}${e.contact ? `（${e.contact}）` : ''}`);
+    }
+  }
+  return out.length ? `💬 最近 ${days} 天意見回饋（新到舊）\n\n${out.join('\n\n')}` : `最近 ${days} 天沒有意見回饋`;
 }
 
 async function errorSummary(env, days) {
