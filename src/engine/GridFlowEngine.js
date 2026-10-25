@@ -555,6 +555,19 @@ export class GridFlowEngine {
           getFillColor: [220, 235, 255, 230], opacity: a, parameters: ADDITIVE
         })
       );
+      // 放大後標出超高壓變電所名稱（OSM 只有中文名 → 英文介面不標，不自行翻譯）
+      const z = this.map.getZoom();
+      if (z >= 8.3 && !isEn()) {
+        const subNames = this.memo('subNames', net, () => net.subs
+          .map((d) => ({ pos: d.pos, text: d.name.replace(/\(E\/S\)|\s/g, '').replace('超高壓變電所', '變電所').replace('超高壓開閉所', '開閉所') }))
+          .filter((d) => /變電所|開閉所/.test(d.text)));
+        layers.push(new TextLayer({
+          id: 'net-sub-names', data: subNames, getPosition: (d) => d.pos, getText: (d) => d.text,
+          getColor: [200, 220, 255, 150], getSize: 10, getPixelOffset: [0, -9], getAlignmentBaseline: 'bottom',
+          fontFamily: FONT, fontWeight: 300, characterSet: 'auto', fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
+          outlineWidth: 3, outlineColor: [3, 5, 10, 180], opacity: a * Math.min(1, (z - 8.3) / 0.5), parameters: NO_DEPTH
+        }));
+      }
     }
 
     // ① 光纖：極淡的流線骨架，粗細對應流量（真實線路模式下已有路網，光纖淡出）

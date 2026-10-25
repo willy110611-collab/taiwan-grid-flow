@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Sparkline } from './widgets.jsx';
+import { Sparkline, rgb } from './widgets.jsx';
+import { FUELS } from '../config/energy.js';
 import { tx, isEn } from '../i18n.js';
 
 /**
@@ -65,10 +66,61 @@ export function WorldCompare() {
           </p>
         </div>
       )}
+      <TaiwanMix series={data.taiwan || []} />
       <p className="fine">
         {tx('碳強度＝每發一度電的二氧化碳排放。Ember 用同一套方法估算各國，適合國與國之間比較；和網站上依能源署電力排碳係數算的即時數字算法不同。',
           'Carbon intensity = CO₂ per kWh generated. Ember estimates every country the same way, so it suits cross-country comparison; it differs from the live figure on this site, which uses the Energy Administration grid factor.')}
         {' '}<a href={data.url} target="_blank" rel="noreferrer">Ember, Yearly Electricity Data（CC BY 4.0）</a>
+      </p>
+    </div>
+  );
+}
+
+/** 台灣發電結構（Ember，2000 年起每年的發電比例）：由下往上 燃煤、燃氣、其他化石、核能、水力等再生、風光 */
+const MIX = [
+  { k: 'coal', zh: '燃煤', en: 'Coal', c: 'coal', v: (y) => y.coal },
+  { k: 'gas', zh: '燃氣', en: 'Gas', c: 'gas', v: (y) => y.gas },
+  { k: 'oil', zh: '其他化石', en: 'Other fossil', c: 'oil', v: (y) => Math.max(0, y.fossil - y.coal - y.gas) },
+  { k: 'nuclear', zh: '核能', en: 'Nuclear', c: 'nuclear', v: (y) => y.nuclear || 0 },
+  { k: 'hydro', zh: '水力等再生', en: 'Hydro & other RE', c: 'hydro', v: (y) => Math.max(0, y.renew - y.windSolar) },
+  { k: 'ws', zh: '風力＋太陽能', en: 'Wind + solar', c: 'solar', v: (y) => y.windSolar || 0 }
+];
+const MW = 300, MH = 90;
+
+function TaiwanMix({ series }) {
+  const [pick, setPick] = useState(null);
+  const ys = series.filter((y) => y.fossil != null && y.renew != null);
+  if (ys.length < 5) return null;
+  const x = (i) => (i / (ys.length - 1)) * MW;
+  let base = ys.map(() => 0);
+  const layers = MIX.map((m) => {
+    const top = ys.map((y, i) => base[i] + m.v(y));
+    const pts = [...ys.map((_, i) => `${x(i).toFixed(1)},${(MH - (top[i] / 100) * MH).toFixed(1)}`), ...ys.map((_, i) => `${x(i).toFixed(1)},${(MH - (base[i] / 100) * MH).toFixed(1)}`).reverse()];
+    base = top;
+    return { ...m, points: pts.join(' ') };
+  });
+  const sel = ys[pick ?? ys.length - 1];
+  const onMove = (e) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    setPick(Math.max(0, Math.min(ys.length - 1, Math.round(((e.clientX - box.left) / box.width) * (ys.length - 1)))));
+  };
+  const si = ys.indexOf(sel);
+  return (
+    <div className="world-mix">
+      <div className="hl-k">{tx(`台灣發電結構 ${ys[0].year}–${ys[ys.length - 1].year}`, `Taiwan’s generation mix ${ys[0].year}–${ys[ys.length - 1].year}`)}</div>
+      <svg className="fs-chart" viewBox={`0 0 ${MW} ${MH + 14}`} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setPick(null)} role="img"
+        aria-label={tx(`${sel.year} 年燃煤 ${sel.coal}%、燃氣 ${sel.gas}%、核能 ${sel.nuclear}%、再生能源 ${sel.renew}%`, `${sel.year}: coal ${sel.coal}%, gas ${sel.gas}%, nuclear ${sel.nuclear}%, renewables ${sel.renew}%`)}>
+        {layers.map((l) => <polygon key={l.k} points={l.points} fill={rgb(FUELS[l.c]?.color || [200, 200, 200], 0.8)} />)}
+        <line x1={x(si)} x2={x(si)} y1="0" y2={MH} className="fs-cursor" />
+        {[0, Math.floor((ys.length - 1) / 2), ys.length - 1].map((i, j) => (
+          <text key={i} x={x(i)} y={MH + 12} textAnchor={j === 0 ? 'start' : j === 2 ? 'end' : 'middle'} className="fs-ax">{ys[i].year}</text>
+        ))}
+      </svg>
+      <p className="fs-read">
+        <span className="nw">{sel.year}</span>{'　'}
+        {MIX.filter((m) => m.v(sel) >= 0.5).map((m) => (
+          <span key={m.k} className="nw"><i className="wm-dot" style={{ background: rgb(FUELS[m.c]?.color || [200, 200, 200]) }} />{tx(m.zh, m.en)} <b>{m.v(sel).toFixed(1)}%</b>{'　'}</span>
+        ))}
       </p>
     </div>
   );
