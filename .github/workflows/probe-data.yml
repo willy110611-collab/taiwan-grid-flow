@@ -1,0 +1,51 @@
+# 一次性：抓 data.gov.tw 候選資料集（說明與檔案），提交回這個分支（評估用，之後刪除）
+name: Probe data
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['.github/workflows/probe-data.yml']
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: data.gov.tw 資料集
+        run: |
+          mkdir -p probe
+          node -e '
+            const fs = require("fs");
+            const ids = ["161209", "29935", "112650", "160060", "14135", "37331"];
+            (async () => {
+              for (const id of ids) {
+                try {
+                  const r = await fetch("https://data.gov.tw/api/v2/rest/dataset/" + id, { headers: { "User-Agent": "taiwan-grid-flow/1.0" } });
+                  const t = await r.text();
+                  fs.writeFileSync("probe/meta-" + id + ".json", t);
+                  const j = JSON.parse(t);
+                  const res = j.result?.distribution || [];
+                  console.log(id, j.result?.title, res.length, "files");
+                  let n = 0;
+                  for (const d of res) {
+                    if (id === "37331" || id === "14135") break;
+                    const url = d.resourceDownloadUrl || d.resourceAccessUrl;
+                    if (!url || n >= 3) continue;
+                    try {
+                      const f = await fetch(url, { headers: { "User-Agent": "taiwan-grid-flow/1.0" }, redirect: "follow" });
+                      const b = Buffer.from(await f.arrayBuffer());
+                      const ext = (d.resourceFormat || "bin").toLowerCase();
+                      fs.writeFileSync("probe/" + id + "-" + n + "." + ext, b.subarray(0, 3e6));
+                      console.log("  ", f.status, url, b.length);
+                      n++;
+                    } catch (e) { console.log("  fail", url, e.message); }
+                  }
+                } catch (e) { console.log(id, "meta fail", e.message); }
+              }
+            })();
+          '
+          ls -la probe
+      - name: 提交回分支
+        run: |
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add probe && git commit -m "暫時：data.gov.tw 候選資料（評估用）" && git push
