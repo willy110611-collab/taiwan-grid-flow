@@ -115,6 +115,7 @@ export default function App() {
     onUserMove: () => armAutoLock(),
     onPlantVisit: (id) => recordRef.current('plant', id),
     onAway: (away) => setUiState((s) => (s.away === away ? s : { ...s, away })),
+    onRoute: (route) => setUiState((s) => ({ ...s, route })), // 真實線路下載失敗 → 選單改顯示示意
     onPlantSelect: (id) => setUiState((s) => ({ ...s, panel: 'plant', plantId: id, fly: false })),
     onShot: (shot) => {
       if (shot) recordRef.current('shot', shot);

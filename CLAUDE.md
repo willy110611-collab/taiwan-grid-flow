@@ -66,7 +66,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 付費：Electricity Maps 商用約 €6,000／年，資料多半也來自台電 → 不建議。
 
 ## 資料需定期更新
-- `public/grid-lines.json`：OSM 345kV／161kV 線路與超高壓變電所（ODbL，2026-10-25 擷取，Douglas-Peucker 精簡）。這個環境連不到 Overpass：要更新時在分支放一次性 workflow 由 Actions 抓取提交，用完刪掉。光流模式 `localStorage tgf-route`（grid／fiber），引擎 `src/engine/gridNet.js`。
+- `public/grid-lines.json`：OSM 345kV／161kV 線路與超高壓變電所（ODbL，2026-10-25 擷取，Douglas-Peucker 精簡）。這個環境連不到 Overpass：要更新時在分支放一次性 workflow 由 Actions 抓取提交，用完刪掉。光流模式 `localStorage tgf-route`（grid／fiber），引擎 `src/engine/gridNet.js`：只走最大連通網路；路線比直線長超過 2.5 倍＋0.1° 改用示意路線（OSM 缺線段，例如和平→花蓮、德基→花蓮）。
 - `src/config/nuclear.js`：核電廠現況（核安會、經濟部）。狀態有變（例如核三再運轉進度、核二送審）要更新，並改 `NUCLEAR_VERIFIED`。
 
 ## 備選清單（暫停中）

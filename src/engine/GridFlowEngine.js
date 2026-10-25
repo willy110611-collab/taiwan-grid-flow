@@ -59,8 +59,9 @@ const TENSION = [
  *  onDaylight 日夜狀態改變時回報（給 HUD 調整天空色）
  */
 export class GridFlowEngine {
-  constructor(container, { density = 1, mode = 'app', fps = 60, initialView = null, onStats, onShot, onDaylight, onUserMove, onPlantVisit, onAway, onPlantSelect } = {}) {
+  constructor(container, { density = 1, mode = 'app', fps = 60, initialView = null, onStats, onShot, onDaylight, onUserMove, onPlantVisit, onAway, onPlantSelect, onRoute } = {}) {
     this.onAway = onAway;
+    this.onRoute = onRoute;
     this.onPlantSelect = onPlantSelect;
     this.onPlantVisit = onPlantVisit;
     this.breathPhase = 0;
@@ -127,6 +128,8 @@ export class GridFlowEngine {
       attributionControl: false,
       fadeDuration: 0
     });
+    // 「全島」要回到一開始進入時的樣子：記下開場的傾斜與旋轉（有存過視角時用預設的開場值）
+    this.homeTilt = initialView ? { pitch: 28, bearing: 0 } : { pitch: this.map.getPitch(), bearing: this.map.getBearing() };
     // 桌布模式預設鎖定：點擊、滾輪、拖曳都無效，避免在桌面上誤觸縮放（按鎖頭才解鎖）
     if (wallpaper) this.setLocked(true);
     this.userMoved = false;
@@ -295,7 +298,7 @@ export class GridFlowEngine {
     this.gridLoading ||= fetch('./grid-lines.json')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
       .then((d) => { setGridNet(d); this.particles.setGridRoutes(this.routeMode === 'grid'); })
-      .catch(() => { this.gridLoading = null; }); // 載入失敗：維持示意光纖，下次切換再試
+      .catch(() => { this.gridLoading = null; this.routeMode = 'fiber'; this.onRoute?.('fiber'); }); // 載入失敗：改回示意光纖（不記住），選單跟著顯示，下次切換再試
     return this.gridLoading;
   }
 
@@ -306,7 +309,7 @@ export class GridFlowEngine {
     this.userMoved = false;
     this.map.setMaxBounds(MAX_BOUNDS);
     clearPadding(this.map);
-    this.map.fitBounds(TAIWAN_BOUNDS, { padding: fitPadding(), pitch: 28, bearing: -8, duration: 1800, essential: true });
+    this.map.fitBounds(TAIWAN_BOUNDS, { padding: fitPadding(), ...this.homeTilt, duration: 1800, essential: true });
     this.onAway?.(false);
   }
 

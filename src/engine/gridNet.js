@@ -9,6 +9,7 @@ const LAT_SCALE = Math.cos((23.7 * Math.PI) / 180);
 const JOIN = 0.02;      // 端點接合距離（度，約 2 公里）
 const SNAP = 0.25;      // 城市接上路網的最大距離（度，約 25 公里）
 const SNAP_SRC = 0.6;   // 電廠：離岸風場經海底電纜上岸，可以遠一點
+const DETOUR = 2.5;     // 路網路線比直線長超過 2.5 倍（＋0.1° 寬容）→ 多半是 OSM 少了一段線，改用示意路線
 const dist = (a, b) => Math.hypot((a[0] - b[0]) * LAT_SCALE, a[1] - b[1]);
 
 let net = null;
@@ -34,16 +35,23 @@ export function setGridNet(data) {
     for (let i = 1; i < ids.length; i++) link(ids[i - 1], ids[i], dist(l.c[i - 1], l.c[i]) * f);
     ends.push(ids[0], ids[ids.length - 1]);
   }
-  // 端點與附近任何節點接起來（線路常在變電所前斷開）；變電所也接上附近節点
-  const joinNear = (p, self) => {
-    for (let j = 0; j < nodes.length; j++) {
-      if (j === self) continue;
-      const d = dist(p, nodes[j]);
-      if (d < JOIN) link(self, j, d + 0.002);
+  // 端點與附近任何節點接起來（線路常在變電所前斷開）；變電所也接上附近節點
+  for (const s of data.subs || []) id(s.pos);
+  const cell = (x) => Math.floor(x / JOIN);
+  const grid = new Map(); // 格網索引：只比對相鄰格子，不用每個端點掃全部節點
+  nodes.forEach((p, i) => { const k = `${cell(p[0])},${cell(p[1])}`; (grid.get(k) || grid.set(k, []).get(k)).push(i); });
+  const joinNear = (self) => {
+    const p = nodes[self], cx = cell(p[0]), cy = cell(p[1]);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      for (const j of grid.get(`${cx + dx},${cy + dy}`) || []) {
+        if (j === self) continue;
+        const d = dist(p, nodes[j]);
+        if (d < JOIN) link(self, j, d + 0.002);
+      }
     }
   };
-  for (const e of ends) joinNear(nodes[e], e);
-  for (const s of data.subs || []) { const i = id(s.pos); joinNear(s.pos, i); }
+  for (const e of ends) joinNear(e);
+  for (const s of data.subs || []) joinNear(id(s.pos));
 
   // 只在最大的連通網路上找路（OSM 有幾段孤立的線或變電所，接上去會走不通）
   const comp = new Int32Array(nodes.length).fill(-1);
@@ -125,5 +133,8 @@ export function gridRoute(from, to) {
   const chain = [];
   for (let v = b; v !== -1; v = prev[v]) chain.push(net.nodes[v]);
   chain.reverse();
-  return [from, ...chain, to];
+  const route = [from, ...chain, to];
+  let len = 0;
+  for (let i = 1; i < route.length; i++) len += dist(route[i - 1], route[i]);
+  return len > dist(from, to) * DETOUR + 0.1 ? null : route;
 }

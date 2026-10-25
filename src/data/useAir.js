@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { APP } from '../config/app.js';
 import { PLANTS } from '../config/geo.js';
 import { setSolarSun } from './parseGenary.js';
-import { firstExtra, freshExtra, onExtra } from './extras.js';
+import { firstExtra, freshExtra, hasExtra, onExtra } from './extras.js';
 
 /**
  * 空氣品質（環境部 AQI，每小時）與電廠煙道排放（環境部 CEMS 1 小時值）
@@ -13,7 +13,10 @@ const REFRESH = 15 * 60 * 1000;
 
 /** 先用資料包裡的（中繼站 v8.3），沒有才另外打中繼站 */
 async function getPart(key, path) {
-  return freshExtra(key) ?? getJson(path);
+  const x = freshExtra(key);
+  if (!x) return getJson(path);
+  if (x.error) throw new Error(x.error);
+  return x;
 }
 
 async function getJson(path) {
@@ -27,8 +30,10 @@ export function useAir() {
   const [air, setAir] = useState({ stations: [], cems: {}, error: null, cemsError: null, loading: true });
   useEffect(() => {
     let alive = true;
+    let seq = 0; // 兩次更新同時進行時，只採用最後開始的那次
     const tick = async () => {
       if (document.hidden && !first) return; // 省電：背景不抓，切回前景時補抓
+      const my = ++seq;
       first = false;
       const next = { stations: [], cems: {}, error: null, cemsError: null, loading: false };
       try {
@@ -39,15 +44,17 @@ export function useAir() {
         next.asOf = next.stations.map((x) => x.time).filter(Boolean).sort().pop() || null;
       } catch (e) { next.error = e.message; }
       try { next.cems = groupCems((await getPart('cems', 'cems.json')).records || []); next.cemsAsOf = Object.values(next.cems).map((c) => c.time).filter(Boolean).sort().pop() || null; } catch (e) { next.cemsError = e.message; }
-      if (alive) setAir(next);
+      if (alive && my === seq) setAir(next);
     };
     let first = true;
     firstExtra().then(() => alive && tick());
     const off = onExtra(() => { if (!first) tick(); }); // 資料包每 10 分鐘帶來新的
-    const id = setInterval(() => { if (freshExtra('aqi') === undefined) tick(); }, REFRESH); // 備援：資料包沒帶時自己抓
-    const onVis = () => { if (!document.hidden && freshExtra('aqi') === undefined) tick(); };
+    const id = setInterval(() => { if (!hasExtra('aqi')) tick(); }, REFRESH); // 備援：資料包沒帶時自己抓
+    // 切回前景：資料包也會馬上重抓 → 等一下，還是沒有新的才自己抓
+    let visT;
+    const onVis = () => { if (!document.hidden) { clearTimeout(visT); visT = setTimeout(() => { if (alive && !hasExtra('aqi')) tick(); }, 12000); } };
     document.addEventListener('visibilitychange', onVis);
-    return () => { alive = false; off(); clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
+    return () => { alive = false; off(); clearInterval(id); clearTimeout(visT); document.removeEventListener('visibilitychange', onVis); };
   }, []);
   return air;
 }
@@ -173,7 +180,7 @@ export function useSun() {
     firstExtra().then(() => alive && tick());
     let lastSun = Date.now();
     const off = onExtra(() => { if (Date.now() - lastSun > 25 * 60e3) { lastSun = Date.now(); tick(); } }); // 日照 30 分鐘更新一次就夠
-    const id = setInterval(() => { if (freshExtra('sun') === undefined) { lastSun = Date.now(); tick(); } }, 30 * 60 * 1000);
+    const id = setInterval(() => { if (!hasExtra('sun')) { lastSun = Date.now(); tick(); } }, 30 * 60 * 1000);
     return () => { alive = false; off(); clearInterval(id); };
   }, []);
   return sun;
