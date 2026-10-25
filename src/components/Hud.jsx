@@ -18,7 +18,7 @@ import { useT, useLang, tx } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
 import { FeedbackPanel } from './Feedback.jsx';
-import { soundPref, soundSupported, startSound, stopSound, setGridMood } from '../audio/ambient.js';
+import { soundPref, soundSupported, startSound, stopSound, soundRunning, setGridMood } from '../audio/ambient.js';
 import { hapticSupported, hapticPref, setHapticPref, installHaptics } from '../audio/haptics.js';
 import { PLANTS, plantName } from '../config/geo.js';
 
@@ -61,12 +61,16 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
   const [sound, setSound] = useState(() => soundPref());
   const [soundToast, setSoundToast] = useState(false);
   const [haptic, setHaptic] = useState(() => hapticPref());
+  const [fbView, setFbView] = useState(''); // 打開意見回饋「當下」的畫面（之後面板會換成回饋，不能再看 ui）
   useEffect(() => {
     installHaptics();
     if (!soundPref() || wallpaper) return undefined;
-    const go = () => startSound();
-    addEventListener('pointerdown', go, { once: true, capture: true });
-    return () => removeEventListener('pointerdown', go, { capture: true });
+    // 觸控要到 pointerup 才算使用者操作（pointerdown 時瀏覽器不讓聲音開始）；真的出聲後才移除
+    const go = () => { if (startSound() && soundRunning()) off(); else setTimeout(() => soundRunning() && off(), 400); };
+    const off = () => { removeEventListener('pointerup', go, true); removeEventListener('keydown', go, true); };
+    addEventListener('pointerup', go, true);
+    addEventListener('keydown', go, true);
+    return off;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // 音色跟著電網：綠能比例、備轉容量率
   useEffect(() => { if (stats) setGridMood({ green: stats.green / 100, reserve: snapshot?.supply?.rate }); }, [stats, snapshot?.supply?.rate]);
@@ -216,7 +220,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
                   {Icon.vibrate}<b>{t(haptic ? '震動：開' : '震動：關')}</b>
                 </button>
               )}
-              <button role="menuitem" className={ui.panel === 'feedback' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'feedback' ? null : 'feedback' }); }}>
+              <button role="menuitem" className={ui.panel === 'feedback' ? 'on' : ''} onClick={() => { setMore(false); setFbView(feedbackView(ui)); setUi({ panel: ui.panel === 'feedback' ? null : 'feedback' }); }}>
                 {Icon.chat}<b>{t('意見回饋')}</b>
               </button>
               <button className="desktop-only" role="menuitem" onClick={() => { setMore(false); toggleFullscreen(); }}>
@@ -268,7 +272,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         </>
       )}
 
-      {soundToast && (
+      {soundToast && !badges?.toast && (
         <div className="badge-toast snd-toast" role="status" onClick={() => setSoundToast(false)}>
           <span className="snd-ico">{Icon.sound}</span>
           <div><small>{tx('背景音已開啟', 'Background sound on')}</small><b>{tx('電網的聲音', 'The sound of the grid')}</b><span>{tx('綠能越多音色越亮・供電吃緊時節奏變快', 'Brighter with more renewables · faster when supply is tight')}</span></div>
@@ -283,7 +287,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'home' && <Guard key={'g-home'} name="home" onClose={() => setUi({ panel: null })}><HomePanel onPick={() => setUi({ pickHome: true })} onMarks={(m) => setUi({ outageMarks: m })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'nuclear' && <Guard key={'g-nuclear'} name="nuclear" onClose={() => setUi({ panel: null })}><NuclearPanel snapshot={snapshot} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'air' && <Guard key={'g-air'} name="air" onClose={() => setUi({ panel: null })}><AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
-      {ui.panel === 'feedback' && <Guard key={'g-feedback'} name="feedback" onClose={() => setUi({ panel: null })}><FeedbackPanel view={feedbackView(ui)} onClose={() => setUi({ panel: null })} /></Guard>}
+      {ui.panel === 'feedback' && <Guard key={'g-feedback'} name="feedback" onClose={() => setUi({ panel: null })}><FeedbackPanel view={fbView} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'plant' && ui.plantId && <Guard key={'g-plant'} name="plant" onClose={() => setUi({ panel: null })}><PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'finder' && <Guard key={'g-finder'} name="finder" onClose={() => setUi({ panel: null })}><FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'store' && <Guard key={'g-store'} name="store" onClose={() => setUi({ panel: null })}><StorePanel onClose={() => setUi({ panel: null })} /></Guard>}
@@ -325,7 +329,7 @@ function ClockPanel({ snapshot, daylight, replayT }) {
 const MORE_PANELS = ['appliance', 'store', 'highlights', 'badges', 'info', 'feedback'];
 /** 意見回饋附上的「目前畫面」：開著的電廠卡就寫電廠名稱，否則寫篩選 */
 function feedbackView(ui) {
-  if (ui.plantId) { const p = PLANTS.find((x) => x.id === ui.plantId); if (p) return `${tx('電廠', 'plant')}：${plantName(p)}`; }
+  if (ui.panel === 'plant' && ui.plantId) { const p = PLANTS.find((x) => x.id === ui.plantId); if (p) return `${tx('電廠：', 'plant: ')}${plantName(p)}`; }
   return ui.filter && ui.filter !== 'all' ? `filter:${ui.filter}` : '';
 }
 

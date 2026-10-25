@@ -22,9 +22,12 @@ export function useAnomalies(snapshot) {
     try { return JSON.parse(localStorage.getItem(`tgf-anomaly-${twDateKey()}`) || '[]'); } catch { return []; }
   });
   const [active, setActive] = useState(null);
+  const day = useRef(twDateKey());
 
   useEffect(() => {
     if (!snapshot) return;
+    // 開著跨過午夜：今日清單從空的開始
+    if (day.current !== twDateKey()) { day.current = twDateKey(); setList([]); }
     const demo = new URLSearchParams(location.search).get('demo') === 'anomaly';
     if ((snapshot.source !== 'live' || snapshot.cached) && !demo) return;
     if (prev.current?.timestamp === snapshot.timestamp && !demo) return;

@@ -56,7 +56,7 @@ export function RefreshBtn() {
         className={`refresh-btn ${u.available ? 'has' : ''} ${u.checking ? 'spin' : ''}`}
         onClick={onClick}
         title={u.available ? `${t('更新到')} v${u.available.version}` : `${t('檢查新版本')}（v${APP.version}）`}
-        aria-label={u.available ? '更新到新版本' : '檢查新版本'}
+        aria-label={u.available ? t('更新到新版本') : t('檢查新版本')}
       >
         {Icon.refresh}
       </button>
@@ -89,7 +89,7 @@ export function Tour({ onDone }) {
   useEsc(show, close);
   if (!show) return null;
   return (
-    <div className="upd-wrap tour" role="dialog" aria-label="功能導覽">
+    <div className="upd-wrap tour" role="dialog" aria-label={t('功能導覽')}>
       <div className="upd-card">
         <div className="upd-title">{t('歡迎來到')} {tx(APP.name, APP.en)}</div>
         <ul className="guide-list">

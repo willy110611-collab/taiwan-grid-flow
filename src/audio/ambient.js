@@ -98,6 +98,8 @@ function onVis() {
   if (document.hidden) ctx.suspend().catch(() => {});
   else if (soundPref()) ctx.resume().catch(() => {});
 }
+// iPhone 切回前景時可能是 interrupted，沒有使用者操作 resume 會失敗 → 下一次點畫面再試
+function onTap() { if (ctx && ctx.state !== 'running' && soundPref() && !document.hidden) ctx.resume().catch(() => {}); }
 
 /** 開啟（必須在使用者點擊的處理函式裡呼叫，iPhone 才會出聲） */
 export function startSound() {
@@ -108,10 +110,12 @@ export function startSound() {
     nodes.master.gain.cancelScheduledValues(ctx.currentTime);
     nodes.master.gain.setTargetAtTime(VOLUME, ctx.currentTime, 0.8); // 約 2 秒淡入
     savePref(true);
-    if (!visBound) { document.addEventListener('visibilitychange', onVis); visBound = true; }
+    if (!visBound) { document.addEventListener('visibilitychange', onVis); addEventListener('pointerup', onTap, true); visBound = true; }
     return true;
   } catch { return false; }
 }
+
+export const soundRunning = () => ctx?.state === 'running';
 
 export function stopSound() {
   savePref(false);

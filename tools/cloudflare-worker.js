@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.5
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.6
+//  v8.6：意見回饋改為每則一個鍵 fb:日期:時間（同時送出不互相覆蓋）、60 秒限制改用 KV（只存 IP 雜湊、60 秒自動刪）、每天滿 100 則回 503 full
 //  v8.5：意見回饋（POST /feedback）：存 KV fb:日期（180 天），每天前 10 則 LINE 通知管理者；管理者在 LINE 傳「回饋」看最近 7 天
 //  v8.4：訂閱資料（App 通知 p:、LINE 好友 u:）同時存成 KV list metadata → 排程列出時不用逐筆讀（原本每 10 分鐘讀「人數」次，約 690 人就用完每天 10 萬次免費讀取）
 //  v8.3：/bundle.json?x=air 順便帶空品（aqi）、煙道（cems）、日照（sun）→ 網頁每人每小時請求從約 16 次降到 6 次
@@ -683,46 +684,60 @@ async function errorAlerts(env) {
 
 /* ───────── v8.5：意見回饋 ─────────
  *  網頁「更多 → 意見回饋」送來：類別、文字（≤500 字）、選填聯絡方式、選填的版本與目前畫面
- *  不存 IP；同一個 IP 60 秒內只能送一則（只用機房快取判斷）、全站每天最多 100 則 */
+ *  不存 IP（只存雜湊 60 秒防重複）；同一個 IP 60 秒內只能送一則、全站每天最多 100 則 */
 const FB_KIND = { bug: '問題回報', data: '資料有誤', idea: '功能建議', other: '其他' };
 async function feedbackRoute(req, env, ctx) {
   const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
   if (!env.NOTIFY) return json({ error: 'not configured' }, 503);
   let j;
   try { j = JSON.parse((await req.text()).slice(0, 6000)); } catch { return json({ error: 'bad request' }, 400); }
+  if (!j || typeof j !== 'object') return json({ error: 'bad request' }, 400);
   const text = String(j.text || '').trim().slice(0, 500);
   if (text.length < 2) return json({ error: 'empty' }, 400);
+  // 同一台 60 秒一則：KV 只存 IP 的雜湊、60 秒後自動刪除（workers.dev 網域上 Cache API 沒有作用，所以改用 KV）
   const ip = req.headers.get('CF-Connecting-IP') || '';
-  const gate = new Request(`https://cache.local/fb-ip/${encodeURIComponent(ip)}`);
-  if (ip && typeof caches !== 'undefined' && await caches.default.match(gate)) return json({ error: 'too fast' }, 429);
+  const gate = ip ? `fbip:${await sha256Hex(`fb|${ip}`)}` : null;
+  if (gate && await env.NOTIFY.get(gate)) return json({ error: 'too fast' }, 429);
+  const day = twDate();
+  const n = Number(await env.NOTIFY.get(`fbn:${day}`)) || 0; // 今天第幾則（概略計數，不需精確）
+  if (n >= 100) return json({ error: 'full' }, 503);
   const c = j.ctx && typeof j.ctx === 'object' ? j.ctx : null;
   const e = {
     t: Date.now(), kind: FB_KIND[j.kind] ? j.kind : 'other', text,
     contact: String(j.contact || '').trim().slice(0, 80) || null,
     ctx: c ? { v: String(c.v || '').slice(0, 12), device: c.device === 'mobile' ? 'mobile' : 'desktop', lang: c.lang === 'en' ? 'en' : 'zh', view: String(c.view || '').slice(0, 40) } : null
   };
-  const key = `fb:${twDate()}`;
-  const list = (await env.NOTIFY.get(key, 'json')) || [];
-  if (list.length >= 100) return json({ error: 'busy' }, 429);
-  list.push(e);
-  await env.NOTIFY.put(key, JSON.stringify(list), { expirationTtl: 180 * 86400 });
-  if (ip && typeof caches !== 'undefined') ctx.waitUntil(caches.default.put(gate, new Response('1', { headers: { 'Cache-Control': 'max-age=60' } })));
+  // 每則一個鍵（同時送出也不會互相覆蓋）
+  const ttl = { expirationTtl: 180 * 86400 };
+  await env.NOTIFY.put(`fb:${day}:${e.t}-${Math.random().toString(36).slice(2, 8)}`, JSON.stringify(e), ttl);
+  ctx.waitUntil(Promise.all([
+    env.NOTIFY.put(`fbn:${day}`, String(n + 1), { expirationTtl: 2 * 86400 }),
+    gate ? env.NOTIFY.put(gate, '1', { expirationTtl: 60 }) : null
+  ]).catch(() => {}));
   // 每天前 10 則用 LINE 通知管理者（主動推播有每月上限，其餘傳「回饋」查）
-  if (env.LINE_TOKEN && env.LINE_TO && list.length <= 10) {
+  if (env.LINE_TOKEN && env.LINE_TO && n < 10) {
     const info = e.ctx ? `\nv${e.ctx.v}・${e.ctx.device === 'mobile' ? '手機' : '電腦'}・${e.ctx.lang === 'en' ? '英文' : '中文'}${e.ctx.view ? `・${e.ctx.view}` : ''}` : '';
     ctx.waitUntil(send(env, [env.LINE_TO], `💬 台灣光脈動 意見回饋（${FB_KIND[e.kind]}）\n${text}${e.contact ? `\n聯絡：${e.contact}` : ''}${info}\n\n傳「回饋」看最近 7 天`).catch(() => {}));
   }
   return json({ ok: true });
 }
 
+async function sha256Hex(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].slice(0, 12).map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
 async function feedbackSummary(env, days) {
   const out = [];
   for (let i = 0; i < days && out.length < 15; i++) {
     const day = new Date(Date.now() + 8 * 3600e3 - i * 864e5).toISOString().slice(0, 10);
-    const list = (await env.NOTIFY.get(`fb:${day}`, 'json')) || [];
-    for (const e of list.slice().reverse()) {
+    // v8.6 起每則一個鍵 fb:日期:時間；v8.5 的舊資料是整天一個陣列 fb:日期
+    const keys = (await env.NOTIFY.list({ prefix: `fb:${day}:` })).keys.map((k) => k.name).sort().reverse();
+    const items = (await Promise.all(keys.slice(0, 15 - out.length).map((k) => env.NOTIFY.get(k, 'json')))).filter(Boolean);
+    const legacy = (await env.NOTIFY.get(`fb:${day}`, 'json')) || [];
+    for (const e of [...items, ...legacy.slice().reverse()]) {
       if (out.length >= 15) break;
-      out.push(`${day.slice(5)}［${FB_KIND[e.kind] || '其他'}］${e.text.slice(0, 120)}${e.contact ? `（${e.contact}）` : ''}`);
+      out.push(`${day.slice(5)}［${FB_KIND[e.kind] || '其他'}］${String(e.text).slice(0, 120)}${e.contact ? `（${e.contact}）` : ''}`);
     }
   }
   return out.length ? `💬 最近 ${days} 天意見回饋（新到舊）\n\n${out.join('\n\n')}` : `最近 ${days} 天沒有意見回饋`;

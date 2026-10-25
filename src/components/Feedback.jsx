@@ -16,7 +16,7 @@ export function FeedbackPanel({ view, onClose }) {
   const [text, setText] = useState('');
   const [contact, setContact] = useState('');
   const [withCtx, setWithCtx] = useState(true);
-  const [status, setStatus] = useState('idle'); // idle | sending | sent | error | fast
+  const [status, setStatus] = useState('idle'); // idle | sending | sent | error | fast | full
   const device = matchMedia('(pointer: coarse)').matches ? 'mobile' : 'desktop';
   const ctxText = [`v${APP.version}`, device === 'mobile' ? tx('手機', 'phone') : tx('電腦', 'desktop'), isEn() ? 'English' : '中文', view].filter(Boolean).join(tx('・', ' · '));
 
@@ -27,6 +27,7 @@ export function FeedbackPanel({ view, onClose }) {
       const body = { kind, text: text.trim(), contact: contact.trim() || null, ctx: withCtx ? { v: APP.version, device, lang: isEn() ? 'en' : 'zh', view: view || '' } : null };
       const r = await fetch(`${APP.relayUrl}/feedback`, { method: 'POST', body: JSON.stringify(body) });
       if (r.status === 429) { setStatus('fast'); return; }
+      if (r.status === 503 && (await r.json().catch(() => null))?.error === 'full') { setStatus('full'); return; }
       if (!r.ok) throw new Error(r.status);
       setStatus('sent');
     } catch { setStatus('error'); }
@@ -64,6 +65,7 @@ export function FeedbackPanel({ view, onClose }) {
         <span>{tx('一起送出版本與目前畫面，方便找問題', 'Include version and current view to help track it down')}<br /><span className="muted">{ctxText}</span></span>
       </label>
       {status === 'error' && <p className="fine fb-err">{tx('沒有送出去，請檢查網路後再試一次。', 'Couldn’t send — check your connection and try again.')}</p>}
+      {status === 'full' && <p className="fine fb-err">{tx('今天收到的回饋已經滿了，請明天再試。', 'Today’s feedback limit has been reached — please try again tomorrow.')}</p>}
       {status === 'fast' && <p className="fine fb-err">{tx('送得太快了，請過一分鐘再試。', 'Too fast — please wait a minute and try again.')}</p>}
       <div className="upd-btns fb-btns">
         <button className="primary" onClick={submit} disabled={text.trim().length < 2 || status === 'sending'}>{status === 'sending' ? tx('送出中…', 'Sending…') : tx('送出', 'Send')}</button>

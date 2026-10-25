@@ -168,7 +168,7 @@ export function BadgeToast({ toast, onDone }) {
   if (!toast) return null;
   const b = toast.badge;
   return (
-    <div className="badge-toast" key={toast.key} onClick={onDone}>
+    <div className="badge-toast" key={toast.key} role="status" onClick={onDone}>
       <div className="converge" style={{ '--c': rgb(b.color) }}>
         {Array.from({ length: 14 }, (_, i) => <i key={i} style={{ '--a': `${(i / 14) * 360}deg`, '--d': `${(i % 4) * 0.08}s` }} />)}
         <Medal badge={b} earned size={74} />
@@ -246,14 +246,14 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
       <input
         type="range" min="0" max={n - 1} step="0.01" value={replay.idx}
         onChange={(e) => setReplay((r) => ({ ...r, idx: Number(e.target.value), playing: false }))}
-        aria-label="回放時間"
+        aria-label={tx('回放時間', 'Replay time')}
       />
       <div className="speeds">
         {SPEEDS.map((s) => (
           <button key={s} className={replay.speed === s ? 'on' : ''} onClick={() => setReplay((r) => ({ ...r, speed: s }))}>{s}×</button>
         ))}
       </div>
-      <button className="icon-btn" onClick={() => setReplay((r) => ({ ...r, on: false, playing: false }))} aria-label="結束回放">{Icon.close}</button>
+      <button className="icon-btn" onClick={() => setReplay((r) => ({ ...r, on: false, playing: false }))} aria-label={tx('結束回放', 'Exit replay')}>{Icon.close}</button>
     </div>
   );
 }

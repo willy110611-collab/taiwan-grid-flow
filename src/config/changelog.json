@@ -1,6 +1,10 @@
 {
-  "version": "0.8.45",
+  "version": "0.8.46",
   "notesEn": [
+    "Background sound: if you left it on, one tap now brings it back (it sometimes took two)",
+    "Feedback only includes the plant you were viewing when you opened it",
+    "Plant cards open from search even without WebGL; today’s anomaly list resets after midnight",
+    "Screen-reader labels fixed for badge pop-ups, replay and the tour in English",
     "Update notes now appear in English in the English interface",
     "If Taipower's supply signal hasn't been refreshed for today yet, its date is shown and it is no longer used as current demand",
     "Badge fixes: several badges earned at once now show one after another; keeping the page open past midnight counts as a new day",
@@ -9,6 +13,10 @@
     "Time Traveler requires actually finishing a replay; plants opened from search or a shared link count toward Plant Dex"
   ],
   "notes": [
+    "背景音：上次開著的話，手機點一下畫面就會恢復（之前有時要按兩次）；iPhone 切回 App 後點一下也會繼續",
+    "意見回饋附上的「目前畫面」只寫打開回饋前正在看的電廠，不會帶到更早看過的",
+    "沒有 WebGL 的裝置也能從搜尋打開電廠卡；今日異常清單過了午夜會重新開始",
+    "徽章提示、回放、導覽在英文介面與讀屏軟體上的說明修正",
     "英文介面的更新說明改成英文",
     "台電供電燈號如果還是前一天發布的，會標出日期，也不再拿來當「目前用電」",
     "徽章修正：一次拿到多枚會依序跳出；開著網頁跨過午夜也算新的一天（連續觀測）",

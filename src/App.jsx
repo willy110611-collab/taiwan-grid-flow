@@ -5,6 +5,7 @@ import { useGridData } from './data/useGridData.js';
 import { useHighlights } from './data/useHighlights.js';
 import { useDayHistory, useYesterday, useRecords } from './data/history.js';
 import { useBadges } from './data/badges.js';
+import { PLANTS } from './config/geo.js';
 import { useAnomalies } from './data/useAnomalies.js';
 import { useAir, useSun, nearestStation } from './data/useAir.js';
 import { useHome, useNotify, townName } from './data/useHome.js';
@@ -183,7 +184,8 @@ export default function App() {
     }
     if (patch.openPlant) {
       // 搜尋、今日異常清單、分享連結：飛到電廠並打開電廠卡（手機先記住原本畫面，關卡片時回去）
-      const p = e?.plants.find((x) => x.id === patch.openPlant || x.name === patch.openPlant);
+      // 沒有 WebGL（引擎沒建起來）時仍可打開電廠卡，只是不飛過去
+      const p = (e?.plants || PLANTS).find((x) => x.id === patch.openPlant || x.name === patch.openPlant);
       if (e && p) {
         if (MOBILE) {
           const m = e.map;
