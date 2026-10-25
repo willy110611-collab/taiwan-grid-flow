@@ -342,10 +342,11 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <li>{tx('燃料分類照台電「今日電力資訊」：抽蓄水力（明潭、大觀二）與電池放電歸「儲能」，不算再生能源。', 'Fuel categories follow Taipower’s live data: pumped hydro (Mingtan, Taikuan II) and battery discharge count as “storage”, not renewables.')}</li>
             <li>{tx('全台發電＝台電各類別小計相加（含儲能放電）；與台電公布的目前用電相差通常不到 0.5%。', 'Total generation = sum of Taipower’s category subtotals (including storage discharge); it usually matches Taipower’s published demand within 0.5%.')}</li>
             <li>{tx('綠能＝太陽能＋風力＋水力＋其他再生能源（地熱、生質能）÷ 全台發電。', 'Green = solar + wind + hydro + other renewables (geothermal, biomass) ÷ total generation.')}</li>
+            <li>{tx('對不到電廠的出力：「其它購電太陽能／風力」等依各縣市裝置容量或風場比例分到地圖上的節點；汽電共生、電池放電沒有固定位置，只算進全台總量，不畫在地圖上。', 'Output that cannot be tied to a plant: lumped purchased solar and wind are spread over map nodes by county capacity or wind-farm share; cogeneration and battery discharge have no fixed location, so they count toward the national total but are not drawn.')}</li>
             <li>{tx('系統頻率：台電沒有公開即時值，畫面上標「模擬」的頻率只是示意。', 'System frequency: Taipower does not publish a live value; the frequency marked “sim” is illustrative only.')}</li>
           </ul>
           <p className="fine">
-            {tx('粒子數量與發電量成正比（每 100 MW 每秒 1 顆）；粒子的路線是示意，沿西部 345kV 走廊的大致走向，不代表實際輸電線位置。', 'Particle count is proportional to output (1 particle per second per 100 MW). Routes are illustrative, roughly following the western 345 kV corridor, not actual line locations.')}
+            {tx('粒子數量與發電量成正比（每 100 MW 每秒 1 顆）。路線預設沿真實輸電線（OpenStreetMap 345kV／161kV 的最短路徑，繞太遠時改用示意路線），也可在「更多 → 線路」改成示意光纖；實際電力潮流由台電調度決定，路線只表示電大致怎麼走。', 'Particle count is proportional to output (1 particle per second per 100 MW). By default particles follow real transmission lines (shortest path over OpenStreetMap 345/161 kV lines, falling back to a schematic route when the detour is too long); switch to schematic routes under More → Lines. Actual power flows are set by Taipower dispatch; routes only show roughly where power goes.')}
           </p>
         </div>
       )}
