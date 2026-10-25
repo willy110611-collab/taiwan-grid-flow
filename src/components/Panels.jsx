@@ -225,7 +225,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
             <dt>{tx('未來供電預測', 'Supply forecast')}</dt>
             <dd>{tx('台電「未來兩個月電力供需預測」（每 10 天一筆）。', 'Taipower two-month supply & demand forecast (one value every 10 days).')}</dd>
             <dt>{tx('電廠位置', 'Plant locations')}</dt>
-            <dd><a href="https://www.gem.wiki/" target="_blank" rel="noreferrer">Global Energy Monitor</a>{tx('、維基百科「台灣發電廠列表」；太陽能群與風場為所在縣市、風場約略中心。', ' and Wikipedia “List of power stations in Taiwan”; solar clusters and wind farms are placed at their county or approximate farm centre.')}</dd>
+            <dd><a href="https://www.gem.wiki/" target="_blank" rel="noreferrer">Global Energy Monitor</a>{tx('、維基百科「台灣發電廠列表」、OpenStreetMap（豐德、海湖、新桃、國光等民營燃氣電廠；火力、核能、離島電廠已和 OSM 交叉核對，相差 1.3 公里內；OSM 沒有綠島發電廠）；太陽能群與風場為所在縣市、風場約略中心。', ', Wikipedia “List of power stations in Taiwan” and OpenStreetMap (private gas plants such as Fong Der, Haihu, Hsintao and Kuokuang; thermal, nuclear and island plants cross-checked against OSM, all within 1.3 km; OSM has no Green Island plant); solar clusters and wind farms are placed at their county or approximate farm centre.')}</dd>
             <dt>{tx('核電廠現況', 'Nuclear plant status')}</dt>
             <dd>{NUCLEAR_SOURCES.map((s, i) => <span key={s.url}>{i ? '；' : ''}<a href={s.url} target="_blank" rel="noreferrer">{isEn() ? s.en : s.label}</a></span>)}{tx(`（整理於 ${NUCLEAR_VERIFIED}）。`, ` (as of ${NUCLEAR_VERIFIED}).`)}</dd>
             <dt>{tx('計畫性停電', 'Planned outages')}</dt>

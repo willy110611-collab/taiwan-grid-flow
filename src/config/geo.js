@@ -42,7 +42,7 @@ export const PLANTS = [
   { id: 'ow_yunneng',  name: '允能雲林離岸風場', en: 'Yunneng',             pos: [120.050, 23.800], match: /允湖|允西/, offshore: true },
 
   // ── 使用者指定的 6 個主節點 ──
-  { id: 'datan',    name: '大潭發電廠',   en: 'Datan',      pos: [121.047, 25.029], match: /大潭|海湖|新桃|國光|觀園|觀威/ },
+  { id: 'datan',    name: '大潭發電廠',   en: 'Datan',      pos: [121.047, 25.029], match: /大潭|觀園|觀威/ }, // 觀音一帶陸域風場；海湖、新桃、國光是不同電廠，另外列（v0.8.25 前曾併在這裡）
   { id: 'taichung', name: '台中發電廠',   en: 'Taichung',   pos: [120.481, 24.213], match: /台中|中火/ },
   { id: 'hsinta',   name: '興達發電廠',   en: 'Hsinta',     pos: [120.198, 22.856], match: /興達/ },
   { id: 'maanshan', name: '第三核能發電廠', en: 'Maanshan', pos: [120.751, 21.958], match: /核三|馬鞍山/ },
@@ -53,6 +53,11 @@ export const PLANTS = [
   { id: 'chiahui',  name: '嘉惠電廠', en: 'Chiahui', pos: [120.473, 23.532], match: /^嘉惠/ },
   // 協和發電廠（台電燃油，基隆中山區；位置：Wikipedia／Global Energy Monitor 25.1573, 121.7394；3、4 號機 2×500 MW）
   { id: 'hsiehho',  name: '協和發電廠', en: 'Hsieh-ho', pos: [121.739, 25.157], match: /^協和/ },
+  // 民營燃氣電廠（台電即時資料「民營電廠-燃氣」逐機組公布；位置：OpenStreetMap power=plant，2026-10-25 擷取）
+  { id: 'fengde',   name: '豐德電廠', en: 'Fong Der', pos: [120.356, 23.082], match: /^豐德/ },   // 森霸電力，台南新市
+  { id: 'haihu',    name: '海湖電廠', en: 'Haihu',    pos: [121.257, 25.116], match: /^海湖/ },   // 桃園蘆竹
+  { id: 'xintao',   name: '新桃電廠', en: 'Hsintao',  pos: [121.198, 24.814], match: /^新桃/ },   // 新竹關西
+  { id: 'kuokuang', name: '國光電廠', en: 'Kuokuang', pos: [121.342, 25.042], match: /^國光/ },   // 桃園
   // 彰濱：彰濱光、崙尾光、星崙光（彰濱工業區崙尾區，台電即時逐案公布）＋陸域風電
   { id: 'changbin', name: '彰濱風電 / 光電', en: 'Changbin', pos: [120.400, 24.110],
     match: /彰濱|彰工|彰品|王功|星彰|崙尾|星崙/, share: { wind: 0.62 } },
@@ -138,11 +143,11 @@ export const countyRegion = (name = '') => {
 
 /** 電廠所在供電區 */
 export const PLANT_REGION = {
-  datan: 'N', linkou: 'N', chinshan: 'N', kuosheng: 'N', hsiehho: 'N',
+  datan: 'N', linkou: 'N', chinshan: 'N', kuosheng: 'N', hsiehho: 'N', haihu: 'N', xintao: 'N', kuokuang: 'N',
   ow_formosa1: 'C', ow_formosa2: 'C', ow_zhongneng: 'C', ow_changfang: 'C', ow_gch12: 'C', ow_gch4: 'C', ow_tpc: 'C', ow_hailong: 'C', ow_yunneng: 'C',
   taichung: 'C', tunghsiao: 'C', mailiao: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
   sol_changhua: 'C', sol_yunlin: 'C', sol_taichung: 'C', sol_miaoli: 'C', sol_nantou: 'C', sol_taoyuan: 'N', sol_north: 'N', sol_kaohsiung: 'S', sol_east: 'E',
-  hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S', talin: 'S', chiahui: 'S',
+  hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S', talin: 'S', chiahui: 'S', fengde: 'S',
   hoping: 'E',
   penghu: 'X', kinmen: 'X', matsu: 'X', ludao: 'X', lanyu: 'X'
 };
