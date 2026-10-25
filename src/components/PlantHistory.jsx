@@ -1,0 +1,70 @@
+import { useEffect, useState } from 'react';
+import { FUELS } from '../config/energy.js';
+import { fmtMw, rgb } from './widgets.jsx';
+import { tx } from '../i18n.js';
+
+/**
+ * 電廠卡：過去發電量（台電「各機組過去發電量」data.gov.tw 37331，scripts/unit-history.mjs 產生）
+ *  ・每天一根柱子＝當天發電量；手指或滑鼠移到柱子上看那天的發電量與最高出力
+ *  ・只有台電自有機組 → 民營電廠、購電的再生能源不在資料裡（沒有資料的電廠不顯示這段）
+ */
+let loading = null;
+const load = () => (loading ||= fetch('./unit-history.json').then((r) => (r.ok ? r.json() : null)).catch(() => { loading = null; return null; }));
+
+const W = 300, H = 56;
+const gwh = (mwh) => (mwh >= 1000 ? `${(mwh / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} GWh` : `${fmtMw(mwh)} MWh`);
+const dayOf = (start, i) => new Date(Date.parse(start) + i * 864e5).toISOString().slice(0, 10);
+
+export function PlantHistory({ id, fuel }) {
+  const [data, setData] = useState(null);
+  const [pick, setPick] = useState(null);
+  useEffect(() => { let alive = true; load().then((d) => alive && setData(d)); return () => { alive = false; }; }, []);
+  useEffect(() => setPick(null), [id]);
+
+  const h = data?.plants?.[id];
+  if (!h) return null;
+  const total = h.e.reduce((a, v) => a + v, 0);
+  const color = rgb(FUELS[fuel]?.color || [110, 240, 190], 0.85);
+  const head = (
+    <div className="hl-k">{tx('過去發電量', 'Past generation')}<small className="muted">　{data.start.slice(5).replace('-', '/')}–{data.end.slice(5).replace('-', '/')}{tx('・台電自有機組', ' · Taipower-owned units')}</small></div>
+  );
+  if (total < 1) {
+    return <div className="life-sec plant-hist">{head}<p className="fine">{tx('這段期間沒有發電。', 'No generation in this period.')}</p></div>;
+  }
+  const max = Math.max(...h.e, 1);
+  const bw = W / h.e.length;
+  const sel = pick ?? h.e.reduce((b, v, i) => (v > h.e[b] ? i : b), 0); // 預設停在發電最多的那天
+  const onMove = (e) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    setPick(Math.max(0, Math.min(h.e.length - 1, Math.floor(((e.clientX - box.left) / box.width) * h.e.length))));
+  };
+  // 每月 1 日的刻度
+  const months = h.e.map((_, i) => dayOf(data.start, i)).map((d, i) => (d.endsWith('-01') ? { i, m: +d.slice(5, 7) } : null)).filter(Boolean);
+
+  return (
+    <div className="life-sec plant-hist">
+      {head}
+      <svg className="ph-chart" viewBox={`0 0 ${W} ${H + 14}`} onPointerMove={onMove} onPointerDown={onMove} role="img"
+        aria-label={tx(`三個月合計 ${gwh(total)}`, `3-month total ${gwh(total)}`)}>
+        {h.e.map((v, i) => {
+          const bh = (v / max) * H;
+          return <rect key={i} x={i * bw + 0.3} y={H - bh} width={Math.max(0.6, bw - 0.6)} height={bh} fill={color} opacity={i === sel ? 1 : 0.55} />;
+        })}
+        <line x1={(sel + 0.5) * bw} x2={(sel + 0.5) * bw} y1="0" y2={H} className="fs-cursor" />
+        {months.map(({ i, m }) => (
+          <text key={i} x={i * bw} y={H + 11} className="fs-ax">{tx(`${m} 月`, ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m])}</text>
+        ))}
+      </svg>
+      <p className="fs-read">
+        <span className="nw">{dayOf(data.start, sel).slice(5).replace('-', '/')}</span>{'　'}
+        <span className="nw">{tx('發電', 'Output')} <b>{gwh(h.e[sel])}</b></span>{'　'}
+        <span className="nw">{tx('最高', 'Peak')} <b>{fmtMw(h.pk[sel])}</b> MW</span>
+      </p>
+      <p className="fine">
+        {tx(`三個月合計 ${gwh(total)}，平均每天 ${gwh(total / h.e.length)}。`, `Three-month total ${gwh(total)}, ${gwh(total / h.e.length)} a day on average.`)}
+        {tx(`資料含台電自有 ${h.units.length} 部機組；民營電廠、購電的再生能源與之後才加入的機組不在這份資料裡。`, ` Covers ${h.units.length} Taipower-owned units; private plants, purchased renewables and units added later are not included.`)}
+        {' '}<a href={data.url} target="_blank" rel="noreferrer">{tx('台電：各機組過去發電量', 'Taipower: past generation by unit')}</a>
+      </p>
+    </div>
+  );
+}

@@ -8,6 +8,7 @@ import { solarSun } from '../data/parseGenary.js';
 import { windText } from './Life.jsx';
 import { useT, isEn, tx, tr } from '../i18n.js';
 import { twHM } from '../data/history.js';
+import { PlantHistory } from './PlantHistory.jsx';
 import { shareLink, plantLink } from '../share.js';
 import { NuclearStatus } from './Nuclear.jsx';
 import { NUCLEAR } from '../config/nuclear.js';
@@ -95,6 +96,8 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
       )}
 
       <NuclearStatus id={id} />
+
+      <PlantHistory id={id} fuel={mix[0]?.[0] || cfg.fuel} />
 
       <div className="life-sec">
         <div className="hl-k">{units.length ? `${t('台電即時機組')}（${units.length}）` : t('資料來源')}</div>
