@@ -63,6 +63,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
         <div><b>{fmtMw(mw)}</b> <small>MW</small></div>
         <span className="muted">{isEn() ? cfg.name : cfg.en}</span>
       </div>
+      {cfg.op && <p className="fine plant-op">{tx(`經營：${cfg.op}（OpenStreetMap）`, `Operator: ${cfg.op} (OpenStreetMap)`)}</p>}
       {showCap && (
         <p className="fine plant-cap">
           {tx(`裝置容量 ${fmtMw(cap)} MW・目前運轉 ${capPct}%`, `Capacity ${fmtMw(cap)} MW · running at ${capPct}%`)}

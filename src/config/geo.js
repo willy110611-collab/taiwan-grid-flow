@@ -53,13 +53,13 @@ export const PLANTS = [
   { id: 'chiahui',  name: '嘉惠電廠', en: 'Chiahui', pos: [120.473, 23.532], match: /^嘉惠/ },
   // 協和發電廠（台電燃油，基隆中山區；位置：Wikipedia／Global Energy Monitor 25.1573, 121.7394；3、4 號機 2×500 MW）
   { id: 'hsiehho',  name: '協和發電廠', en: 'Hsieh-ho', pos: [121.739, 25.157], match: /^協和/ },
-  // 民營燃氣電廠（台電即時資料「民營電廠-燃氣」逐機組公布；位置：OpenStreetMap power=plant，2026-10-25 擷取）
-  { id: 'fengde',   name: '豐德電廠', en: 'Fong Der', pos: [120.356, 23.082], match: /^豐德/ },   // 森霸電力，台南新市
+  // 民營燃氣電廠（台電即時資料「民營電廠-燃氣」逐機組公布；位置與經營者 op：OpenStreetMap power=plant，2026-10-25 擷取）
+  { id: 'fengde',   name: '豐德電廠', en: 'Fong Der', pos: [120.356, 23.082], match: /^豐德/, op: '森霸電力公司' },   // 森霸電力，台南新市
   { id: 'haihu',    name: '海湖電廠', en: 'Haihu',    pos: [121.257, 25.116], match: /^海湖/ },   // 桃園蘆竹
-  { id: 'xintao',   name: '新桃電廠', en: 'Hsintao',  pos: [121.198, 24.814], match: /^新桃/ },   // 新竹關西
-  { id: 'kuokuang', name: '國光電廠', en: 'Kuokuang', pos: [121.342, 25.042], match: /^國光/ },   // 桃園
-  { id: 'xingyuan', name: '星元電廠', en: 'Star Buck', pos: [120.421, 24.129], match: /^星元/ },   // 彰化彰濱工業區
-  { id: 'xingneng', name: '星能彰濱電廠', en: 'Star Energy Changbin', pos: [120.432, 24.127], match: /^星彰/ },   // 星能公司，彰化彰濱工業區（OSM「彰濱電廠」）
+  { id: 'xintao',   name: '新桃電廠', en: 'Hsintao',  pos: [121.198, 24.814], match: /^新桃/, op: '新桃電力公司' },   // 新竹關西
+  { id: 'kuokuang', name: '國光電廠', en: 'Kuokuang', pos: [121.342, 25.042], match: /^國光/, op: '國光電力公司' },   // 桃園
+  { id: 'xingyuan', name: '星元電廠', en: 'Star Buck', pos: [120.421, 24.129], match: /^星元/, op: '星元電力' },   // 彰化彰濱工業區
+  { id: 'xingneng', name: '星能彰濱電廠', en: 'Star Energy Changbin', pos: [120.432, 24.127], match: /^星彰/, op: '星能公司' },   // 星能公司，彰化彰濱工業區（OSM「彰濱電廠」）
   // 彰濱：彰濱光、崙尾光、星崙光（彰濱工業區崙尾區，台電即時逐案公布）＋陸域風電
   { id: 'changbin', name: '彰濱風電 / 光電', en: 'Changbin', pos: [120.400, 24.110],
     match: /彰濱|彰工|彰品|王功|崙尾|星崙/, share: { wind: 0.62 } }, // 星彰（星能燃氣）另外列
@@ -84,7 +84,7 @@ export const PLANTS = [
   // 位置：Global Energy Monitor（NanPu / Talin power station）；南部、大林相距約 7 公里，分開兩點
   { id: 'nanbu',    name: '南部發電廠', en: 'Nanbu', pos: [120.299, 22.601], match: /南部CC/ }, // 「南部小水力」是彙總列，不屬於這座電廠
   { id: 'talin',    name: '大林發電廠', en: 'Talin', pos: [120.329, 22.537], match: /大林/ },
-  { id: 'hoping',   name: '和平電廠',     en: 'Ho-Ping',    pos: [121.755, 24.300], match: /和平/ },
+  { id: 'hoping',   name: '和平電廠',     en: 'Ho-Ping',    pos: [121.755, 24.300], match: /和平/, op: '和平電力股份有限公司' },
   { id: 'miaoli',   name: '苗栗風場', en: 'Miaoli Wind', pos: [120.780, 24.640], match: /苗栗|大鵬/, share: { wind: 0.20 } },
   { id: 'mingtan',  name: '明潭 / 大觀抽蓄', en: 'Sun Moon Lake Hydro', pos: [120.865, 23.835], match: /明潭|大觀|日月潭/, share: { hydro: 0.62 } },
   // ── 離島（獨立電網，不與本島相連；電只在島內流動）──
