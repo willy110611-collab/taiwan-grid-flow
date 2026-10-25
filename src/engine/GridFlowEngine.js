@@ -561,13 +561,8 @@ export class GridFlowEngine {
         const subNames = this.memo('subNames', net, () => net.subs
           .map((d) => ({ pos: d.pos, text: (d.name || '').replace(/\(E\/S\)|\s/g, '').replace('超高壓變電所', '變電所').replace('超高壓開閉所', '開閉所') }))
           .filter((d) => /變電所|開閉所/.test(d.text)));
-        // 選取中的電廠標籤附近（畫面 150 px 內）不標變電所，避免字疊在一起
-        const hp = this.hover.id && this.plants.find((p) => p.id === this.hover.id);
-        const c = this.map.getCenter();
-        const shownSubs = !hp ? subNames : this.memo('subShown', `${hp.id}|${z.toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${this.map.getBearing().toFixed(0)}|${this.map.getPitch().toFixed(0)}`, () => {
-          const a = this.map.project(hp.pos);
-          return subNames.filter((d) => { const b = this.map.project(d.pos); return Math.hypot(a.x - b.x, a.y - b.y) > 150; });
-        });
+        // 電廠標籤範圍內不標變電所，避免字疊在一起
+        const shownSubs = this.clearOfLabel('subShown', subNames);
         layers.push(new TextLayer({
           id: 'net-sub-names', data: shownSubs, getPosition: (d) => d.pos, getText: (d) => d.text,
           getColor: [200, 220, 255, 150], getSize: 10, getPixelOffset: [0, -9], getAlignmentBaseline: 'bottom',
@@ -897,15 +892,8 @@ export class GridFlowEngine {
     // ⑧ 融入地圖的文字：負載點名稱（極淡） + hover 電廠標籤（淡入）
     // 手機的用電視角只標主要城市（離島與小負載點只留名字），避免數字擠成一團
     let loadData = window.innerWidth < 700 && dm > 0.5 ? this.loads.filter((l) => !l.island && (l.demand || 0) >= 0.1) : this.loads;
-    // 一般視角選取電廠時：標籤附近（畫面 150 px 內）的地名先不標，避免和電廠標籤疊字
-    const hpl = dm < 0.5 && this.hover.id && this.plants.find((p) => p.id === this.hover.id);
-    if (hpl) {
-      const c = this.map.getCenter(), base = loadData;
-      loadData = this.memo('loadShown', `${hpl.id}|${this.map.getZoom().toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${this.map.getBearing().toFixed(0)}|${this.map.getPitch().toFixed(0)}`, () => {
-        const a = this.map.project(hpl.pos);
-        return base.filter((d) => { const b = this.map.project(d.pos); return Math.hypot(a.x - b.x, a.y - b.y) > 150; });
-      });
-    }
+    // 一般視角選取電廠時：電廠標籤範圍內的地名先不標（用電視角的地名帶用電量，照常顯示）
+    if (dm < 0.5) loadData = this.clearOfLabel('loadShown', loadData);
     layers.push(new TextLayer({
       id: 'load-names',
       data: loadData,
@@ -1029,6 +1017,18 @@ export class GridFlowEngine {
   }
 
   /** 小快取：key 沒變就回傳上次的結果（讓每幀重建的圖層拿到同一個 data 陣列，deck.gl 就不用重新排版文字） */
+  /** 電廠標籤（畫在電廠點右側，約 x −40～+260、y −40～+90 px）範圍內的文字先拿掉；標籤淡出期間也算 */
+  clearOfLabel(name, items) {
+    const id = this.hover.id || (this.hover.alpha > 0.3 ? this.hover.shownId : null);
+    const hp = id && this.plants.find((p) => p.id === id);
+    if (!hp) return items;
+    const m = this.map, c = m.getCenter();
+    return this.memo(name, `${hp.id}|${m.getZoom().toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${m.getBearing().toFixed(0)}|${m.getPitch().toFixed(0)}|${items.length}`, () => {
+      const a = m.project(hp.pos);
+      return items.filter((d) => { const b = m.project(d.pos), dx = b.x - a.x, dy = b.y - a.y; return !(dx > -40 && dx < 260 && dy > -40 && dy < 90); });
+    });
+  }
+
   memo(name, key, fn) {
     const c = (this.memoCache ||= {})[name];
     if (c && c.key === key) return c.val;
