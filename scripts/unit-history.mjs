@@ -31,8 +31,9 @@ for (const r of rec.NET_P) {
   seen.add(key);
   const p = PLANTS.find((x) => x.match && x.match.test(r.UNIT_NAME));
   if (!p) { unmatched.add(r.UNIT_NAME); continue; }
-  const P = (plants[p.id] ||= { units: new Set(), e: new Array(days).fill(0), at: new Map() });
+  const P = (plants[p.id] ||= { units: new Set(), e: new Array(days).fill(0), at: new Map(), f: {} });
   P.units.add(r.UNIT_NAME);
+  P.f[r.FUEL_TYPE] = (P.f[r.FUEL_TYPE] || 0) + v / 6; // 各燃料別合計（例如核能電廠裡的燃油氣渦輪機、太陽能）
   P.e[dayIdx(r.DATETIME)] += v / 6; // 10 分鐘 → MWh
   P.at.set(r.DATETIME, (P.at.get(r.DATETIME) || 0) + v);
 }
@@ -47,7 +48,8 @@ const out = {
 for (const [id, P] of Object.entries(plants)) {
   const pk = new Array(days).fill(0);
   for (const [t, mw] of P.at) { const i = dayIdx(t); if (mw > pk[i]) pk[i] = mw; }
-  out.plants[id] = { units: [...P.units].sort(), e: P.e.map(Math.round), pk: pk.map(Math.round) };
+  const f = Object.fromEntries(Object.entries(P.f).map(([k, v]) => [k, Math.round(v)]));
+  out.plants[id] = { units: [...P.units].sort(), f, e: P.e.map(Math.round), pk: pk.map(Math.round) };
 }
 fs.writeFileSync('public/unit-history.json', JSON.stringify(out));
 console.log(`  略過重複資料 ${dup.toLocaleString()} 筆`);

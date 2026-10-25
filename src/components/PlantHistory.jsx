@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { FUELS } from '../config/energy.js';
 import { fmtMw, rgb } from './widgets.jsx';
 import { tx } from '../i18n.js';
+import { NUCLEAR_IDS } from '../config/nuclear.js';
 
 /**
  * 電廠卡：過去發電量（台電「各機組過去發電量」data.gov.tw 37331，scripts/unit-history.mjs 產生）
@@ -13,6 +14,8 @@ const load = () => (loading ||= fetch('./unit-history.json').then((r) => (r.ok ?
 
 const W = 300, H = 56;
 const gwh = (mwh) => (mwh >= 1000 ? `${(mwh / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} GWh` : `${fmtMw(mwh)} MWh`);
+// 原檔的燃料別名稱 → 英文
+const FUEL_EN = { 核能: 'nuclear', 燃煤: 'coal', 燃氣: 'gas', 燃油: 'oil', 輕油: 'light oil (gas turbines)', 水力: 'hydro', 抽蓄發電: 'pumped hydro', 風力: 'wind', 太陽能: 'solar', 汽電共生: 'cogeneration', 儲能: 'storage' };
 const dayOf = (start, i) => new Date(Date.parse(start) + i * 864e5).toISOString().slice(0, 10);
 
 export function PlantHistory({ id, fuel }) {
@@ -31,6 +34,10 @@ export function PlantHistory({ id, fuel }) {
   if (total < 1) {
     return <div className="life-sec plant-hist">{head}<p className="fine">{tx('這段期間沒有發電。', 'No generation in this period.')}</p></div>;
   }
+  const fuels = Object.entries(h.f || {}).filter(([, v]) => v >= 1).sort((a, b) => b[1] - a[1]);
+  const nuke = NUCLEAR_IDS.includes(id);
+  const nukeIdle = nuke && !(h.f?.['核能'] >= 1); // 核能電廠：停機期間只剩廠內燃油氣渦輪機、太陽能
+  const mixLine = fuels.length > 1 || nuke ? fuels.map(([k, v]) => `${tx(k, FUEL_EN[k] || k)} ${gwh(v)}`).join(tx('・', ' · ')) : '';
   const max = Math.max(...h.e, 1);
   const bw = W / h.e.length;
   const sel = pick ?? h.e.reduce((b, v, i) => (v > h.e[b] ? i : b), 0); // 預設停在發電最多的那天
@@ -60,6 +67,7 @@ export function PlantHistory({ id, fuel }) {
         <span className="nw">{tx('發電', 'Output')} <b>{gwh(h.e[sel])}</b></span>{'　'}
         <span className="nw">{tx('最高', 'Peak')} <b>{fmtMw(h.pk[sel])}</b> MW</span>
       </p>
+      {mixLine && <p className="fine">{tx('組成：', 'By fuel: ')}{mixLine}{nukeIdle ? tx('。核能機組這段期間沒有發電，圖中是廠內其他機組。', '. The nuclear units did not run in this period; the chart shows the other units on site.') : ''}</p>}
       <p className="fine">
         {tx(`三個月合計 ${gwh(total)}，平均每天 ${gwh(total / h.e.length)}。`, `Three-month total ${gwh(total)}, ${gwh(total / h.e.length)} a day on average.`)}
         {tx(`資料含台電自有 ${h.units.length} 部機組；民營電廠、購電的再生能源與之後才加入的機組不在這份資料裡。`, ` Covers ${h.units.length} Taipower-owned units; private plants, purchased renewables and units added later are not included.`)}
