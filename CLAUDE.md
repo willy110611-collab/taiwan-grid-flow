@@ -54,6 +54,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 ### 其他
 - 英文介面：空品測站名（「我的家」測站選單）仍是中文——環境部 aqx_p_432 沒有英文站名；要英文需中繼站另抓測站基本資料 aqx_p_07 的 siteengname（要部署中繼站）。機組名只在開頭是電廠主名稱時換英文（geo.js `unitName`），水力節點與其他小站照原文。
 - loadpara.json 另有 `yday_*`（昨日尖峰用電、備轉）與 `real_hr_maxi_sply_capacity`（今日實際最大供電能力），網頁目前沒用。
+- 安全（2026-10-27 npm audit）：maplibre-gl 5.6 有署名控制項 XSS 公告 GHSA-jrc7-96c5-q579（修正在 6.4.1）。只在署名字串來自外部時才會被利用；本站署名都寫死在 baseStyle.js 等程式內 → 目前不受影響。升 6.x 是大版本，要另外測地圖、deck.gl 疊圖後再做。
 - 首次載入最大宗是字型（Noto Sans TC 300＋400 約 0.9 MB），其次 maplibre 255 KB、deck.gl 221 KB（gzip）。
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
 - CEMS：中繼站沒有漏資料，環境部 aqx_p_187 本身時常缺台中、興達、麥寮汽電（2026-10-25 02:00 查證）。
