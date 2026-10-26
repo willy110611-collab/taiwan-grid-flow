@@ -1,4 +1,4 @@
-import { isEn } from '../i18n.js';
+import { isEn, tr } from '../i18n.js';
 
 // ─────────────────────────────────────────────────────────────
 //  地理靜態資料：發電節點（Source）、都市負載點（Target）、西部骨幹
@@ -27,6 +27,20 @@ const kw = (...cs) => cs.reduce((a, c) => a + SOLAR_COUNTY_KW[c], 0) / 1e6; // �
 
 /** 電廠顯示名稱：英文介面用 en */
 export const plantName = (p) => (isEn() && p?.en ? p.en : p?.name);
+// 機組名（台電原文，例「台中新CC#1-2」）：英文介面只在開頭正好是這座電廠的主要名稱（match 的第一個詞）時換成英文名，
+// 其他（例如德基電廠底下的「天輪」）沒有可靠英文名就照原文（字典有的詞照 tr 翻）
+export function unitName(unit, p) {
+  if (!isEn() || !unit) return unit || '';
+  if (!p?.en || !p.match || p.share?.hydro) return tr(unit); // 水力節點是多座電站合成（例如明潭／大觀），英文名不代表單一電站
+  const head = unit.match(/^[\u4e00-\u9fff]+/)?.[0];
+  const key = p.match.source.replace(/^\^/, '').split('|')[0].match(/^[\u4e00-\u9fff]+/)?.[0];
+  if (!head || !key || !head.startsWith(key)) return tr(unit);
+  const rest = head.slice(key.length);
+  const extra = rest === '' || rest === '廠' ? '' : rest === '新' ? ' New' : null;
+  if (extra === null) return tr(unit);
+  const tail = unit.slice(head.length);
+  return `${p.en}${extra}${tail ? ' ' : ''}${tail}`;
+}
 
 export const PLANTS = [
   // ── 離岸風場：台電每 10 分鐘公布「每個風場」的即時淨發電量，各自一個光點（位置為風場約略中心）──

@@ -1,7 +1,7 @@
 import { Panel } from './Panels.jsx';
 import { useState } from 'react';
 import { fmtMw, rgb, Sparkline, Icon } from './widgets.jsx';
-import { PLANTS, SOLAR_COUNTY_KW, plantName } from '../config/geo.js';
+import { PLANTS, SOLAR_COUNTY_KW, plantName, unitName } from '../config/geo.js';
 import { FUELS } from '../config/energy.js';
 import { nearestWind } from '../data/useAir.js';
 import { solarSun } from '../data/parseGenary.js';
@@ -122,7 +122,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
               const tone = NOTE_TONE.find(([re]) => re.test(u.note))?.[1];
               return (
                 <li key={u.unit}>
-                  <span className="u-name">{u.unit}</span>
+                  <span className="u-name">{unitName(u.unit, cfg)}</span>
                   <span className="u-bar"><i style={{ width: `${(pct ?? 0) * 100}%`, background: rgb(FUELS[u.fuel]?.color || [200, 200, 200]) }} /></span>
                   <span className="u-mw">{fmtMw(Math.max(0, u.mw))}{u.capacity > 0 ? <small> / {fmtMw(u.capacity)}</small> : null}</span>
                   {u.note && u.note.trim() && <em className={`tag ${tone || ''}`}>{tr(u.note)}</em>}

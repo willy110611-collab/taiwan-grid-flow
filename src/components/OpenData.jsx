@@ -13,9 +13,17 @@ import {
 
 const n0 = (v) => Math.round(v).toLocaleString();
 const md = (ymd) => `${Number(ymd.slice(5, 7))}/${Number(ymd.slice(8, 10))}`;
+// 資料集名稱（建置時寫進 JSON 的是中文原名）→ 英文介面用的說明，以 data.gov.tw 編號對應
+const SRC_EN = {
+  26144: 'Taipower planned work outages',
+  29936: 'Taipower renewable purchases by county',
+  19995: 'Taipower historical supply & demand',
+  14135: 'Taipower household electricity use by township',
+};
+const srcName = (data) => (isEn() && SRC_EN[data?.sourceUrl?.match(/dataset\/(\d+)/)?.[1]]) || data?.source;
 const Src = ({ data, extra }) => (
   <p className="fine src-line">
-    {tx('資料：', 'Source: ')}{data?.sourceUrl ? <a href={data.sourceUrl} target="_blank" rel="noreferrer">{data.source}</a> : data?.source || '—'}
+    {tx('資料：', 'Source: ')}{data?.sourceUrl ? <a href={data.sourceUrl} target="_blank" rel="noreferrer">{srcName(data)}</a> : data?.source || '—'}
     {extra ? <>{tx('。', '. ')}{extra}</> : null}
   </p>
 );

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
-import { PLANTS, plantName } from '../config/geo.js';
+import { PLANTS, plantName, unitName } from '../config/geo.js';
 import { FUELS } from '../config/energy.js';
 import { t, tx, tr, useT } from '../i18n.js';
 import { shareLink, viewLink } from '../share.js';
@@ -107,7 +107,7 @@ export function FinderPanel({ snapshot, onOpen, getView, onClose }) {
                     <span className="issue-units">
                       {g.list.map((u) => (
                         <em key={u.unit} className={`note ${u.kind.tone}`}>
-                          {tr(u.unit)} <small>{fmtMw(u.mw)}/{fmtMw(u.capacity || 0)} MW</small> {tr(u.note)}
+                          {unitName(u.unit, PLANTS.find((p) => p.id === u.plantId))} <small>{fmtMw(u.mw)}/{fmtMw(u.capacity || 0)} MW</small> {tr(u.note)}
                         </em>
                       ))}
                     </span>

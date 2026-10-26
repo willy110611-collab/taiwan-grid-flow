@@ -11,7 +11,7 @@ import { SUPPLY_LEVELS } from '../data/parseAux.js';
 import { billCompare } from '../data/advice.js';
 import { t, tx, tr, isEn, useT } from '../i18n.js';
 import { OutageSection, TownCompare } from './OpenData.jsx';
-import { pushExtra } from '../data/openData.js';
+import { pushExtra, countyName } from '../data/openData.js';
 
 const DIRS = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
 const DIRS_EN = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -325,7 +325,7 @@ function LocationPicker({ home, setHome, stations = [], onPick, setMsg }) {
         >
           <option value="">{tx(`或從 ${stations.length} 個空品測站選…`, `Or choose from ${stations.length} air stations…`)}</option>
           {byCounty.map(([county, list]) => (
-            <optgroup key={county} label={county}>
+            <optgroup key={county} label={countyName(county, isEn())}>
               {list.map((s) => <option key={s.site} value={s.site}>{s.site}</option>)}
             </optgroup>
           ))}
