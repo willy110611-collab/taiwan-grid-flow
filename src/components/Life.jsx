@@ -282,7 +282,7 @@ function LocationPicker({ home, setHome, stations = [], onPick, setMsg }) {
     const key = q.trim().replace(/臺/g, '台');
     if (!key) return [];
     const st = stations.filter((s) => s.site.replace(/臺/g, '台').includes(key))
-      .slice(0, 4).map((s) => ({ name: `${s.site}測站`, sub: s.county, pos: [s.lng, s.lat] }));
+      .slice(0, 4).map((s) => ({ name: tx(`${s.site}測站`, `${s.site} station`), sub: countyName(s.county, isEn()), pos: [s.lng, s.lat] }));
     return [...searchTowns(key, 8 - st.length).map((t) => ({ ...t, sub: '' })), ...st];
   }, [q, stations]);
   const byCounty = useMemo(() => {
