@@ -179,7 +179,9 @@ export class GridFlowEngine {
         const exact = id && info.object?.pos && (() => { const q = this.map.project(info.object.pos); return Math.hypot(q.x - info.x, q.y - info.y) < 8; })();
         if (id && !exact && !CAN_HOVER && this.map?.getZoom() < 9) { // 正好點在某個光點上就尊重使用者的選擇
           const hits = this.overlay.pickMultipleObjects({ x: info.x, y: info.y, radius: 4, layerIds: ['pick'] });
-          const best = hits.map((h) => h.object).filter(Boolean).sort((a, b) => (b.mw || 0) - (a.mw || 0))[0];
+          // 出力相同（例如兩座都停機 0 MW）時選離手指最近的，不要跳到隔壁那座
+          const dist = (o) => { const q = this.map.project(o.pos); return Math.hypot(q.x - info.x, q.y - info.y); };
+          const best = hits.map((h) => h.object).filter(Boolean).sort((a, b) => (b.mw || 0) - (a.mw || 0) || dist(a) - dist(b))[0];
           if (best) id = best.id;
         }
         this.setHover(id);
