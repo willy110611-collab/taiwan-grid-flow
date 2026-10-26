@@ -1,1 +1,0 @@
-{"url":"/openapi/swagger/v1/swagger.json","statusCode":404,"statusMessage":"Page not found: /openapi/swagger/v1/swagger.json","message":"Page not found: /openapi/swagger/v1/swagger.json","stack":"","data":{"path":"/openapi/swagger/v1/swagger.json"}}

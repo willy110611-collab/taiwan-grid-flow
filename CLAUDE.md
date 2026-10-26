@@ -63,6 +63,11 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 英國 Elexon：`data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST`（燃料別 5 分鐘）、`PN/stream`（逐機組計畫值，40 分鐘約 1.1 MB）、`B1610`（實測，約晚 5 天）、`reference/bmunits/all`（有 GSP 區，無座標）；全部 CORS *。NESO `api.carbonintensity.org.uk/regional` 有 14 區發電組成。
 - 法國 RTE éCO2mix（odre.opendatasoft.com）CORS *。
 
+### 自來水版評估（2026-10-26 用一次性 Actions 實測，待使用者決定）
+- 海外（GitHub Actions）可直接讀：台水 `www.water.gov.tw/opendata/*.csv`（淨水場位置與供水轄區 supp7.csv＝data.gov.tw 36602，TWD97；水質 qual9.csv；供水系統月資料 syst8.csv）、data.gov.tw API、水利署 opendata.wra.gov.tw（枯旱預警 36695、曾文 32733、高屏堰 143020 等 `/api/v2/{id}?format=JSON`）。
+- 管線真實座標：只有臺南（data.gov.tw 122507 給水管線）、臺北（data.taipei 自來水系統管線）、桃園（opendata.tycg.gov.tw）以開放資料公開，註明「僅供參考」；其他縣市沒有。OSM 台灣：water_works 約 190、水塔約 260、水管 pipeline 131 條。
+- 沒有：即時用水量／水壓、停水公告 API（6050 疑似停更）、水情燈號 API。
+
 ### 可加的資料（2026-10-25 研究，免費優先；網址待在台灣網路確認）
 1. ~~台電各機組過去發電量（37331）~~（只有台電自有機組，v0.8.22 用在電廠卡「過去發電量」）。
 2. ~~OSM 超高壓線路與變電所~~（v0.8.19 已做，「更多 → 線路」可切回示意光纖）。
