@@ -998,7 +998,7 @@ button:not(:disabled):active { transform: scale(0.95); }
 .mode-switch button { font: inherit; font-size: 12px; letter-spacing: 0.14em; color: var(--ink-dim); background: none; border: 0; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
 .mode-switch button.on { color: #03131c; background: rgb(110, 240, 190); box-shadow: 0 0 14px rgba(110, 240, 190, 0.35); }
 .mode-switch button.on.water { background: #5fd4ff; box-shadow: 0 0 16px rgba(95, 212, 255, 0.45); }
-@media (min-width: 1001px) { .hud .filters { top: calc(64px + var(--safe-t)); } } /* 桌面：能源篩選排在電／水切換下面 */
+@media (min-width: 1001px) { .hud:has(.mode-switch) .filters { top: calc(64px + var(--safe-t)); } } /* 桌面：能源篩選排在電／水切換下面 */
 .water-mode .mix:not(.water-stats), .water-mode .home-card, .water-mode .alert-banner, .water-mode .data-issue,
 .water-mode .sourceline:not(.w-src), .water-mode .cruise-caption, .water-mode .reset-view { display: none !important; }
 .mix-value.water { color: #5fd4ff; }

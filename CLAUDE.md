@@ -66,6 +66,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 法國 RTE éCO2mix（odre.opendatasoft.com）CORS *。
 
 ### 💧 水模式（v0.8.51 起）
+- **2026-10-26 使用者決定先不開放**：`src/config/app.js` 的 `water: false` → 不顯示切換、強制電力模式；開發測試用 `?water=1`（冒煙測試也用它）。要開放就改 `water: true`。
 - 切換：上方 `ModeSwitch`（網址 `?mode=water`、localStorage `tgf-mode`）。`engine.setWater(on)` 清空 deck 圖層、停粒子與各區熱度、maxZoom 12→17。水的圖層是 MapLibre 原生圖層：`src/water/waterMap.js`；介面：`src/water/WaterHud.jsx`（右上總覽、圖層開關、圖例、點選卡、水庫清單、停水連結）。
 - 靜態資料 `public/water/`（`scripts/water/build-static.py`，由 `.github/workflows/water-static.yml` 在 Actions 跑；手動執行可選 `plants reservoirs taipei`，推到分支只重跑水庫）：
   - `plants.json`：台水淨水場 36602（supp7.csv，TWD97→WGS84），每年。

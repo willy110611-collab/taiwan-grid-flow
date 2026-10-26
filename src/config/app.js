@@ -16,5 +16,7 @@ export const APP = {
   ],
   // 颱風停電（D2）：台電 psvs1 擋海外主機、也不給跨網站讀取，暫停使用；有新的資料來源再改成 true
   typhoon: false,
+  // 💧 水模式：整理完成前不對使用者開放（false＝不顯示電／水切換；開發測試用網址 ?water=1）
+  water: false,
   taipowerPage: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html'
 };

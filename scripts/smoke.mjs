@@ -34,7 +34,7 @@ try {
     // SMOKE_OFFLINE=1：本機沒有外網時擋掉外部請求（地圖圖磚、中繼站），只測程式本身
     if (process.env.SMOKE_OFFLINE) await page.route('**/*', (r) => (r.request().url().startsWith('http://127.0.0.1') ? r.continue() : r.abort()));
     page.on('pageerror', (e) => errors.push(`${tag} 程式錯誤：${e.message}`));
-    await page.goto(`http://127.0.0.1:${PORT}/?sim=1&density=0.2&fps=10`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`http://127.0.0.1:${PORT}/?sim=1&density=0.2&fps=10&water=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.toolbar', { timeout: 30000 });
     await sleep(3000);
     for (const label of LABELS[lang]) {
@@ -55,8 +55,7 @@ try {
     }
     // 水模式：切過去、打開水庫與停水面板、再切回電
     const sw = page.locator('.mode-switch button').nth(1);
-    if (!(await sw.count())) errors.push(`${tag} 找不到電／水切換`);
-    else {
+    if (await sw.count()) { // 水模式開放（APP.water）時才有切換
       await sw.click();
       await sleep(2500);
       if (!(await page.locator('.hud.water-mode').count())) errors.push(`${tag} 切到水模式失敗`);

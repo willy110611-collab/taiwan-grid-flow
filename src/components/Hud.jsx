@@ -112,7 +112,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
 
   return (
     <div className={`hud ${wallpaper ? 'is-wallpaper' : ''} ${W ? 'water-mode' : ''}`}>
-      {!wallpaper && waterUi && <ModeSwitch water={W} onChange={(on) => { setMore(false); waterUi.setWater(on); }} />}
+      {!wallpaper && waterUi?.enabled && <ModeSwitch water={W} onChange={(on) => { setMore(false); waterUi.setWater(on); }} />}
       <header className="brand">
         <div className="brand-zh">台灣光脈動</div>
         <div className="brand-en">TAIWAN GRID FLOW</div>

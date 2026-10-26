@@ -83,7 +83,9 @@ export default function App() {
   const { home, setHome } = useHome();
   // ── 水模式（電／水切換）：網址 ?mode=water 或上次的選擇 ──
   const [engineReady, setEngineReady] = useState(0);
+  const WATER_ON = APP.water || params.has('water'); // 水模式暫不開放；?water=1 給開發測試
   const [water, setWater] = useState(() => {
+    if (!WATER_ON) return false;
     const m = params.get('mode');
     if (m === 'water' || m === 'power') return m === 'water';
     try { return localStorage.getItem('tgf-mode') === 'water'; } catch { return false; }
@@ -299,7 +301,7 @@ export default function App() {
     m.flyTo({ center: pos, zoom: Math.max(m.getZoom(), zoom), padding: MOBILE ? { bottom: Math.round(innerHeight * 0.45), top: 120 } : { right: 420 }, duration: 1600 });
   }, []);
   const waterUi = {
-    water, setWater, data: wData, sel: wSel, layers: wLayers, setLayers: (p) => setWLayers((l) => ({ ...l, ...p })),
+    enabled: WATER_ON, water, setWater, data: wData, sel: wSel, layers: wLayers, setLayers: (p) => setWLayers((l) => ({ ...l, ...p })),
     pickReservoir: (r) => { const s = { kind: 'res', ...r, pos: r.p }; waterRef.current?.select(s); setWSel(s); setUiState((st) => ({ ...st, panel: 'water-sel' })); waterFly(r.p, 10.5); },
     showPipes: () => { setWLayers((l) => ({ ...l, pipes: true })); waterFly([121.545, 25.055], 12); },
     toPower: () => { setWater(false); }
