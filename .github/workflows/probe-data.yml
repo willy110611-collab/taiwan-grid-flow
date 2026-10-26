@@ -1,4 +1,4 @@
-# 一次性（第 3 輪）：找臺南／臺北／桃園自來水管線開放資料的下載網址與樣本、台水停水地圖的資料來源與使用規定（之後刪除）
+# 一次性（第 4 輪）：臺北市自來水系統管線（data.taipei，政府資料開放授權第 1 版）→ WGS84 GeoJSON（管徑 ≥ 300 mm）供預覽用（之後刪除）
 name: Probe data
 on:
   push:
@@ -11,18 +11,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 抓資料
+      - name: 下載並轉換
         run: |
-          set +e
           mkdir -p probe
+          cat > /tmp/conv.py <<'PY'
+          import sys, json, math, xml.etree.ElementTree as ET, collections
+          def tm2(x, y):
+              a=6378137.0; f=1/298.257222101; b=a*(1-f); e2=(a*a-b*b)/(a*a); k0=0.9999; lon0=math.radians(121)
+              x-=250000; M=y/k0; mu=M/(a*(1-e2/4-3*e2**2/64-5*e2**3/256)); e1=(1-math.sqrt(1-e2))/(1+math.sqrt(1-e2))
+              fp=mu+(3*e1/2-27*e1**3/32)*math.sin(2*mu)+(21*e1**2/16-55*e1**4/32)*math.sin(4*mu)+(151*e1**3/96)*math.sin(6*mu)+(1097*e1**4/512)*math.sin(8*mu)
+              ep2=e2/(1-e2); C1=ep2*math.cos(fp)**2; T1=math.tan(fp)**2; R1=a*(1-e2)/(1-e2*math.sin(fp)**2)**1.5; N1=a/math.sqrt(1-e2*math.sin(fp)**2); D=x/(N1*k0)
+              lat=fp-(N1*math.tan(fp)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720)
+              lon=lon0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/math.cos(fp)
+              return [round(math.degrees(lon),5), round(math.degrees(lat),5)]
+          feats=[]; stat=collections.Counter(); length=collections.Counter(); total=0
+          for path in sys.argv[1:]:
+              for ev, el in ET.iterparse(path, events=('end',)):
+                  if not el.tag.endswith('UTL_管線_自來水'): continue
+                  total+=1
+                  g={c.tag.split('}')[-1]: (c.text or '') for c in el}
+                  pos=el.find('.//{http://www.opengis.net/gml}posList')
+                  dim=el.find('.//{http://www.opengis.net/gml}LineString')
+                  try: d=float(g.get('管徑寬度') or 0)
+                  except: d=0
+                  try: L=float(g.get('管線長度') or 0)
+                  except: L=0
+                  band='≥1000' if d>=1000 else '600–999' if d>=600 else '300–599' if d>=300 else '<300'
+                  stat[band]+=1; length[band]+=L
+                  if d>=300 and pos is not None and pos.text and g.get('使用狀態','0')=='0':
+                      n=int(dim.get('srsDimension','3')) if dim is not None else 3
+                      v=[float(x) for x in pos.text.split()]
+                      pts=[tm2(v[i],v[i+1]) for i in range(0,len(v)-n+1,n)]
+                      if len(pts)>=2: feats.append({'type':'Feature','properties':{'d':int(d),'m':g.get('管線材料','')},'geometry':{'type':'LineString','coordinates':pts}})
+                  el.clear()
+          json.dump({'type':'FeatureCollection','features':feats}, open('probe/taipei-pipes-300.geojson','w'), ensure_ascii=False, separators=(',',':'))
+          json.dump({'total':total,'count':stat,'length_m':{k:round(v) for k,v in length.items()},'kept':len(feats)}, open('probe/taipei-pipes-stats.json','w'), ensure_ascii=False, indent=1)
+          PY
           UA="Mozilla/5.0 (taiwan-grid-flow; https://github.com/willy110611-collab/taiwan-grid-flow)"
-          get() { code=$(curl -sSL -A "$UA" --max-time 120 -o "probe/$1" -w '%{http_code} %{size_download} %{content_type}' "$2"); echo "$1 $code $2" >> probe/summary.txt; }
-          curl -sSL -A "$UA" --max-time 120 "https://data.taipei/api/dataset/af167303-0e5f-45dd-b624-a01f541565ce/resource/30056122-21c3-4a6d-9f90-274509a08e7a/download" | head -c 40000 > probe/taipei-pipe-head.xml
-          echo "taipei head $(stat -c %s probe/taipei-pipe-head.xml)" >> probe/summary.txt
-          curl -sSL -A "$UA" --max-time 60 -o probe/tainan-gis.json -w 'tainan %{http_code} %{size_download}\n' "https://soa.tainan.gov.tw/Api/Service/GetGis/32b5cb9a-2939-4655-b2cc-8031dd20f01e" >> probe/summary.txt
-          ls -la probe; for f in probe/*; do s=$(stat -c %s "$f"); [ "$s" -gt 4000000 ] && head -c 4000000 "$f" > "$f.p" && mv "$f.p" "$f" && echo "$f truncated from $s" >> probe/summary.txt; done
-          cat probe/summary.txt
+          B="https://data.taipei/api/dataset/af167303-0e5f-45dd-b624-a01f541565ce/resource"
+          for r in 30056122-21c3-4a6d-9f90-274509a08e7a aeeaa0cd-38f0-45f1-9849-762642fb77be 07946ee4-3537-49c7-a964-606c995e02fe 650ab113-454c-45ba-a8b5-32066265b1a2 540545ed-5d58-43b3-b1c7-3f6d6e3c73c1 984276ba-b66a-40f3-9ef1-4e5668b9a3da; do
+            curl -sSL -A "$UA" --max-time 600 -o /tmp/$r.xml "$B/$r/download"; ls -l /tmp/$r.xml
+          done
+          python3 /tmp/conv.py /tmp/*.xml
+          ls -l probe; cat probe/taipei-pipes-stats.json
       - name: 提交回分支
         run: |
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
-          git add probe && git commit -m "暫時：管線與停水資料來源樣本" && git push
+          git add probe && git commit -m "暫時：臺北自來水管線（≥300 mm）預覽用" && git push
