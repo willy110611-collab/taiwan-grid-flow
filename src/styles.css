@@ -1027,3 +1027,13 @@ button:not(:disabled):active { transform: scale(0.95); }
   .mode-switch button { padding: 6px 14px; }
 }
 @media (max-width: 700px) { .water-filters { justify-content: center; gap: 10px; } }
+/* 平板直式（701–1000px）：工具列在中間，時鐘往上移，不被蓋住 */
+@media (min-width: 701px) and (max-width: 1000px) {
+  .clock { bottom: calc(92px + var(--safe-b)); }
+  .filters button { padding: 6px 10px; letter-spacing: 0.1em; } /* 篩選列變窄，不碰到左上標題 */
+}
+/* 小手機（≤ 380px，例如 360 寬的 Android）：狀態列縮短，語言／更新鈕不壓到右上的數字 */
+@media (max-width: 380px) {
+  .badge { letter-spacing: 0.12em; }
+  .lang-btn { margin-left: 5px; padding: 3px 8px; }
+}
