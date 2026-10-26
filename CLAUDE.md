@@ -49,6 +49,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.7 已部署（2026-10-26 12:26，commit 0e53bb7，SHA-256 3a69e83a…6ff2）：App 通知依訂閱語言發中／英文（訂閱存 `lang`，subscribe 回傳 lang）。
 - v8.8 已部署（2026-10-26，commit 073725a，SHA-256 a9cc59ec…3e08）（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
 - v8.9 已部署（2026-10-26，commit 0abc92f，SHA-256 5b304ca4…1047）：`/water/tainan-pipes.json` 固定轉送臺南給水管線（實測 522，臺南伺服器擋 Cloudflare）。
+- v8.10 已部署（2026-10-26 23:46，commit a33f4e4，SHA-256 a4eee5ee…2904）：推播、LINE 訊息名稱改「台灣脈動」。
 - v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
 ### 其他
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
