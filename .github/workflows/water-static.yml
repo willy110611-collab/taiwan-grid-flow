@@ -2,6 +2,8 @@
 name: Water static data
 on:
   workflow_dispatch:
+    inputs:
+      jobs: { description: '要產生的項目（plants reservoirs taipei）', default: 'plants reservoirs taipei' }
   push:
     branches: ['claude/**']
     paths: ['scripts/water/build-static.py', '.github/workflows/water-static.yml']
@@ -14,9 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 產生資料
-        run: python3 scripts/water/build-static.py plants reservoirs taipei
+        run: python3 scripts/water/build-static.py ${{ github.event.inputs.jobs || 'reservoirs' }}  # 推到分支時只重跑水庫（管線要 25 分鐘）
       - name: 統計
-        run: du -sh public/water; ls public/water | head; ls public/water/taipei | wc -l; du -sh public/water/taipei-trunk.json
+        run: du -sh public/water; ls public/water | head; cat public/water/reservoirs.json | head -c 1500 || true
       - name: 提交回分支
         run: |
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"

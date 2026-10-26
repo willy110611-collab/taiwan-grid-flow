@@ -93,7 +93,9 @@ def reservoirs():
     print('32726 fields', list(rows[0].keys()))
     # OSM 水庫（名稱→中心點）
     q = '[out:json][timeout:180][bbox:21.8,118.1,26.5,122.2];(nwr["natural"="water"]["water"="reservoir"]["name"];nwr["landuse"="reservoir"]["name"];);out center tags;'
-    osm = json.loads(urllib.request.urlopen(urllib.request.Request('https://overpass-api.de/api/interpreter', data=('data=' + urllib.parse.quote(q)).encode(), headers=UA), timeout=240).read())
+    # Overpass 會擋瀏覽器樣式的 User-Agent（406）→ 用專案名稱
+    oh = {'User-Agent': 'taiwan-grid-flow/1.0 (https://github.com/willy110611-collab/taiwan-grid-flow)', 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'}
+    osm = json.loads(urllib.request.urlopen(urllib.request.Request('https://overpass-api.de/api/interpreter', data=('data=' + urllib.parse.quote(q)).encode(), headers=oh), timeout=240).read())
     named = collections.defaultdict(list)
     for e in osm['elements']:
         c = e.get('center') or {'lat': e.get('lat'), 'lon': e.get('lon')}
@@ -102,7 +104,7 @@ def reservoirs():
     latest = {}
     for r in rows:
         rid = str(pick(r, 'ReservoirIdentifier', 'reservoiridentifier', '水庫代碼') or '')
-        yr = str(pick(r, 'Year', 'year', '年度') or '')
+        yr = str(pick(r, 'Year', 'year', '年度', '民國年') or '').zfill(4)
         if rid and (rid not in latest or yr > latest[rid][0]): latest[rid] = (yr, r)
     out, miss = [], []
     for rid, (yr, r) in latest.items():
