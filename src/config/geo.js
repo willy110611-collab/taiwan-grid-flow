@@ -86,7 +86,7 @@ export const PLANTS = [
   { id: 'talin',    name: '大林發電廠', en: 'Talin', pos: [120.329, 22.537], match: /大林/ },
   { id: 'hoping',   name: '和平電廠',     en: 'Ho-Ping',    pos: [121.755, 24.300], match: /和平/, op: '和平電力股份有限公司' },
   { id: 'miaoli',   name: '苗栗風場', en: 'Miaoli Wind', pos: [120.780, 24.640], match: /苗栗|大鵬/, share: { wind: 0.20 } },
-  { id: 'mingtan',  name: '明潭 / 大觀抽蓄', en: 'Sun Moon Lake Hydro', pos: [120.865, 23.835], match: /明潭|大觀|日月潭/, share: { hydro: 0.62 } },
+  { id: 'mingtan',  name: '明潭 / 大觀抽蓄', en: 'Sun Moon Lake Hydro', pos: [120.865, 23.835], match: /明潭|大觀|日月潭|鉅工|水里/, share: { hydro: 0.62 } },
   // ── 離島（獨立電網，不與本島相連；電只在島內流動）──
   //  est：台電若未即時公布（顯示 0 或 N/A），以典型負載推估（MW）
   { id: 'penghu', name: '澎湖尖山電廠', en: 'Penghu · Jianshan', pos: [119.661, 23.563], match: /澎湖|尖山|中屯|湖西/, island: 'penghu', est: 75, fuel: 'oil' },
@@ -94,7 +94,7 @@ export const PLANTS = [
   { id: 'matsu',  name: '馬祖珠山電廠', en: 'Matsu · Zhushan', pos: [119.935, 26.157], match: /馬祖|珠山|連江/, island: 'matsu', est: 14 },
   { id: 'ludao',  name: '綠島發電廠',   en: 'Green Island', pos: [121.476, 22.659], match: /綠島/, island: 'ludao', est: 3 },
   { id: 'lanyu',  name: '蘭嶼發電廠',   en: 'Orchid Island', pos: [121.540, 22.026], match: /蘭嶼/, island: 'lanyu', est: 2.5 },
-  { id: 'tachien',  name: '德基 / 青山水力', en: 'Tachien Hydro', pos: [121.166, 24.255], match: /德基|青山|谷關|天輪|馬鞍#|卓蘭|萬大|松林|鉅工|水里/, share: { hydro: 0.38 } }
+  { id: 'tachien',  name: '德基 / 青山水力', en: 'Tachien Hydro', pos: [121.166, 24.255], match: /德基|青山|谷關|天輪|馬鞍#|卓蘭|萬大|松林/, share: { hydro: 0.38 } }
 ];
 
 /**
@@ -150,7 +150,7 @@ export const PLANT_REGION = {
   taichung: 'C', tunghsiao: 'C', mailiao: 'C', xingyuan: 'C', xingneng: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
   sol_changhua: 'C', sol_yunlin: 'C', sol_taichung: 'C', sol_miaoli: 'C', sol_nantou: 'C', sol_taoyuan: 'N', sol_north: 'N', sol_kaohsiung: 'S', sol_east: 'E',
   hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S', talin: 'S', chiahui: 'S', fengde: 'S',
-  hoping: 'E',
+  hoping: 'N', // 台電各區資料把和平電廠算在北部（2026-10-26 查證：東部發電 69 MW，和平同時 1,198 MW）
   penghu: 'X', kinmen: 'X', matsu: 'X', ludao: 'X', lanyu: 'X'
 };
 

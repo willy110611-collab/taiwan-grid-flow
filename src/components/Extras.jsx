@@ -59,6 +59,7 @@ export function DemandPanel({ snapshot, onClose }) {
           <p className="fine">
             {tx('地圖上的區域底色：', 'Region shading on the map: ')}<span className="warm">{tx('暖色', 'warm')}</span>{tx(' 表示用電大於發電，需要從外區送電進來（吸能）；', ' means demand exceeds generation, so power is imported; ')}
             <span className="cool">{tx('冷色', 'cool')}</span>{tx(' 表示發電有剩，往外送（供能）。都市光暈越大代表用電越多。', ' means surplus generation is exported. Larger city glows mean higher demand.')}
+            {tx('分區照台電公布的北、中、南、東四區；台電把花蓮的和平電廠算在北部。', ' Regions follow Taipower’s four areas; Taipower counts the Ho-Ping plant in Hualien as part of the North.')}
             {snapshot.supply?.peakHours && tx(`今日用電尖峰預估 ${snapshot.supply.peakHours}。`, ` Today’s demand peak is expected at ${snapshot.supply.peakHours}.`)}
           </p>
         </>

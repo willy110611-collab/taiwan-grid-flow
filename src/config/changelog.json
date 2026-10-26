@@ -1,12 +1,15 @@
 {
-  "version": "0.8.53",
+  "version": "0.8.54",
   "notesEn": [
+    "Data check: Ho-Ping plant now counted in the North as Taipower does; Shuili and Jugong hydro moved to Sun Moon Lake; carbon low/high labels compared on the same basis as the official factor",
+    "Corrected note: hydro units without a known location are drawn at the Mingtan and Tachien nodes for now",
     "The Chinese name is now 台灣脈動",
     "Water mode is paused for now and will return once it is ready",
-    "New 💧 Water mode (Power/Water switch at the top): live storage for 37 major reservoirs (hourly, Water Resources Agency), 479 treatment plants with their sources and supply areas, and drought alerts",
-    "Taipei water mains at their real positions (city open data): mains ≥ 300 mm shown at once, smaller pipes load when you zoom to street level"
+    "New 💧 Water mode (Power/Water switch at the top): live storage for 37 major reservoirs (hourly, Water Resources Agency), 479 treatment plants with their sources and supply areas, and drought alerts"
   ],
   "notes": [
+    "資料檢核：和平電廠依台電分區改算在北部；水里、鉅工水力改歸日月潭一帶；碳排「偏低／偏高」改用與官方係數相同的口徑比較，說明也寫清楚",
+    "說明文字更正：對不到位置的水力機組暫時畫在明潭、德基兩個節點",
     "名稱改為「台灣脈動」",
     "「💧 水」模式先暫停開放，整理完成後再上線",
     "新增「💧 水」模式（上方電／水切換）：全台 37 座主要水庫的即時蓄水率（水利署，每小時）、479 座台水淨水場（真實位置、原水來源與供水範圍）、枯旱預警",

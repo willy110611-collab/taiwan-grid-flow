@@ -55,7 +55,8 @@ export function carbonIntensity(totals, fx = null) {
 /** 依強度給文字等級（相對官方年平均） */
 export function carbonLevel(ci) {
   if (ci == null) return { label: '—', tone: 'muted' };
-  const r = ci / OFFICIAL_FACTOR.value;
+  // 官方係數是售電端 CO₂e（含線損、廠用電、其他溫室氣體），本站是發電端燃燒 CO₂ → 基準乘 0.95 換到同一口徑（約略）
+  const r = ci / (OFFICIAL_FACTOR.value * 0.95);
   if (r < 0.85) return { label: '偏低', tone: 'green' };
   if (r < 1.05) return { label: '普通', tone: 'ink' };
   return { label: '偏高', tone: 'warm' };

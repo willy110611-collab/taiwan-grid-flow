@@ -135,7 +135,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
         <div className="hl-k">{tx('每度電的碳排', 'Carbon per kWh')} <em className="tag modeled">{tx('推估', 'est.')}</em></div>
         <div className="big-num">{sum.ci?.toFixed(3) ?? '—'} <small>{tx('kg CO₂ / 度', 'kg CO₂ / kWh')}</small> <span className={cl.tone}>{t(cl.label)}</span></div>
         <Sparkline values={sum.ciSeries} color="rgb(255,170,110)" />
-        <p className="fine">{tx(`依各機組即時發電量 × 機組型式的典型排放係數推算（超超臨界燃煤、亞臨界燃煤、新舊複循環燃氣分開計算）。對照：能源署公告 ${OFFICIAL_FACTOR.year} 年度電力排碳係數 ${OFFICIAL_FACTOR.value} kg CO₂e/度（全年平均）。`, `Estimated from each unit’s live output × typical emission factor for its type (ultra-supercritical coal, subcritical coal, new and old combined-cycle gas counted separately). For reference: the Energy Administration’s ${OFFICIAL_FACTOR.year} grid factor is ${OFFICIAL_FACTOR.value} kg CO₂e/kWh (annual average).`)}</p>
+        <p className="fine">{tx(`依各機組即時發電量 × 機組型式的典型排放係數推算（超超臨界燃煤、亞臨界燃煤、新舊複循環燃氣分開計算）。對照：能源署公告 ${OFFICIAL_FACTOR.year} 年度電力排碳係數 ${OFFICIAL_FACTOR.value} kg CO₂e/度（全年平均、售電端、含線損與其他溫室氣體）；本站只算發電端燃燒的 CO₂，同樣情況下約低 5%，「偏低／偏高」已依此換算。`, `Estimated from each unit’s live output × typical emission factor for its type (ultra-supercritical coal, subcritical coal, new and old combined-cycle gas counted separately). For reference: the Energy Administration’s ${OFFICIAL_FACTOR.year} grid factor is ${OFFICIAL_FACTOR.value} kg CO₂e/kWh (annual average, at the point of sale, including grid losses and other greenhouse gases); this site counts only combustion CO₂ at the power plants, about 5% lower for the same mix, and the low/high labels are adjusted for that.`)}</p>
       </section>
 
       {/* 3. 空氣 */}
