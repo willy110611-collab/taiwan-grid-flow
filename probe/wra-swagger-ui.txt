@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>水利資料整合雲平台Open API</title>
+  <link rel="stylesheet" href="./css/swagger-ui.css">
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    #swagger-ui { height: 100%; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      overflow: hidden;
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+  <!-- swagger-ui 依賴 -->
+  <script src="./js/swagger-ui-bundle.js" preload></script>
+  <script src="./js/swagger-ui-standalone-preset.js" preload></script>
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+</head>
+<body>
+  <h1 class="visually-hidden">水利資料整合雲平台Open API</h1>
+  <div id="swagger-ui"></div>
+  <script>
+    // 設置 Swagger UI 中的按鈕屬性以符合無障礙需求
+    function updateButtons() {
+      const swaggerUI = document.getElementById('swagger-ui');
+      if (swaggerUI) {
+        const buttons = swaggerUI.querySelectorAll('button');
+        buttons.forEach(button => {
+          if (button.classList.contains('opblock-summary-control')) {
+            button.setAttribute('title', '展開/收合');
+            button.setAttribute('aria-label', '展開/收合 API 詳細資訊');
+          }
+          if (button.classList.contains('expand-operation')) {
+            button.setAttribute('title', '展開/收合');
+            button.setAttribute('aria-label', '展開/收合 API 列表');
+          }
+        });
+      }
+    }
+
+    // 先向 Nuxt API 拿設定
+    fetch('/nuxtapi/swagger-config')
+      .then(res => res.json())
+      .then(config => {
+        // 初始化 Swagger UI
+        const swaggerJsonUrl = `${config.apiBase}/api/v2/openapi.get`;
+        SwaggerUIBundle({
+          url: swaggerJsonUrl,
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIStandalonePreset
+          ],
+          layout: "BaseLayout",
+          onComplete: () => {
+            setTimeout(updateButtons, 100);
+          }
+        });
+      })
+      .catch(err => {
+        document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:50px;">載入設定失敗: ${err}</h2>`;
+      });
+  </script>
+</body>
+</html>
