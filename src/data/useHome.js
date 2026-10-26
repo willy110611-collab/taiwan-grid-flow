@@ -14,14 +14,22 @@ export function townName(pos) {
   }
   return best ? `${best[0]}${best[1]}` : '地圖選點';
 }
+/** 顯示用的地名：英文介面用內政部英文名（townName 是比對停電等資料用的中文鍵，不能改） */
+const townLabel = (t) => (isEn() && t[4] ? t[4] : `${t[0]}${t[1]}`);
+export function townDisplay(pos) {
+  const key = townName(pos);
+  const t = TOWNS.find((x) => x[0] + x[1] === key);
+  return t ? townLabel(t) : isEn() ? 'Picked on map' : key;
+}
 
-/** 搜尋鄉鎮市區（台/臺 視為相同） */
+/** 搜尋鄉鎮市區（台/臺 視為相同；英文介面也可用英文搜尋，例如 Xitun） */
 export function searchTowns(q, limit = 8) {
   const n = (s) => s.replace(/臺/g, '台');
   const key = n(q.trim());
   if (!key) return [];
-  return TOWNS.filter((t) => n(t[0] + t[1]).includes(key)).slice(0, limit)
-    .map((t) => ({ name: `${t[0]}${t[1]}`, pos: [t[2], t[3]] }));
+  const en = key.toLowerCase();
+  return TOWNS.filter((t) => n(t[0] + t[1]).includes(key) || (/[a-z]/.test(en) && t[4]?.toLowerCase().replace(/[^a-z ,]/g, '').includes(en.replace(/[^a-z ,]/g, '')))).slice(0, limit)
+    .map((t) => ({ name: townLabel(t), pos: [t[2], t[3]] }));
 }
 
 /**
@@ -48,7 +56,7 @@ export function locate(setHome) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('此瀏覽器不支援定位'));
     navigator.geolocation.getCurrentPosition(
-      (p) => { const pos = [p.coords.longitude, p.coords.latitude]; setHome({ name: townName(pos), pos }); resolve(); },
+      (p) => { const pos = [p.coords.longitude, p.coords.latitude]; setHome({ name: townDisplay(pos), pos }); resolve(); },
       (e) => reject(new Error(e.code === 1 ? '定位權限被拒絕' : '無法取得位置')),
       { enableHighAccuracy: false, timeout: 10000 }
     );

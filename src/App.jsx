@@ -8,7 +8,7 @@ import { useBadges } from './data/badges.js';
 import { PLANTS } from './config/geo.js';
 import { useAnomalies } from './data/useAnomalies.js';
 import { useAir, useSun, nearestStation } from './data/useAir.js';
-import { useHome, useNotify, townName, enablePush } from './data/useHome.js';
+import { useHome, useNotify, townDisplay, enablePush } from './data/useHome.js';
 import { pushExtra } from './data/openData.js';
 import { useLang } from './i18n.js';
 import { APP } from './config/app.js';
@@ -200,7 +200,7 @@ export default function App() {
       pickCancel.current?.();
       pickCancel.current = e?.pickPoint((pos) => {
         pickCancel.current = null;
-        setHomeRef.current({ name: townName(pos), pos });
+        setHomeRef.current({ name: townDisplay(pos), pos });
         setUiState((s) => ({ ...s, picking: false, panel: 'home' }));
       });
       setUiState((s) => ({ ...s, picking: true, panel: null, cruise: false }));

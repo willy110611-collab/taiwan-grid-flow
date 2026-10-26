@@ -303,7 +303,7 @@ function LocationPicker({ home, setHome, stations = [], onPick, setMsg }) {
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={tx('搜尋鄉鎮市區或測站，例如 北斗、西屯', 'Search a township or station (Chinese), e.g. 北斗')}
+        placeholder={tx('搜尋鄉鎮市區或測站，例如 北斗、西屯', 'Search a township, e.g. Xitun or Beidou')}
         enterKeyHint="search"
       />
       {results.length > 0 && (
@@ -320,7 +320,7 @@ function LocationPicker({ home, setHome, stations = [], onPick, setMsg }) {
           value=""
           onChange={(e) => {
             const s = stations.find((x) => x.site === e.target.value);
-            if (s) choose(`${s.site}測站`, [s.lng, s.lat]);
+            if (s) choose(tx(`${s.site}測站`, `${s.site} station`), [s.lng, s.lat]);
           }}
         >
           <option value="">{tx(`或從 ${stations.length} 個空品測站選…`, `Or choose from ${stations.length} air stations…`)}</option>
