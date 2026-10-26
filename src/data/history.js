@@ -14,6 +14,8 @@ import { PLANTS } from '../config/geo.js';
  */
 export const twDateKey = (d = new Date()) => new Date(d.getTime() + 8 * 3600e3).toISOString().slice(0, 10);
 export const twHM = (t) => new Date(t + 8 * 3600e3).toISOString().slice(11, 16);
+/** 台電資料時間（毫秒）；解析不了才用收到資料的時間 t */
+const dataMs = (s) => { const v = Date.parse(String(s.timestamp || '').replace(' ', 'T') + ':00+08:00'); return Number.isFinite(v) ? v : s.t; };
 /** 一筆紀錄的台電資料時間（HH:MM）；t 是收到資料的時間，可能晚 10 分鐘以上 */
 export const rowHM = (r) => String(r.timestamp || '').match(/(\d{1,2}):(\d{2})$/)?.slice(1).map((x) => x.padStart(2, '0')).join(':') || twHM(r.t);
 const r1 = (v) => Math.round(v * 10) / 10;
@@ -74,8 +76,7 @@ function reconstructDay(snap, fuel = snap.curves?.fuel, areaRows = snap.curves?.
   if (!fuel?.length) return null;
   const areaByHm = new Map((areaRows || []).map((r) => [r.hm, r.load]));
   // 以台電資料時間為準（剛過午夜時收到的可能還是前一天 23:50 的資料）；解析不了才用收到的時間
-  const dataT = Date.parse(String(snap.timestamp || '').replace(' ', 'T') + ':00+08:00');
-  const tw = new Date((Number.isFinite(dataT) ? dataT : snap.t) + (8 - 24 * dayOffset) * 3600e3);
+  const tw = new Date(dataMs(snap) + (8 - 24 * dayOffset) * 3600e3);
   const ymd = tw.toISOString().slice(0, 10);
   const midnight = Date.UTC(tw.getUTCFullYear(), tw.getUTCMonth(), tw.getUTCDate()) - 8 * 3600e3;
 
@@ -185,7 +186,7 @@ export function useRecords(snapshot) {
       let changed = false;
       const next = { ...old };
       for (const [k, v] of Object.entries(vals)) {
-        if (v > 0 && (!old[k] || v > old[k].v)) { next[k] = { v: r1(v), t: snapshot.t }; changed = true; }
+        if (v > 0 && (!old[k] || v > old[k].v)) { next[k] = { v: r1(v), t: dataMs(snapshot) }; changed = true; }
       }
       if (!next.since) { next.since = snapshot.t; changed = true; }
       if (!changed) return old;
