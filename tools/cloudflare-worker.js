@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.7
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.8
+//  v8.8：低碳時段通知（訂閱 lowc）：每天依昨日燃料別曲線推估 07–22 點最低碳的 2 小時，時段開始時發 App 通知（中英）
 //  v8.7：App 通知依訂閱語言（lang：zh／en）發中文或英文；網頁換語言時會重新登記
 //  v8.6：意見回饋改為每則一個鍵 fb:日期:時間（同時送出不互相覆蓋）、60 秒限制改用 KV（只存 IP 雜湊、60 秒自動刪）、每天滿 100 則回 503 full
 //  v8.5：意見回饋（POST /feedback）：存 KV fb:日期（180 天），每天前 10 則 LINE 通知管理者；管理者在 LINE 傳「回饋」看最近 7 天
@@ -119,6 +120,23 @@ export default {
         const en = { title: 'Taiwan Grid Flow · Supply alert', body: `⚡ Taiwan’s power supply today: ${sup.labelEn}. Forecast peak operating reserve ${sup.rate}% (${sup.hours}). Please use less power during the peak.` };
         await pushAll(env, subs.filter((p) => p.alerts !== false), (p) => (p.lang === 'en' ? en : { title: '台灣光脈動・供電提醒', body: text })); // v7：只訂停電提醒的不收
         await env.NOTIFY.put(`${today}:psupply`, '1', { expirationTtl: 2 * 86400 });
+      }
+    }
+
+    // 1b) 低碳時段（v8.8）：依昨天同時段推估今天最低碳的 2 小時，開始時通知有勾選的訂閱者（每天一次）
+    const lowSubs = subs.filter((p) => p.lowc);
+    if (lowSubs.length && !(await env.NOTIFY.get(`${today}:plowc`))) {
+      let win = await env.NOTIFY.get(`${today}:lowc`, 'json');
+      if (!win) {
+        win = (await lowCarbonWindow().catch(() => null)) || { none: true };
+        await env.NOTIFY.put(`${today}:lowc`, JSON.stringify(win), { expirationTtl: 2 * 86400 });
+      }
+      const hm = new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16);
+      if (!win.none && hm >= win.from && hm < win.to) {
+        await pushAll(env, lowSubs, (p) => (p.lang === 'en'
+          ? { title: 'Taiwan Grid Flow · Low-carbon window', body: `🌿 Electricity should be cleanest from now until about ${win.to} (estimated from the same hours yesterday). A good time for laundry, the dryer or charging.` }
+          : { title: '台灣光脈動・低碳時段', body: `🌿 現在到 ${win.to} 左右電力碳排較低（依昨天同時段推估），適合洗衣、烘衣、充電。` }));
+        await env.NOTIFY.put(`${today}:plowc`, '1', { expirationTtl: 2 * 86400 });
       }
     }
 
@@ -249,8 +267,9 @@ async function pushRoute(req, env, name) {
   const road = String(body.road || '').replace(/\s+/g, '').slice(0, 20) || null;
   const outage = { d3: !!body.o3, d1: !!body.o1 };
   const alerts = body.alerts !== false; // false＝只要停電提醒，不收空品／供電
+  const lowc = !!body.lowc; // v8.8：低碳時段開始時通知
   const lang = body.lang === 'en' ? 'en' : 'zh';
-  await kvPutJson(env, key, { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, lang, since: twDate() });
+  await kvPutJson(env, key, { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, lang, lowc, since: twDate() });
   if (body.test) await pushOne(env, sub, lang === 'en'
     ? { title: 'Taiwan Grid Flow', body: `Notifications are on${site ? ` (${site} station)` : ''}. We’ll let you know when air quality is poor or power supply is tight.` }
     : { title: '台灣光脈動', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
@@ -412,6 +431,32 @@ async function handleEvent(env, ev) {
   return reply(env, ev.replyToken, county.length
     ? `找不到「${ev.message.text}」測站。這個縣市的測站有：${county.join('、')}`
     : `找不到「${ev.message.text}」。\n\n${HELP}`);
+}
+
+/* 低碳時段：昨日燃料別曲線（每 10 分鐘，萬瓩）× 燃燒排放係數 → 07:00–22:00 內平均碳排最低的連續 2 小時
+ * 欄位順序與網頁 parseAux.js 的 FUEL_COLS 相同；係數與網頁 carbon.js 的 EMISSION 相同 */
+const CURVE_COLS = ['gas', 'gas', 'coal', 'coal', 'cogen', 'oil', 'solar', 'wind', 'hydro', 'storage', 'otherRe', null];
+const CO2 = { coal: 0.92, gas: 0.39, oil: 0.78, cogen: 0.70 };
+async function lowCarbonWindow() {
+  const t = await (await fetch(TP + 'loadfueltype_1.csv', { headers: UA })).text();
+  const pts = [];
+  for (const l of t.replace(/^\uFEFF/, '').trim().split(/\r?\n/)) {
+    const c = l.split(',').map((x) => parseFloat(x));
+    const hm = (l.match(/^\s*(\d{1,2}):(\d{2})/) || []).slice(1).map((x) => x.padStart(2, '0')).join(':');
+    if (!hm || c.length < 12) continue;
+    const vals = c.slice(1);
+    const cols = vals.length >= 13 ? ['nuclear', ...CURVE_COLS] : CURVE_COLS;
+    let mw = 0, co2 = 0;
+    cols.forEach((f, i) => { if (!f || f === 'storage' || !(vals[i] > 0)) return; mw += vals[i]; co2 += vals[i] * (CO2[f] || 0); });
+    if (mw > 1000) pts.push({ hm, ci: co2 / mw });
+  }
+  const day = pts.filter((p) => p.hm >= `${String(SEND_FROM).padStart(2, '0')}:00` && p.hm < `${SEND_TO}:00`);
+  let best = null;
+  for (let i = 0; i + 12 <= day.length; i++) {
+    const avg = day.slice(i, i + 12).reduce((a, p) => a + p.ci, 0) / 12;
+    if (!best || avg < best.avg) best = { from: day[i].hm, to: day[Math.min(day.length - 1, i + 12)].hm, avg: Math.round(avg * 1000) / 1000 };
+  }
+  return best;
 }
 
 const AQI_EN = { 良好: 'good', 普通: 'moderate', 對敏感族群不健康: 'unhealthy for sensitive groups', 對所有族群不健康: 'unhealthy', 非常不健康: 'very unhealthy', 危害: 'hazardous' };

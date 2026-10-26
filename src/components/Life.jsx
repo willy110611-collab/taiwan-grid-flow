@@ -197,7 +197,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
       {/* 6. 提醒 */}
       <section className="life-sec">
         <div className="hl-k">{tx('提醒', 'Alerts')}</div>
-        <p className="fine">{tx('空品 AQI ≥ 101（對人體有害）或供電非綠燈時通知；每天最多一次，只在 07–22 點發送。', 'Notifies when AQI ≥ 101 (unhealthy) or the supply signal is not green; at most once a day, only between 07:00 and 22:00.')}</p>
+        <p className="fine">{tx('空汙（你家附近測站 AQI ≥ 101，對人體有害）或供電非綠燈時通知；每種每天最多一次，只在 07–22 點發送。', 'Notifies when air pollution near you reaches AQI ≥ 101 (unhealthy) or the supply signal is not green; each at most once a day, only between 07:00 and 22:00.')}</p>
 
         {/* App 通知（免費） */}
         <label className="switch">
@@ -225,6 +225,26 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
           />
           <span>{tx('App 通知（免費、不限次數）', 'App notifications (free, unlimited)')}{home.push && home.pushSite ? tx(`：${home.pushSite}測站`, `: ${home.pushSite} station`) : ''}</span>
         </label>
+        {home.push && (
+          <label className="switch sub">
+            <input
+              type="checkbox"
+              checked={!!home.lowcPush}
+              disabled={busy}
+              onChange={async (e) => {
+                const on = e.target.checked;
+                setBusy(true);
+                try {
+                  await enablePush(APP.relayUrl, line?.vapidPublic, home.pushSite, { test: false, extra: pushExtra({ ...home, lowcPush: on }) });
+                  setHome({ lowcPush: on });
+                  setMsg('');
+                } catch (err) { setMsg(tr(err.message)); }
+                setBusy(false);
+              }}
+            />
+            <span>{tx('低碳時段開始時也通知（每天一次，依昨天同時段推估最低碳的 2 小時）', 'Also notify when the low-carbon window starts (once a day; the cleanest 2 hours estimated from yesterday)')}</span>
+          </label>
+        )}
         {!home.push && pushSupport().ios && <p className="fine">{tx('iPhone：Safari「分享 → 加入主畫面」後，從主畫面打開光脈動再開啟這個開關。', 'iPhone: in Safari tap Share → Add to Home Screen, open the app from the Home Screen, then turn this on.')}</p>}
 
         {/* LINE */}

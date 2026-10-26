@@ -259,6 +259,19 @@ export default function App() {
     return () => removeEventListener('orientationchange', onResize);
   }, []);
 
+  // 返回鍵（Android、瀏覽器上一頁）：面板開著時先關面板，不直接離開網頁
+  //  面板打開時推一筆歷史紀錄；按返回 → popstate 關面板；用 ✕ 關掉時把那筆紀錄退掉
+  const panelOpen = !!ui.panel;
+  useEffect(() => {
+    if (panelOpen && !history.state?.tgfPanel) history.pushState({ ...(history.state || {}), tgfPanel: true }, '');
+    else if (!panelOpen && history.state?.tgfPanel) history.back();
+  }, [panelOpen]);
+  useEffect(() => {
+    const onPop = () => setUiState((s) => (s.panel ? { ...s, panel: null } : s));
+    addEventListener('popstate', onPop);
+    return () => removeEventListener('popstate', onPop);
+  }, []);
+
   // 從清單、搜尋打開電廠卡時，地圖上的電廠標籤也換成這一座（不要留著上一座的標籤）
   useEffect(() => {
     if (ui.panel === 'plant' && ui.plantId) engine.current?.setHover(ui.plantId);

@@ -1,14 +1,16 @@
 {
-  "version": "0.8.49",
+  "version": "0.8.50",
   "notesEn": [
+    "The Android back button (or browser Back) now closes an open panel instead of leaving the page",
+    "Home → Alerts: optionally get notified when the day’s low-carbon window starts; air-pollution (AQI ≥ 101) and supply alerts continue as before",
     "Tapping the map sends out a small ring of light — soft white on empty map, the plant’s fuel colour on a plant (off when Reduce Motion is on)",
     "App notifications follow your interface language: English interface, English notifications",
     "Map plant labels use larger small text; Tab stays inside the tour and update dialogs",
-    "A supply signal published the previous day no longer triggers alerts or affects advice and map tension",
-    "The anomaly banner shows English plant names; tapping exactly on a small plant on a phone opens that plant",
-    "On phones, tapping a crowded spot on the island view now picks the biggest plant under your finger; closing a plant card also clears its map label"
+    "A supply signal published the previous day no longer triggers alerts or affects advice and map tension"
   ],
   "notes": [
+    "Android 按返回鍵（或瀏覽器上一頁）會先關掉打開的面板，不會直接離開網頁",
+    "我的家 → 提醒：可勾選「低碳時段開始時也通知」，每天依昨天同時段推估最低碳的 2 小時；空汙（AQI ≥ 101）與供電提醒照舊",
     "點地圖時手指位置會泛起一圈光：空白處是淡白色，點到電廠是該電廠的燃料顏色（系統開啟「減少動態效果」時不顯示）",
     "App 通知跟著介面語言：英文介面會收到英文通知（換語言後自動重新登記）",
     "地圖電廠標籤的小字放大，比較好讀；導覽與更新提示用 Tab 時不會跑到後面的地圖",

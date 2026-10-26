@@ -47,6 +47,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.5 已部署（2026-10-25，commit c293723，SHA-256 952fca18…441e）：意見回饋 POST /feedback（KV `fb:日期` 存 180 天、全站每天上限 100 則、同 IP 60 秒一則；每天前 10 則 LINE 通知管理者；管理者在 LINE 傳「回饋」看最近 7 天）。
 - v8.6 已部署（2026-10-26 01:41，commit 81a3845，SHA-256 d81f0de2…6c9e）：回饋改為每則一個鍵 `fb:日期:時間-亂數`（v8.5 的 `fb:日期` 陣列仍可查）、每日計數 `fbn:日期`、60 秒限制改 KV `fbip:IP雜湊`（60 秒 TTL；workers.dev 上 Cache API 無效）、滿 100 則回 503 `full`、body 非物件回 400。
 - v8.7 已部署（2026-10-26 12:26，commit 0e53bb7，SHA-256 3a69e83a…6ff2）：App 通知依訂閱語言發中／英文（訂閱存 `lang`，subscribe 回傳 lang）。
+- v8.8（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
 - v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
 ### 其他
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。

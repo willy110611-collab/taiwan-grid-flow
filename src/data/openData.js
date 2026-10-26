@@ -51,7 +51,7 @@ const WD = '日一二三四五六', WD_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 
 export const weekday = (ymd, en) => (en ? WD_EN : WD)[new Date(`${ymd}T12:00:00+08:00`).getUTCDay()];
 
 /** App 通知登記時一起送給中繼站的設定（計畫停電提醒；alerts＝是否也要空品／供電通知） */
-export const pushExtra = (home) => ({ town: homeTown(home)?.key || '', road: home.outRoad || '', o3: !!home.outD3, o1: !!home.outD1, alerts: !!home.push });
+export const pushExtra = (home) => ({ town: homeTown(home)?.key || '', road: home.outRoad || '', o3: !!home.outD3, o1: !!home.outD1, alerts: !!home.push, lowc: !!home.push && !!home.lowcPush });
 
 /** 停電是否影響我家：同鄉鎮；有填路名再比對路段 */
 export function outageHits(list, place, road) {
