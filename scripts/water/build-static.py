@@ -95,7 +95,12 @@ def reservoirs():
     q = '[out:json][timeout:180][bbox:21.8,118.1,26.5,122.2];(nwr["natural"="water"]["water"="reservoir"]["name"];nwr["landuse"="reservoir"]["name"];);out center tags;'
     # Overpass 會擋瀏覽器樣式的 User-Agent（406）→ 用專案名稱
     oh = {'User-Agent': 'taiwan-grid-flow/1.0 (https://github.com/willy110611-collab/taiwan-grid-flow)', 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'}
-    osm = json.loads(urllib.request.urlopen(urllib.request.Request('https://overpass-api.de/api/interpreter', data=('data=' + urllib.parse.quote(q)).encode(), headers=oh), timeout=240).read())
+    osm, err = None, None
+    for host in ['https://overpass-api.de', 'https://overpass.private.coffee', 'https://maps.mail.ru/osm/tools/overpass', 'https://overpass-api.de']:
+        try:
+            osm = json.loads(urllib.request.urlopen(urllib.request.Request(f'{host}/api/interpreter', data=('data=' + urllib.parse.quote(q)).encode(), headers=oh), timeout=240).read()); break
+        except Exception as e: err = e; print('overpass', host, repr(e)); __import__('time').sleep(15)
+    if osm is None: raise err
     named = collections.defaultdict(list)
     for e in osm['elements']:
         c = e.get('center') or {'lat': e.get('lat'), 'lon': e.get('lon')}
