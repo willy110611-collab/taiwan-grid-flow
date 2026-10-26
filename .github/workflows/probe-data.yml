@@ -1,0 +1,36 @@
+# 一次性：北水處停水資料（128236）、災時供水狀態 KML（138526）、北水淨水場與供水區資料格式（之後刪除）
+name: Probe data
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['.github/workflows/probe-data.yml']
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 抓資料
+        run: |
+          set +e
+          mkdir -p probe
+          UA="Mozilla/5.0 (taiwan-grid-flow; https://github.com/willy110611-collab/taiwan-grid-flow)"
+          get() { code=$(curl -sSL -A "$UA" --max-time 90 -D "probe/$1.h" -o "probe/$1" -w '%{http_code} %{size_download} %{content_type}' "$2"); echo "$1 $code $2" >> probe/summary.txt; }
+          for id in 128236 138526 138523 138524 138525 138579 139258 121027; do
+            get dgt-$id.json "https://data.gov.tw/api/v2/rest/dataset/$id"
+            python3 -c "import json;d=json.load(open('probe/dgt-$id.json'))['result'];print('$id', d.get('title'), d.get('updateFrequency'));[print('  ', r.get('resourceFormat'), r.get('resourceDownloadUrl'), r.get('resourceDescription','')[:80]) for r in d.get('distribution',[])]" >> probe/datasets.txt 2>&1
+          done
+          n=0
+          for u in $(python3 -c "import json
+          for i in ['128236','138526','138523','138579','139258']:
+            try:
+              d=json.load(open(f'probe/dgt-{i}.json'))['result']
+              for r in d.get('distribution',[])[:2]: print(r['resourceDownloadUrl'].replace(' ','%20'))
+            except Exception: pass"); do n=$((n+1)); get "res-$n" "$u"; done
+          for f in probe/res-*; do s=$(stat -c %s "$f"); [ "$s" -gt 200000 ] && head -c 200000 "$f" > "$f.p" && mv "$f.p" "$f"; done
+          cat probe/summary.txt probe/datasets.txt
+      - name: 提交回分支
+        run: |
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add probe && git commit -m "暫時：北水停水與災時供水資料樣本" && git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin HEAD:"${GITHUB_REF_NAME}"
