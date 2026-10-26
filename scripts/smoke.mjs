@@ -15,7 +15,10 @@ const errors = [];
 const STATIC = {
   'grid-lines.json': (d) => d.lines?.length > 100 && d.subs?.length > 5,
   'unit-history.json': (d) => Object.values(d.plants || {}).length > 5 && Object.values(d.plants).every((p) => p.e.length === p.pk.length),
-  'ember.json': (d) => d.areas?.some((a) => a.id === 'Taiwan') && d.taiwan?.length > 5
+  'ember.json': (d) => d.areas?.some((a) => a.id === 'Taiwan') && d.taiwan?.length > 5,
+  'water/plants.json': (d) => d.plants?.length > 300 && d.plants.every((p) => p.p[0] > 118 && p.p[1] > 21.8),
+  'water/reservoirs.json': (d) => d.reservoirs?.length > 20 && d.reservoirs.filter((r) => r.cap > 0).length > 20,
+  'water/taipei-trunk.json': (d) => d.lines?.length > 1000 && d.tiles?.length > 20
 };
 for (const [f, ok] of Object.entries(STATIC)) {
   try { if (!ok(await (await fetch(`http://127.0.0.1:${PORT}/${f}`)).json())) throw new Error('格式不符'); } catch (e) { errors.push(`靜態資料 ${f}：${e.message}`); }
@@ -49,6 +52,25 @@ try {
       if (await page.locator('.guard-card').count()) errors.push(`${tag}「${label}」顯示錯誤卡片`);
       const close = page.locator('.panel .icon-btn').first();
       if (await close.count()) { await close.click(); await sleep(300); }
+    }
+    // 水模式：切過去、打開水庫與停水面板、再切回電
+    const sw = page.locator('.mode-switch button').nth(1);
+    if (!(await sw.count())) errors.push(`${tag} 找不到電／水切換`);
+    else {
+      await sw.click();
+      await sleep(2500);
+      if (!(await page.locator('.hud.water-mode').count())) errors.push(`${tag} 切到水模式失敗`);
+      for (const label of lang === 'en' ? ['Reservoirs', 'Outages'] : ['水庫', '停水']) {
+        const btn = page.locator('.toolbar > button', { hasText: new RegExp(`^\\s*${label}\\s*$`) }).first();
+        if (!(await btn.count())) { errors.push(`${tag} 水模式找不到「${label}」`); continue; }
+        await btn.click();
+        await sleep(700);
+        if (!(await page.locator('.panel').count())) errors.push(`${tag} 水模式「${label}」沒有打開面板`);
+        const close = page.locator('.panel .icon-btn').first();
+        if (await close.count()) { await close.click(); await sleep(300); }
+      }
+      await page.locator('.mode-switch button').first().click();
+      await sleep(800);
     }
     console.log(`✓ ${tag}`);
     await ctx.close();

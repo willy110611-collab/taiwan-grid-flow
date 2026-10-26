@@ -74,6 +74,15 @@ export const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
 /** 線條圖示（不用 emoji，保持高冷科技感） */
 export const Icon = {
+  drop: (
+    <svg viewBox="0 0 24 24"><path d="M12 3.5c3.2 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.3-6 5.5-10z" /></svg>
+  ),
+  tap: (
+    <svg viewBox="0 0 24 24"><path d="M4 9h9a3 3 0 0 1 3 3v2M4 6v6M16 17v.5M16 20.5v.5" /><path d="M8 9V6.5h3V9" /></svg>
+  ),
+  pipe: (
+    <svg viewBox="0 0 24 24"><path d="M3 9h7a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h7M3 13h5M16 11h5" /></svg>
+  ),
   globe: (
     <svg viewBox="0 0 24 24"><path d="M12 3.5c-2.6 3-3.6 6-3.6 8.5s1 5.5 3.6 8.5M12 3.5c2.6 3 3.6 6 3.6 8.5s-1 5.5-3.6 8.5" /><circle cx="12" cy="12" r="8.5" /><path d="M3.8 9h16.4M3.8 15h16.4" /></svg>
   ),

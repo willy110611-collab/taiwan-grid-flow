@@ -48,6 +48,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.6 已部署（2026-10-26 01:41，commit 81a3845，SHA-256 d81f0de2…6c9e）：回饋改為每則一個鍵 `fb:日期:時間-亂數`（v8.5 的 `fb:日期` 陣列仍可查）、每日計數 `fbn:日期`、60 秒限制改 KV `fbip:IP雜湊`（60 秒 TTL；workers.dev 上 Cache API 無效）、滿 100 則回 503 `full`、body 非物件回 400。
 - v8.7 已部署（2026-10-26 12:26，commit 0e53bb7，SHA-256 3a69e83a…6ff2）：App 通知依訂閱語言發中／英文（訂閱存 `lang`，subscribe 回傳 lang）。
 - v8.8 已部署（2026-10-26，commit 073725a，SHA-256 a9cc59ec…3e08）（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
+- v8.9 已部署（2026-10-26，commit 0abc92f，SHA-256 5b304ca4…1047）：`/water/tainan-pipes.json` 固定轉送臺南給水管線（實測 522，臺南伺服器擋 Cloudflare）。
 - v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
 ### 其他
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
@@ -63,6 +64,17 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 澳洲 AEMO：`visualisations.aemo.com.au/aemo/apps/api/report/ELEC_NEM_SUMMARY`（5 州需求、價格、互聯線，CORS *，瀏覽器可直接讀）；逐機組 `nemweb.com.au/Reports/Current/Dispatch_SCADA/` 每 5 分鐘一個 ZIP（約 3.7 KB、約 520 個 DUID，無 CORS → 要中繼站解壓）。機組座標要另外對（GEM，CC BY）。
 - 英國 Elexon：`data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST`（燃料別 5 分鐘）、`PN/stream`（逐機組計畫值，40 分鐘約 1.1 MB）、`B1610`（實測，約晚 5 天）、`reference/bmunits/all`（有 GSP 區，無座標）；全部 CORS *。NESO `api.carbonintensity.org.uk/regional` 有 14 區發電組成。
 - 法國 RTE éCO2mix（odre.opendatasoft.com）CORS *。
+
+### 💧 水模式（v0.8.51 起）
+- 切換：上方 `ModeSwitch`（網址 `?mode=water`、localStorage `tgf-mode`）。`engine.setWater(on)` 清空 deck 圖層、停粒子與各區熱度、maxZoom 12→17。水的圖層是 MapLibre 原生圖層：`src/water/waterMap.js`；介面：`src/water/WaterHud.jsx`（右上總覽、圖層開關、圖例、點選卡、水庫清單、停水連結）。
+- 靜態資料 `public/water/`（`scripts/water/build-static.py`，由 `.github/workflows/water-static.yml` 在 Actions 跑；手動執行可選 `plants reservoirs taipei`，推到分支只重跑水庫）：
+  - `plants.json`：台水淨水場 36602（supp7.csv，TWD97→WGS84），每年。
+  - `reservoirs.json`：水利署水庫基本資料 32726（中文欄位、容量有千分位逗號；目前有效容量缺值用設計值）＋ OSM 水庫範圍中心（Overpass 要用專案 User-Agent，會 502 要換站）。對不到：大埔、集集攔河堰、鹿寮溪。
+  - `taipei-trunk.json`（管徑 ≥ 300 mm，約 950 km，1.7 MB）＋ `taipei/{x}_{y}.json`（小管 0.02° 一格，76 格約 25 MB，zoom ≥ 14 才載入）：data.taipei 工務局「公共管線圖資＿自來水系統管線」6 個 XML（約 760 MB，轉檔約 25 分鐘），每季更新。service worker 不快取 `/water/`。
+- 即時：`scripts/water-live.mjs`（build 時跑）→ `public/data/water-live.json`：水庫水情 45501（`opendata.wra.gov.tw/api/v2/2be9044c-…`，有效蓄水量單位萬 m³）、枯旱預警 36695（`51ea7202-…`）。水利署要求蓄水率不要用綠黃橙紅（避免和水情燈號混淆）→ 一律藍色。
+- 臺南給水管線（122507）：`soa.tainan.gov.tw` 擋海外，Cloudflare 也 522（中繼站 v8.9 `/water/tainan-pipes.json` 已部署但取不到）→ 要在台灣網路下載後放進 repo 再轉檔。桃園（opendata.tycg.gov.tw）下載方式未找到。
+- 停水：台水無公開 API（停水地圖用內部介面，不用）→ 只放連結。北水處有官方停水開放資料 128236（ASMX，大台北，每日）→ 下一步可接（要查欄位與 CORS／中繼站）。
+- 研究（2026-10-26）可加：北水災時供水 KML 138526、北水各淨水場水質 139258（季）、環境部自來水水質抽驗、每人每日用水量 8316、台水漏水率 103681、地下水即時水位；國外參考：USGS National Water Dashboard、東京都水道局震災通水地圖、Thames Water 維修地圖、芝加哥鉛管地圖、「從水源到水龍頭」導覽（Las Virgenes、Icon Water）。
 
 ### 自來水版評估（2026-10-26 用一次性 Actions 實測，待使用者決定）
 - 海外（GitHub Actions）可直接讀：台水 `www.water.gov.tw/opendata/*.csv`（淨水場位置與供水轄區 supp7.csv＝data.gov.tw 36602，TWD97；水質 qual9.csv；供水系統月資料 syst8.csv）、data.gov.tw API、水利署 opendata.wra.gov.tw（枯旱預警 36695、曾文 32733、高屏堰 143020 等 `/api/v2/{id}?format=JSON`）。

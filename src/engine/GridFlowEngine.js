@@ -278,6 +278,18 @@ export class GridFlowEngine {
   }
 
   /** 鎖定 / 解鎖地圖互動（桌布模式用） */
+  /** 水模式：清掉電力圖層與各區熱度，暫停粒子動畫；關掉時下一幀自動畫回來 */
+  setWater(on) {
+    this.water = !!on;
+    this.map.setMaxZoom(on ? 17 : 12); // 水模式要能放大到街道看小管
+    if (on) {
+      this.cruise?.stop();
+      this.setHover(null);
+      this.overlay.setProps({ layers: [] });
+      if (this.map.getLayer('region-heat')) this.map.setPaintProperty('region-heat', 'fill-opacity', 0);
+    } else this.updateRegionHeat(true);
+  }
+
   setLocked(locked) {
     for (const h of ['scrollZoom', 'boxZoom', 'dragRotate', 'dragPan', 'keyboard', 'doubleClickZoom', 'touchZoomRotate', 'touchPitch']) {
       locked ? this.map[h].disable() : this.map[h].enable();
@@ -431,7 +443,7 @@ export class GridFlowEngine {
    * 用 MapLibre 圖層 paint 屬性更新（約每秒 8 次，含呼吸）
    */
   updateRegionHeat(force = false) {
-    if (!this.regions || !this.map.getLayer('region-heat')) return;
+    if (this.water || !this.regions || !this.map.getLayer('region-heat')) return;
     const breath = 0.5 + 0.5 * Math.sin(this.breathPhase);
     const colors = ['match', ['get', 'region']];
     const opac = ['match', ['get', 'region']];
@@ -474,6 +486,7 @@ export class GridFlowEngine {
 
     // 每 30 秒檢查一次日夜色調
     if (Math.floor(this.time / 30) !== Math.floor((this.time - dt) / 30)) this.updateDaylight();
+    if (this.water) return; // 水模式：電力圖層暫停（地圖照常，水的圖層由 src/water/waterMap.js 畫）
     // 呼吸：以相位累加，供電燈號改變週期時不會跳動
     this.breathPhase += (dt * 2 * Math.PI) / TENSION[this.tension].period;
     this.demandMix += ((this.demandView ? 1 : 0) - this.demandMix) * (1 - Math.exp(-dt / 0.3));

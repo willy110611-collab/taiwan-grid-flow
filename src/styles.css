@@ -988,3 +988,39 @@ button:not(:disabled):active { transform: scale(0.95); }
 }
 .tap-rp.core { border: 0; background: radial-gradient(circle, var(--c), transparent 70%); animation-duration: 0.3s; --s: 2.4; }
 @keyframes tapRp { from { transform: scale(0.4); opacity: 0.95; } to { transform: scale(var(--s)); opacity: 0; } }
+
+/* ───────── 水模式（src/water/） ───────── */
+.mode-switch {
+  position: absolute; z-index: 6; top: calc(18px + var(--safe-t)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2px; padding: 3px; border-radius: 999px; pointer-events: auto;
+  background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.mode-switch button { font: inherit; font-size: 12px; letter-spacing: 0.14em; color: var(--ink-dim); background: none; border: 0; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+.mode-switch button.on { color: #03131c; background: rgb(110, 240, 190); box-shadow: 0 0 14px rgba(110, 240, 190, 0.35); }
+.mode-switch button.on.water { background: #5fd4ff; box-shadow: 0 0 16px rgba(95, 212, 255, 0.45); }
+@media (min-width: 1001px) { .hud .filters { top: calc(64px + var(--safe-t)); } } /* 桌面：能源篩選排在電／水切換下面 */
+.water-mode .mix:not(.water-stats), .water-mode .home-card, .water-mode .alert-banner, .water-mode .data-issue,
+.water-mode .sourceline:not(.w-src), .water-mode .cruise-caption, .water-mode .reset-view { display: none !important; }
+.mix-value.water { color: #5fd4ff; }
+.water-chip i { box-shadow: 0 0 8px currentColor; }
+.water-legend li i.bar { width: 14px; height: 3px; border-radius: 2px; }
+.water-legend li i.bar.thin { height: 2px; }
+.w-dl { display: grid; grid-template-columns: 72px 1fr; gap: 8px 12px; font-size: 13px; margin: 10px 0 12px; }
+.w-dl dt { color: var(--ink-faint); }
+.w-dl dd { margin: 0; color: var(--ink-dim); }
+.w-dl a, .w-links a { color: #8fdcff; }
+.link-btn { font: inherit; background: none; border: 0; padding: 0; color: rgb(110, 240, 190); cursor: pointer; text-align: left; }
+.w-res-big b { font-family: var(--mono); font-size: 34px; font-weight: 300; color: #5fd4ff; display: block; }
+.w-res-big small { color: var(--ink-dim); font-size: 12px; }
+.w-bar { display: block; height: 6px; border-radius: 3px; background: rgba(95, 212, 255, 0.12); margin: 8px 0 4px; overflow: hidden; }
+.w-bar span { display: block; height: 100%; background: #5fd4ff; border-radius: 3px; }
+.w-bar.small { flex: 1; height: 4px; margin: 0 10px; }
+.w-res-list button { display: flex; align-items: center; }
+.w-res-list button b { min-width: 7.5em; }
+.w-drought { margin: 6px 0 0; padding-left: 18px; color: var(--ink-dim); font-size: 12.5px; }
+.w-links { padding-left: 18px; line-height: 1.9; }
+@media (max-width: 700px) {
+  .mode-switch { top: calc(104px + var(--safe-t)); left: var(--gutter); transform: none; } /* 狀態列下方、海面上，不壓台灣 */
+  .mode-switch button { padding: 6px 14px; }
+}
+@media (max-width: 700px) { .water-filters { justify-content: center; gap: 10px; } }

@@ -12,6 +12,7 @@ import { useHome, useNotify, townName, enablePush } from './data/useHome.js';
 import { pushExtra } from './data/openData.js';
 import { useLang } from './i18n.js';
 import { APP } from './config/app.js';
+import { WaterLayers } from './water/waterMap.js';
 import { usageAdvice } from './data/advice.js';
 import { homeSummary } from './components/Life.jsx';
 import { getPowerPref } from './power.js';
@@ -28,6 +29,7 @@ import { Guard } from './components/Guard.jsx';
  *  ?view=經度,緯度,縮放  分享連結：打開就是這個畫面
  */
 const params = new URLSearchParams(location.search);
+const WATER_PANELS = ['water-sel', 'water-res', 'water-off'];
 const WALLPAPER = params.get('mode') === 'wallpaper';
 const MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -79,6 +81,17 @@ export default function App() {
   const air = useAir();
   const sun = useSun(); // 太陽能依各地即時日照分配（中繼站需設定 CWA_KEY）
   const { home, setHome } = useHome();
+  // ── 水模式（電／水切換）：網址 ?mode=water 或上次的選擇 ──
+  const [engineReady, setEngineReady] = useState(0);
+  const [water, setWater] = useState(() => {
+    const m = params.get('mode');
+    if (m === 'water' || m === 'power') return m === 'water';
+    try { return localStorage.getItem('tgf-mode') === 'water'; } catch { return false; }
+  });
+  const waterRef = useRef(null);
+  const [wData, setWData] = useState(null);
+  const [wSel, setWSel] = useState(null);
+  const [wLayers, setWLayers] = useState({ res: true, plants: true, pipes: true });
   // App 通知的語言跟著介面：換語言（或舊訂閱還沒記語言）就重新登記一次，不發測試通知
   const [lang] = useLang();
   useEffect(() => {
@@ -259,6 +272,39 @@ export default function App() {
     return () => removeEventListener('orientationchange', onResize);
   }, []);
 
+  // 電／水切換：水模式暫停電力圖層、顯示水的圖層；記住選擇
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    e.setWater(water);
+    try { localStorage.setItem('tgf-mode', water ? 'water' : 'power'); } catch { /* 略 */ }
+    if (water) {
+      waterRef.current ||= new WaterLayers(e.map, {
+        onSelect: (s) => { setWSel(s); setUiState((st) => ({ ...st, panel: s ? 'water-sel' : st.panel === 'water-sel' ? null : st.panel })); }
+      });
+      waterRef.current.show().then(setWData);
+      setReplay((r) => (r.on ? { ...r, on: false, playing: false } : r));
+      setUiState((st) => ({ ...st, cruise: false, panel: WATER_PANELS.includes(st.panel) ? st.panel : null }));
+    } else {
+      waterRef.current?.hide();
+      setWSel(null);
+      setUiState((st) => ({ ...st, panel: WATER_PANELS.includes(st.panel) ? null : st.panel }));
+    }
+  }, [water, engineReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { waterRef.current?.setLayers(wLayers); }, [wLayers]);
+  useEffect(() => { if (ui.panel !== 'water-sel') waterRef.current?.select(null); }, [ui.panel]);
+  const waterFly = useCallback((pos, zoom = 11) => {
+    const m = engine.current?.map;
+    if (!m) return;
+    m.flyTo({ center: pos, zoom: Math.max(m.getZoom(), zoom), padding: MOBILE ? { bottom: Math.round(innerHeight * 0.45), top: 120 } : { right: 420 }, duration: 1600 });
+  }, []);
+  const waterUi = {
+    water, setWater, data: wData, sel: wSel, layers: wLayers, setLayers: (p) => setWLayers((l) => ({ ...l, ...p })),
+    pickReservoir: (r) => { const s = { kind: 'res', ...r, pos: r.p }; waterRef.current?.select(s); setWSel(s); setUiState((st) => ({ ...st, panel: 'water-sel' })); waterFly(r.p, 10.5); },
+    showPipes: () => { setWLayers((l) => ({ ...l, pipes: true })); waterFly([121.545, 25.055], 12); },
+    toPower: () => { setWater(false); }
+  };
+
   // 返回鍵（Android、瀏覽器上一頁）：面板開著時先關面板，不直接離開網頁
   //  面板打開時推一筆歷史紀錄；按返回 → popstate 關面板；用 ✕ 關掉時把那筆紀錄退掉
   const panelOpen = !!ui.panel;
@@ -324,13 +370,14 @@ export default function App() {
 
   return (
     <main className={`app ${WALLPAPER ? 'wallpaper' : ''}`} style={daylight ? { '--sky': daylight.sky } : undefined}>
-      <Guard name="map" full><GridFlowMap snapshot={shown} options={options} onReady={(e) => { engine.current = e; if (params.has('debug')) window.tgf = e; }} /></Guard>
+      <Guard name="map" full><GridFlowMap snapshot={shown} options={options} onReady={(e) => { engine.current = e; setEngineReady((n) => n + 1); if (params.has('debug')) window.tgf = e; }} /></Guard>
       <div className="sky" style={{ opacity: daylight ? 0.25 + daylight.day * 0.35 + daylight.twilight * 0.4 : 0.3 }} />
       <div className="vignette" />
       <Guard name="hud" full>
       <Hud
         snapshot={shown}
         ui={ui}
+        waterUi={waterUi}
         setUi={setUi}
         highlights={highlights}
         daylight={daylight}

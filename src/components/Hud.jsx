@@ -21,6 +21,7 @@ import { FeedbackPanel } from './Feedback.jsx';
 import { soundPref, soundSupported, startSound, stopSound, soundRunning, setGridMood } from '../audio/ambient.js';
 import { hapticSupported, hapticPref, setHapticPref, installHaptics } from '../audio/haptics.js';
 import { PLANTS, plantName } from '../config/geo.js';
+import { ModeSwitch, WaterStats, WaterFilters, WaterLegend, WaterSelPanel, ReservoirPanel, OutagePanel } from '../water/WaterHud.jsx';
 
 /**
  * HUD — 絕對乾淨的排版
@@ -28,7 +29,7 @@ import { PLANTS, plantName } from '../config/geo.js';
  *  左下：時間 · 頻率 · 日出日落 下中：工具列（放空 / 亮點 / 資訊）  右下：圖例 + 來源
  *  桌布模式只保留品牌、佔比、時間、巡航場景名與一行來源。
  */
-export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpaper, badges, anomaly, rows, dayRows, yRows, replay, setReplay, onReplayFinish, home, setHome, homeSum, advice, air, hasYesterday, sun, records, powerSave, power, getView }) {
+export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight, wallpaper, badges, anomaly, rows, dayRows, yRows, replay, setReplay, onReplayFinish, home, setHome, homeSum, advice, air, hasYesterday, sun, records, powerSave, power, getView }) {
   const stats = useMemo(() => {
     if (!snapshot) return null;
     const totals = snapshot.totals;
@@ -107,9 +108,11 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
     return () => { removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onDown, true); };
   }, [more]);
   const typhoon = useTyphoon(APP.typhoon && !wallpaper);
+  const W = waterUi?.water && !wallpaper;
 
   return (
-    <div className={`hud ${wallpaper ? 'is-wallpaper' : ''}`}>
+    <div className={`hud ${wallpaper ? 'is-wallpaper' : ''} ${W ? 'water-mode' : ''}`}>
+      {!wallpaper && waterUi && <ModeSwitch water={W} onChange={(on) => { setMore(false); waterUi.setWater(on); }} />}
       <header className="brand">
         <div className="brand-zh">台灣光脈動</div>
         <div className="brand-en">TAIWAN GRID FLOW</div>
@@ -132,7 +135,9 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         {!wallpaper && <DataIssue snapshot={snapshot} air={air} onOpen={() => setUi({ panel: 'info', infoTab: 'diag' })} />}
       </header>
 
-      {!wallpaper && (
+      {W && <WaterFilters layers={waterUi.layers} onChange={waterUi.setLayers} />}
+      {W && <WaterStats data={waterUi.data} />}
+      {!wallpaper && !W && (
         <nav className="filters" aria-label={tx('能源篩選', 'Energy filter')}>
           {FILTERS.map((f) => (
             <button
@@ -198,6 +203,22 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
 
       {!wallpaper && (
         <div className="toolbar">
+          {W ? (
+            <>
+              <button className={ui.panel === 'water-res' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'water-res' ? null : 'water-res' }); }}>
+                {Icon.drop}<span>{t('水庫')}</span>
+              </button>
+              <button onClick={() => { setMore(false); waterUi.showPipes(); }}>
+                {Icon.pipe}<span>{t('管線')}</span>
+              </button>
+              <button className={ui.panel === 'water-off' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'water-off' ? null : 'water-off' }); }}>
+                {Icon.tap}<span>{t('停水')}</span>
+              </button>
+              <button onClick={() => { setMore(false); setUi({ resetView: true }); }}>
+                {Icon.globe}<span>{t('全島')}</span>
+              </button>
+            </>
+          ) : (<>
           <button className={ui.panel === 'home' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'home' ? null : 'home' }); }}>
             {Icon.home}<span>{t('我的家')}</span>
           </button>
@@ -210,6 +231,7 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
           <button className={ui.cruise ? 'on' : ''} onClick={() => { setMore(false); setUi({ toggleCruise: true }); }}>
             {Icon.cruise}<span>{t('放空')}</span>
           </button>
+          </>)}
           <button className={more || MORE_PANELS.includes(ui.panel) ? 'on' : ''} onClick={() => setMore(!more)} aria-expanded={more}>
             {Icon.more}<span>{t('更多')}</span>{hasIssue && <i className="tb-dot" />}
           </button>
@@ -250,7 +272,8 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
         </div>
       )}
 
-      {!wallpaper && (
+      {W && <WaterLegend data={waterUi.data} />}
+      {!wallpaper && !W && (
         <ul className="legend">
           {LEGEND_ORDER.map((f) => (
             <li key={f}>
@@ -306,6 +329,9 @@ export default function Hud({ snapshot, ui, setUi, highlights, daylight, wallpap
       {ui.panel === 'home' && <Guard key={'g-home'} name="home" onClose={() => setUi({ panel: null })}><HomePanel onPick={() => setUi({ pickHome: true })} onMarks={(m) => setUi({ outageMarks: m })} home={home} setHome={setHome} sum={homeSum} advice={advice} snapshot={snapshot} air={air} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'nuclear' && <Guard key={'g-nuclear'} name="nuclear" onClose={() => setUi({ panel: null })}><NuclearPanel snapshot={snapshot} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'air' && <Guard key={'g-air'} name="air" onClose={() => setUi({ panel: null })}><AirPanel air={air} snapshot={snapshot} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
+      {W && ui.panel === 'water-sel' && <Guard key={'g-wsel'} name="water-sel" onClose={() => setUi({ panel: null })}><WaterSelPanel sel={waterUi.sel} onClose={() => setUi({ panel: null })} onPower={waterUi.toPower} /></Guard>}
+      {W && ui.panel === 'water-res' && <Guard key={'g-wres'} name="water-res" onClose={() => setUi({ panel: null })}><ReservoirPanel data={waterUi.data} onPick={waterUi.pickReservoir} onClose={() => setUi({ panel: null })} /></Guard>}
+      {W && ui.panel === 'water-off' && <Guard key={'g-woff'} name="water-off" onClose={() => setUi({ panel: null })}><OutagePanel onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'feedback' && <Guard key={'g-feedback'} name="feedback" onClose={() => setUi({ panel: null })}><FeedbackPanel view={fbView} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'plant' && ui.plantId && <Guard key={'g-plant'} name="plant" onClose={() => setUi({ panel: null })}><PlantPanel key={ui.plantId} id={ui.plantId} snapshot={snapshot} air={air} rows={replay?.on ? null : rows} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'finder' && <Guard key={'g-finder'} name="finder" onClose={() => setUi({ panel: null })}><FinderPanel snapshot={snapshot} getView={getView} onOpen={(id) => setUi({ openPlant: id })} onClose={() => setUi({ panel: null })} /></Guard>}

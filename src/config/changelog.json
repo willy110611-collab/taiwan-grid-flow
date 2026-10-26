@@ -1,14 +1,17 @@
 {
-  "version": "0.8.50",
+  "version": "0.8.51",
   "notesEn": [
+    "New 💧 Water mode (Power/Water switch at the top): live storage for 37 major reservoirs (hourly, Water Resources Agency), 479 treatment plants with their sources and supply areas, and drought alerts",
+    "Taipei water mains at their real positions (city open data): mains ≥ 300 mm shown at once, smaller pipes load when you zoom to street level",
+    "Tap a plant, reservoir or pipe for details and outage links, or jump back to Power for the same area",
     "The Android back button (or browser Back) now closes an open panel instead of leaving the page",
     "Home → Alerts: optionally get notified when the day’s low-carbon window starts; air-pollution (AQI ≥ 101) and supply alerts continue as before",
-    "Tapping the map sends out a small ring of light — soft white on empty map, the plant’s fuel colour on a plant (off when Reduce Motion is on)",
-    "App notifications follow your interface language: English interface, English notifications",
-    "Map plant labels use larger small text; Tab stays inside the tour and update dialogs",
-    "A supply signal published the previous day no longer triggers alerts or affects advice and map tension"
+    "Tapping the map sends out a small ring of light — soft white on empty map, the plant’s fuel colour on a plant (off when Reduce Motion is on)"
   ],
   "notes": [
+    "新增「💧 水」模式（上方電／水切換）：全台 37 座主要水庫的即時蓄水率（水利署，每小時）、479 座台水淨水場（真實位置、原水來源與供水範圍）、枯旱預警",
+    "臺北市自來水管線（工務局開放資料，真實位置）：管徑 300 mm 以上一開始就顯示，放大到街道才載入小管；點管線看管徑、長度",
+    "點淨水場、水庫、管線可以看詳細資料，附台水／北水處停水查詢，也能一鍵切回「電」看同一帶的發電與用電",
     "Android 按返回鍵（或瀏覽器上一頁）會先關掉打開的面板，不會直接離開網頁",
     "我的家 → 提醒：可勾選「低碳時段開始時也通知」，每天依昨天同時段推估最低碳的 2 小時；空汙（AQI ≥ 101）與供電提醒照舊",
     "點地圖時手指位置會泛起一圈光：空白處是淡白色，點到電廠是該電廠的燃料顏色（系統開啟「減少動態效果」時不顯示）",
