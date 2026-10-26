@@ -228,7 +228,8 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
   // Esc 結束回放（有面板開著時先關面板）
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key !== 'Escape' || e.isComposing || document.querySelector('.panel, .upd-wrap, [role="menu"], .pick-banner')) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing || document.querySelector('.panel, .upd-wrap, [role="menu"], .pick-banner')) return;
+      e.preventDefault();
       setReplay((r) => ({ ...r, on: false, playing: false }));
     };
     addEventListener('keydown', onKey);

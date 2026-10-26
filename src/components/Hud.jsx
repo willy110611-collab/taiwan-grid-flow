@@ -82,7 +82,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
   // 選家模式按 Esc 取消
   useEffect(() => {
     if (!ui.picking) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing) setUi({ cancelPick: true }); };
+    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented) { e.preventDefault(); setUi({ cancelPick: true }); } };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
   }, [ui.picking]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -91,7 +91,8 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
   useEffect(() => {
     if (!ui.cruise || wallpaper) return undefined;
     const onKey = (e) => {
-      if (e.key !== 'Escape' || e.isComposing || document.querySelector('.panel, .upd-wrap, [role="menu"], .pick-banner, .replay')) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing || document.querySelector('.panel, .upd-wrap, [role="menu"], .pick-banner, .replay')) return;
+      e.preventDefault();
       setUi({ toggleCruise: true });
     };
     addEventListener('keydown', onKey);

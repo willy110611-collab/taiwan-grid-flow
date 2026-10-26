@@ -9,7 +9,7 @@ import { useT, tx, isEn } from '../i18n.js';
 function useEsc(active, fn) {
   useEffect(() => {
     if (!active) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing) fn(); };
+    const onKey = (e) => { if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented) { e.preventDefault(); fn(); } };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
   }, [active, fn]);

@@ -8,7 +8,7 @@ import { useBadges } from './data/badges.js';
 import { PLANTS } from './config/geo.js';
 import { useAnomalies } from './data/useAnomalies.js';
 import { useAir, useSun, nearestStation } from './data/useAir.js';
-import { useHome, useNotify, townDisplay, enablePush } from './data/useHome.js';
+import { useHome, useNotify, townDisplay, homeLabel, enablePush } from './data/useHome.js';
 import { pushExtra } from './data/openData.js';
 import { useLang } from './i18n.js';
 import { APP } from './config/app.js';
@@ -113,7 +113,7 @@ export default function App() {
     [shown, rows, snapshot?.curves?.yesterday, home.touUser]
   );
   const homeSum = useMemo(() => homeSummary({ home, snapshot: shown, air, rows, advice }), [home, shown, air, rows, advice]);
-  useEffect(() => { engine.current?.setHome(home.pos ? home : null); }, [home.pos?.[0], home.pos?.[1], home.name, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { engine.current?.setHome(home.pos ? { ...home, name: homeLabel(home) } : null); }, [home.pos?.[0], home.pos?.[1], home.name, lang, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { engine.current?.setAir(air.stations, air.cems); }, [air, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
   // D1 計畫停電：只在「我的家」打開時把清單畫到地圖上
   useEffect(() => { engine.current?.setOutages(ui.panel === 'home' ? ui.outageMarks : null); }, [ui.panel, ui.outageMarks, !!engine.current]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -308,20 +308,26 @@ export default function App() {
   };
 
   // 返回鍵（Android、瀏覽器上一頁）：面板開著時先關面板，不直接離開網頁
-  //  面板打開時推一筆歷史紀錄；按返回 → popstate 關面板；用 ✕ 關掉時把那筆紀錄退掉
-  //  「在地圖上點選我的家」也算：開始選點時面板會關，但不能把紀錄退掉，否則下一次返回就離開網頁
-  const panelOpen = !!ui.panel || !!ui.picking;
+  //  用「層數」對應歷史紀錄：面板 1 層、在地圖上點選我的家 2 層（返回先取消選點、回到「我的家」，再返回才關面板）
+  //  介面自己關掉時（✕、Esc、選好地點）用 history.go 退回對應層數，這次的 popstate 略過
+  const histDepth = ui.picking ? 2 : ui.panel ? 1 : 0;
+  const skipPop = useRef(false);
   useEffect(() => {
-    if (panelOpen && !history.state?.tgfPanel) history.pushState({ ...(history.state || {}), tgfPanel: true }, '');
-    else if (!panelOpen && history.state?.tgfPanel) history.back();
-  }, [panelOpen]);
+    const have = history.state?.tgfDepth || 0;
+    if (histDepth > have) {
+      for (let d = have + 1; d <= histDepth; d++) history.pushState({ ...(history.state || {}), tgfPanel: true, tgfDepth: d }, '');
+    } else if (histDepth < have) {
+      skipPop.current = true;
+      history.go(histDepth - have);
+    }
+  }, [histDepth]);
   useEffect(() => {
     const onPop = () => {
+      if (skipPop.current) { skipPop.current = false; return; }
       if (pickCancel.current) { // 選點中按返回＝取消選點，回到「我的家」（和 Esc、取消一樣）
         pickCancel.current();
         pickCancel.current = null;
         setUiState((s) => ({ ...s, picking: false, panel: 'home' }));
-        history.pushState({ ...(history.state || {}), tgfPanel: true }, ''); // 回到「我的家」面板：補回一筆，下一次返回才是關面板
         return;
       }
       setUiState((s) => (s.panel ? { ...s, panel: null } : s));

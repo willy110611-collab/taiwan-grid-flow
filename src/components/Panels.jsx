@@ -22,7 +22,7 @@ export function Panel({ title, meta, onClose, children }) {
   useT();
   // 鍵盤：Esc 關閉面板
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape' && !e.defaultPrevented && !e.isComposing && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) onClose?.(); }; // 注音組字中、輸入框裡按 Esc 不關面板
+    const onKey = (e) => { if (e.key === 'Escape' && !e.defaultPrevented && !e.isComposing && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) { e.preventDefault(); onClose?.(); } }; // preventDefault：同一次 Esc 不要再結束回放／放空 // 注音組字中、輸入框裡按 Esc 不關面板
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);

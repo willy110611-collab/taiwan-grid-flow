@@ -22,6 +22,19 @@ export function townDisplay(pos) {
   return t ? townLabel(t) : isEn() ? 'Picked on map' : key;
 }
 
+/** 我的家的名稱（顯示用）：存的可能是中文或英文（看設定當時的介面語言），依目前語言重新翻成同一個地點的名稱 */
+export function homeLabel(home) {
+  const name = home?.name || '';
+  if (!name || !home.pos) return name;
+  const key = townName(home.pos);
+  const t = TOWNS.find((x) => x[0] + x[1] === key);
+  if (t && (name === key || name === t[4])) return townLabel(t);
+  const st = name.match(/^(.+?)(?:測站| station)$/);
+  if (st) return isEn() ? `${st[1]} station` : `${st[1]}測站`;
+  if (name === '地圖選點' || name === 'Picked on map') return isEn() ? 'Picked on map' : '地圖選點';
+  return name;
+}
+
 /** 搜尋鄉鎮市區（台/臺 視為相同；英文介面也可用英文搜尋，例如 Xitun） */
 export function searchTowns(q, limit = 8) {
   const n = (s) => s.replace(/臺/g, '台');

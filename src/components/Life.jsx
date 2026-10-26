@@ -6,7 +6,7 @@ import { PLANTS, REGIONS, plantName } from '../config/geo.js';
 import { THERMAL } from '../config/energy.js';
 import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js';
 import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
-import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSupport } from '../data/useHome.js';
+import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSupport, homeLabel } from '../data/useHome.js';
 import { SUPPLY_LEVELS } from '../data/parseAux.js';
 import { billCompare } from '../data/advice.js';
 import { t, tx, tr, isEn, useT } from '../i18n.js';
@@ -100,7 +100,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
     <Panel title="我的家" onClose={onClose}>
       <div className="home-loc">
         <div>
-          <b>{home.name || tx('尚未設定地點', 'No location set')}</b>
+          <b>{homeLabel(home) || tx('尚未設定地點', 'No location set')}</b>
           <span className="muted">　{sum.region ? tx(`${sum.region.name}供電區`, `${rName(sum.region)} supply region`) : ''}</span>
         </div>
       </div>
