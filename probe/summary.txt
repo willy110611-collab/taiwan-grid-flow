@@ -1,7 +1,0 @@
-tainan-gis.json 000 0  https://soa.tainan.gov.tw/Api/Service/GetGis/32b5cb9a-2939-4655-b2cc-8031dd20f01e
-tainan-detail.html 200 21713 text/html; charset=utf-8 https://data.tainan.gov.tw/DataSet/Detail/586123be-9fba-4c7c-8b68-a3d0e66d828c
-taipei-view.json 200 11420 application/json https://data.taipei/api/frontstage/tpeod/dataset.view?id=af167303-0e5f-45dd-b624-a01f541565ce
-tycg-v1-a.json 404 665 text/html;charset=UTF-8 https://opendata.tycg.gov.tw/api/v1/dataset/fdc2dc1a-c988-4b1e-aac8-ca109972bb07
-tycg-v1-b.json 404 665 text/html;charset=UTF-8 https://opendata.tycg.gov.tw/api/v1/datalist/fdc2dc1a-c988-4b1e-aac8-ca109972bb07
-tycg-v1-c.json 000 0  https://data.tycg.gov.tw/api/v1/rest/datastore/fdc2dc1a-c988-4b1e-aac8-ca109972bb07?format=json&limit=5
-wateroff-app.js 200 311208 application/javascript https://web.water.gov.tw/wateroffmap/js/app.2b4f2cb0.js

@@ -1,4 +1,4 @@
-# 一次性（第 2 輪）：找臺南／臺北／桃園自來水管線開放資料的下載網址與樣本、台水停水地圖的資料來源與使用規定（之後刪除）
+# 一次性（第 3 輪）：找臺南／臺北／桃園自來水管線開放資料的下載網址與樣本、台水停水地圖的資料來源與使用規定（之後刪除）
 name: Probe data
 on:
   push:
@@ -17,17 +17,11 @@ jobs:
           mkdir -p probe
           UA="Mozilla/5.0 (taiwan-grid-flow; https://github.com/willy110611-collab/taiwan-grid-flow)"
           get() { code=$(curl -sSL -A "$UA" --max-time 120 -o "probe/$1" -w '%{http_code} %{size_download} %{content_type}' "$2"); echo "$1 $code $2" >> probe/summary.txt; }
-          get tainan-gis.json "https://soa.tainan.gov.tw/Api/Service/GetGis/32b5cb9a-2939-4655-b2cc-8031dd20f01e"
-          get tainan-detail.html "https://data.tainan.gov.tw/DataSet/Detail/586123be-9fba-4c7c-8b68-a3d0e66d828c"
-          get taipei-view.json "https://data.taipei/api/frontstage/tpeod/dataset.view?id=af167303-0e5f-45dd-b624-a01f541565ce"
-          get tycg-v1-a.json "https://opendata.tycg.gov.tw/api/v1/dataset/fdc2dc1a-c988-4b1e-aac8-ca109972bb07"
-          get tycg-v1-b.json "https://opendata.tycg.gov.tw/api/v1/datalist/fdc2dc1a-c988-4b1e-aac8-ca109972bb07"
-          get tycg-v1-c.json "https://data.tycg.gov.tw/api/v1/rest/datastore/fdc2dc1a-c988-4b1e-aac8-ca109972bb07?format=json&limit=5"
-          get wateroff-app.js "https://web.water.gov.tw/wateroffmap/js/app.2b4f2cb0.js"
-          grep -ohE "[\"'](https?:)?//?[A-Za-z0-9_./-]*(api|Api|API|ashx|Get|Query|json)[A-Za-z0-9_./?=&-]*[\"']" probe/wateroff-app.js | sort -u | head -40 > probe/wateroff-endpoints.txt
-          grep -oE "baseURL[^,]{0,120}" probe/wateroff-app.js | head -5 >> probe/wateroff-endpoints.txt
+          curl -sSL -A "$UA" --max-time 120 "https://data.taipei/api/dataset/af167303-0e5f-45dd-b624-a01f541565ce/resource/30056122-21c3-4a6d-9f90-274509a08e7a/download" | head -c 40000 > probe/taipei-pipe-head.xml
+          echo "taipei head $(stat -c %s probe/taipei-pipe-head.xml)" >> probe/summary.txt
+          curl -sSL -A "$UA" --max-time 60 -o probe/tainan-gis.json -w 'tainan %{http_code} %{size_download}\n' "https://soa.tainan.gov.tw/Api/Service/GetGis/32b5cb9a-2939-4655-b2cc-8031dd20f01e" >> probe/summary.txt
           ls -la probe; for f in probe/*; do s=$(stat -c %s "$f"); [ "$s" -gt 4000000 ] && head -c 4000000 "$f" > "$f.p" && mv "$f.p" "$f" && echo "$f truncated from $s" >> probe/summary.txt; done
-          cat probe/summary.txt probe/wateroff-endpoints.txt
+          cat probe/summary.txt
       - name: 提交回分支
         run: |
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
