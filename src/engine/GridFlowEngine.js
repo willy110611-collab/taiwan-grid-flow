@@ -1003,7 +1003,7 @@ export class GridFlowEngine {
         .slice(0, 2)
         .map(([f, mw]) => `${(isEn() ? FUELS[f]?.en : FUELS[f]?.label) ?? f} ${Math.round((mw / (hp.targetMw || 1)) * 100)}%`)
         .join(' · ');
-      const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.targetMw)}|${fuelText}|${isEn()}|${this.source}|${this.cems?.[hp.id]?.time || ''}|${Object.values(this.cems?.[hp.id]?.items || {}).map((it) => it.max).join()}|${!!solarSun()}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}`, () => [
+      const label = this.memo('hoverLabel', `${hp.id}|${Math.round(hp.targetMw)}|${fuelText}|${isEn()}|${this.source}|${this.cems?.[hp.id]?.time || ''}|${Object.values(this.cems?.[hp.id]?.items || {}).map((it) => it.max).join()}|${!!solarSun()}|${hp.color.map(Math.round).join()}|${Math.round(hp.liveMw)}|${this.map.getContainer().clientWidth < 500}`, () => [
         { pos: hp.pos, text: isEn() ? hp.en : hp.name, size: 15, off: [22, -10], font: FONT, color: [240, 244, 255], weight: 400 },
         { pos: hp.pos, text: isEn() ? hp.name : hp.en.toUpperCase(), size: 10.5, off: [22, 8], font: isEn() ? FONT : MONO, color: [150, 165, 195], weight: 300 },
         {
@@ -1012,26 +1012,35 @@ export class GridFlowEngine {
           size: 12.5, off: [22, 25], font: MONO, color: hp.color, weight: 400
         },
         { pos: hp.pos, text: evidenceText(hp, this.source), size: 10.5, off: [22, 42], font: FONT, color: [150, 165, 195], weight: 300 },
-        ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id]), size: 10.5, off: [22, 58], font: FONT, color: [225, 190, 160], weight: 300 }] : []),
+        ...(this.cems?.[hp.id] ? [{ pos: hp.pos, text: cemsText(this.cems[hp.id], this.map.getContainer().clientWidth < 500), size: 10.5, off: [22, 58], font: FONT, color: [225, 190, 160], weight: 300 }] : []),
         // 滑鼠裝置：提示可以點開電廠卡（手機點一下就直接開，不需要提示）
         ...(CAN_HOVER ? [{ pos: hp.pos, text: tx('點一下看各機組 ›', 'Click for units ›'), size: 10.5, off: [22, this.cems?.[hp.id] ? 74 : 58], font: FONT, color: [110, 240, 190], weight: 300 }] : [])
       ]);
+      // 電廠靠近畫面右緣、標籤會超出時改畫在左側（手機上常見，例如台中、和平）
+      const W = this.map.getContainer().clientWidth, px = this.map.project(hp.pos).x;
+      const estW = Math.max(...label.map((d) => [...d.text].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x2e80 ? 1 : 0.62) * d.size, 0)));
+      //  兩邊都放不下（手機上的大標籤）：移到電廠點下方，左右夾在畫面內
+      const fitR = px + 22 + estW <= W - 8, fitL = px - 22 - estW >= 8;
+      const flip = !fitR && fitL;
+      const dx = !fitR && !fitL ? Math.max(8, Math.min(px + 22, W - 8 - estW)) - px : null;
+      const dy = dx == null ? 0 : 34;
+      this.hoverBox = dx != null ? [dx - 10, dx + estW + 10, -20, 130] : flip ? [-260, 40, -40, 90] : [-40, 260, -40, 90];
       layers.push(new TextLayer({
         id: 'hover-label',
         data: label,
         getPosition: (d) => d.pos,
         getText: (d) => d.text,
         getSize: (d) => d.size,
-        getPixelOffset: (d) => [d.off[0] + (1 - a) * -6, d.off[1]],
+        getPixelOffset: (d) => (dx != null ? [dx, d.off[1] + dy] : [(flip ? -1 : 1) * (d.off[0] + (1 - a) * -6), d.off[1]]),
         getColor: (d) => [...d.color, 255 * a],
-        getTextAnchor: 'start',
+        getTextAnchor: flip ? 'end' : 'start',
         getAlignmentBaseline: 'center',
         fontFamily: FONT,
         characterSet: 'auto',
         fontSettings: { sdf: true, fontSize: 64, buffer: 8 },
         outlineWidth: 4,
         outlineColor: [3, 5, 10, 200 * a],
-        updateTriggers: { getColor: a, getPixelOffset: a, getText: [Math.round(hp.targetMw), isEn()] }, // 文字直接用目標值（光暈才做漸變）：數字立刻正確，也不用每幀重排
+        updateTriggers: { getColor: a, getPixelOffset: [a, flip, dx], getTextAnchor: flip, getText: [Math.round(hp.targetMw), isEn()] }, // 文字直接用目標值（光暈才做漸變）：數字立刻正確，也不用每幀重排
         parameters: NO_DEPTH
       }));
     }
@@ -1040,7 +1049,7 @@ export class GridFlowEngine {
   }
 
   /** 小快取：key 沒變就回傳上次的結果（讓每幀重建的圖層拿到同一個 data 陣列，deck.gl 就不用重新排版文字） */
-  /** 電廠標籤（畫在電廠點右側，約 x −40～+260、y −40～+90 px）範圍內的文字先拿掉；標籤淡出期間也算 */
+  /** 電廠標籤（畫在電廠點右側，約 x −40～+260、y −40～+90 px；放不下時換到左側或下方，範圍見 hoverBox）範圍內的文字先拿掉；標籤淡出期間也算 */
   /** 點地圖的光環回饋：空白處淡白、電廠用燃料顏色；約 0.4 秒消失（系統要求減少動態時不顯示） */
   tapRipple(x, y, color) {
     if (this.mode === 'wallpaper' || REDUCED_MOTION || !Number.isFinite(x)) return;
@@ -1062,9 +1071,10 @@ export class GridFlowEngine {
     const hp = id && this.plants.find((p) => p.id === id);
     if (!hp) return items;
     const m = this.map, c = m.getCenter();
-    return this.memo(name, `${hp.id}|${m.getZoom().toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${m.getBearing().toFixed(0)}|${m.getPitch().toFixed(0)}|${items.length}`, () => {
+    const [x0, x1, y0, y1] = this.hoverBox || [-40, 260, -40, 90]; // 標籤換到左側或下方時，讓位的範圍跟著換
+    return this.memo(name, `${hp.id}|${m.getZoom().toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${m.getBearing().toFixed(0)}|${m.getPitch().toFixed(0)}|${items.length}|${x0}|${x1}`, () => {
       const a = m.project(hp.pos);
-      return items.filter((d) => { const b = m.project(d.pos), dx = b.x - a.x, dy = b.y - a.y; return !(dx > -40 && dx < 260 && dy > -40 && dy < 90); });
+      return items.filter((d) => { const b = m.project(d.pos), dx = b.x - a.x, dy = b.y - a.y; return !(dx > x0 && dx < x1 && dy > y0 && dy < y1); });
     });
   }
 
@@ -1110,7 +1120,7 @@ const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-
 const CAN_HOVER = typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches;
 
 /** hover 標籤第 5 行：煙道排放（環境部 CEMS 1 小時值，取該廠最高的一根煙囪） */
-function cemsText(c) {
+function cemsText(c, narrow = false) {
   const parts = ['硫氧化物', '氮氧化物', '粒狀物', '不透光率']
     .filter((k) => c.items[k])
     .slice(0, 3)
@@ -1119,7 +1129,8 @@ function cemsText(c) {
       const short = { 硫氧化物: 'SOx', 氮氧化物: 'NOx', 粒狀物: tx('粒狀物', 'PM'), 不透光率: tx('不透光', 'Opacity') }[k];
       return `${short} ${Math.round(it.max * 10) / 10}${it.std ? `/${it.std}` : ''}`;
     });
-  return parts.length ? `煙道 ${parts.join(' · ')}（CEMS 值/標準）` : '';
+  // 手機窄螢幕省略括號說明（電廠卡裡有完整說明），標籤才不會超出畫面
+  return parts.length ? `${tx('煙道', 'Stack')} ${parts.join(' · ')}${narrow ? '' : tx('（CEMS 值/標準）', ' (CEMS value/limit)')}` : '';
 }
 
 /** hover 標籤第 4 行：這個數字的可信度（仿軌島「即時 / 推估」標示） */
