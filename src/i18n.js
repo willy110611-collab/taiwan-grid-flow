@@ -70,7 +70,7 @@ const EN = {
   '放空巡航': 'Drift cruise', '日出': 'Sunrise', '日落': 'Sunset', '資料': 'Data',
   'LIVE · 台電即時': 'LIVE · Taipower', 'SIMULATED · 模擬資料': 'SIMULATED', '尖峰備轉': 'peak reserve', '模擬': 'sim', '更新中 · 上次': 'Updating · last',
   '供電充裕': 'Supply OK', '供電吃緊': 'Supply tight', '供電警戒': 'Supply alert', '限電警戒': 'Rationing alert', '限電準備': 'Rationing prep',
-  '適合用電': 'Good time to use', '可以用電': 'OK to use', '建議延後': 'Better to wait', '＋ 設定我的家': '＋ Set home',
+  '適合用電': 'Good time to use', '可以用電': 'OK to use', '建議延後': 'Better to wait', '暫時無法判斷': 'Can’t tell right now', '＋ 設定我的家': '＋ Set home',
   '點地圖選擇「我的家」': 'Tap the map to set Home', '取消': 'Cancel', '有新版本・點此更新': 'New version · tap to update',
   // 燃料
   '太陽能': 'Solar', '風力': 'Wind', '水力': 'Hydro', '其他再生': 'Other RE', '燃氣': 'LNG', '燃煤': 'Coal', '汽電共生': 'Co-gen', '燃油': 'Oil', '儲能': 'Storage',

@@ -78,6 +78,10 @@ export function billCompare(kwh, peakShare, summer) {
 export function usageAdvice(snap, rows = [], yRows = null, { touUser = false } = {}) {
   if (!snap) return null;
   const now = new Date();
+  // 連不到台電、畫面退回模擬（不是刻意開的 ?sim=1 示範）：模擬數字不能拿來給建議
+  if (snap.source !== 'live' && snap.diag?.length && !/[?&]sim\b/.test(globalThis.location?.search || '')) {
+    return { level: 'na', head: '暫時無法判斷', reasons: ['連不到台電資料，目前是模擬畫面'], tou: touPeriod(now), ci: null, best: null };
+  }
   const tou = touPeriod(now);
   const fx = snap.carbonFx;
   const ci = carbonIntensity(snap.totals, fx);

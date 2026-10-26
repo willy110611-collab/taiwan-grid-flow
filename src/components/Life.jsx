@@ -28,7 +28,7 @@ function StaleNote({ air }) {
   const hm = String(air.asOf || air.staleAt || '').replace('T', ' ').slice(11, 16);
   return <p className="fine warm">{tx(`環境部暫時無法提供最新資料，顯示 ${hm} 的資料。`, `MOENV is not providing new data right now; showing data from ${hm}.`)}</p>;
 }
-const ADVICE_COLOR = { good: [110, 240, 160], ok: [255, 214, 92], bad: [255, 130, 90] };
+const ADVICE_COLOR = { good: [110, 240, 160], ok: [255, 214, 92], bad: [255, 130, 90], na: [150, 160, 180] };
 
 /** 我的家的即時摘要（給卡片與面板共用） */
 export function homeSummary({ home, snapshot, air, rows, advice }) {
