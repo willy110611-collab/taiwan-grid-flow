@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BADGES } from '../data/badges.js';
-import { REGION_KEYS, PLANTS, plantName } from '../config/geo.js';
+import { REGION_KEYS, PLANTS, plantName, unitName } from '../config/geo.js';
 import { EVIDENCE } from '../config/energy.js';
 import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
@@ -191,7 +191,7 @@ export function AlertBanner({ alert, onClose }) {
       <i />
       <div>
         <b>{plantName(PLANTS.find((p) => p.id === alert.plantId)) || tr(alert.unit)} {tx('出力驟降', 'output drop')}</b>
-        <span>{alert.unit}　{fmtMw(alert.from)} → {fmtMw(alert.to)} MW　{tx(`（${alert.time}，偵測）`, `(${alert.time}, detected)`)}</span>
+        <span>{unitName(alert.unit, PLANTS.find((p) => p.id === alert.plantId))}　{fmtMw(alert.from)} → {fmtMw(alert.to)} MW　{tx(`（${alert.time}，偵測）`, `(${alert.time}, detected)`)}</span>
       </div>
       <button className="icon-btn" onClick={onClose} aria-label={tx('關閉', 'Close')}>{Icon.close}</button>
     </div>

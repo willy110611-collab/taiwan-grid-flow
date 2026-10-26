@@ -9,7 +9,7 @@ import { t, tx, tr, useT, isEn } from '../i18n.js';
 const airDiagText = (err) => (/429|1027/.test(err || '') ? tx('今天使用人數太多，早上 8 點恢復', 'Too many visitors today; back at 8 am Taiwan time') : tx('暫時讀不到，稍後自動恢復', 'Temporarily unavailable; will recover automatically'));
 const srcLabel = (u = '') => (/workers\.dev/.test(u) ? tx(' · 本站伺服器', ' · our server') : /^\.\/data\//.test(u) ? tx(' · 網站備份', ' · site backup') : '');
 const agoLabel = (m) => (m < 1 ? tx('剛剛', 'just now') : m < 60 ? tx(`${m} 分鐘前`, `${m} min ago`) : m < 1440 ? tx(`${Math.floor(m / 60)} 小時前`, `${Math.floor(m / 60)} h ago`) : tx(`${Math.floor(m / 1440)} 天前`, `${Math.floor(m / 1440)} d ago`));
-import { PLANTS, SOLAR_COUNTY_KW, plantName } from '../config/geo.js';
+import { PLANTS, SOLAR_COUNTY_KW, plantName, unitName } from '../config/geo.js';
 import { twHM } from '../data/history.js';
 import { setPowerPref } from '../power.js';
 import { SupplyHistory, RenewTab } from './OpenData.jsx';
@@ -165,7 +165,7 @@ export function HighlightsPanel({ hl, live, records, dayRows, yRows, onPlant, on
               <div className="hl-k">{t('今日機組異常（偵測）')}</div>
               <ul>
                 {hl.anomalies.slice(-5).reverse().map((a, i) => (
-                  <li key={i}><span>{a.time}</span>{a.plant || a.unit}　{a.unit}　{fmtMw(a.from)} → {fmtMw(a.to)} MW</li>
+                  <li key={i}><span>{a.time}</span>{plantName(PLANTS.find((p) => p.id === a.plantId)) || a.plant || tr(a.unit)}　{unitName(a.unit, PLANTS.find((p) => p.id === a.plantId))}　{fmtMw(a.from)} → {fmtMw(a.to)} MW</li>
                 ))}
               </ul>
             </div>
