@@ -115,7 +115,7 @@ def reservoirs():
     for rid, (yr, r) in latest.items():
         name = re.sub(r'\s', '', str(pick(r, 'ReservoirName', 'reservoirname', '水庫名稱') or ''))
         cap = pick(r, 'CurruntEffectiveCapacity', 'CurrentEffectiveCapacity', 'currunteffectivecapacity', '目前有效容量', '設計有效容量')  # 目前沒填（例如翡翠）用設計值
-        try: cap = float(cap)
+        try: cap = float(str(cap).replace(',', ''))  # 例如 "33,550.94"
         except (TypeError, ValueError): cap = None
         bare = name.replace('水庫', '')
         cands = named.get(name) or named.get(bare) or named.get(bare + '水庫') or next((v for k, v in named.items() if name and (k.startswith(name.replace('水庫', '')) and '水庫' in k)), None)
