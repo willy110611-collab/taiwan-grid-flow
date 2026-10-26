@@ -1,13 +1,14 @@
 {
-  "version": "0.8.56",
+  "version": "0.8.57",
   "notesEn": [
+    "Plant labels on the map move to the left or below when they would run off the screen; the stack (CEMS) line is now in English",
+    "Small phones in English: all six energy filters fit on one row",
     "Tablets: opening a panel no longer shrinks the map; the clock is no longer hidden behind the toolbar",
     "Small phones (360 px wide): buttons no longer overlap the numbers at top right",
-    "When Taipower can’t be reached and the map is simulated, Home no longer gives usage advice",
-    "English: unit names in plant cards and the finder now use the plant's English name (e.g. Taichung New CC#1-2); data sources and air-station county groups in English",
-    "Today's highlights, replay and the status badge now show Taipower's data time (they sometimes showed the time the data arrived, about 10 minutes later)"
+    "When Taipower can’t be reached and the map is simulated, Home no longer gives usage advice"
   ],
   "notes": [
+    "地圖上的電廠標籤靠近畫面邊緣時，改畫在左側或下方，不再被切掉；手機版煙道數值省略括號說明",
     "平板：打開面板時地圖不再縮成一小塊；直式時鐘不被工具列蓋住",
     "小螢幕手機（360 寬）：右上數字不再被按鈕壓到",
     "連不到台電、畫面暫時是模擬時，「我的家」不給用電建議（顯示「暫時無法判斷」）",
