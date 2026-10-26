@@ -48,7 +48,7 @@ export function mockGenary(now = new Date()) {
       const share = i === units.length - 1 ? rest : Math.min(cap, (total * cap) / capSum);
       rest -= share;
       const mw = Math.max(0, share);
-      rows.push([typeCell(zh, en), '', name, cap.toFixed(1), `${mw.toFixed(1)}(${((mw / cap) * 100).toFixed(1)}%)`, '', mw > 0 ? '' : '停機']);
+      rows.push([typeCell(zh, en), '', name, cap.toFixed(1), `${mw.toFixed(1)}(${((mw / cap) * 100).toFixed(1)}%)`, '', mw > 0 || en === 'Solar' ? '' : '停機']); // 太陽能夜間 0 是正常的，台電不會標停機
     });
     rows.push([typeCell(zh, en), '', '小計', capSum.toFixed(1), total.toFixed(1), '', '']);
   };

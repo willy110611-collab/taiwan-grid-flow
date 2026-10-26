@@ -337,8 +337,10 @@ export default function App() {
       const sheet = document.querySelector('.panel');
       const top = (document.querySelector('.mix .supply') || document.querySelector('.mix'))?.getBoundingClientRect().bottom ?? 120;
       if (!sheet) return;
+      const rect = sheet.getBoundingClientRect();
+      if (rect.width < innerWidth - 40) return; // 平板（觸控但畫面寬）：面板在右側不是底部抽屜，地圖不用縮到上方
       e.cruise.stop();
-      const sheetPx = sheet.getBoundingClientRect().height;
+      const sheetPx = rect.height;
       const plant = ui.panel === 'plant' ? e.plants.find((p) => p.id === ui.plantId) : null;
       if (plant) e.panAboveSheet({ sheetPx, topPx: top + 8, pos: plant.pos });
       else e.fitAboveSheet({ sheetPx, topPx: top + 8, focus: ui.panel === 'home' && home.pos ? home.pos : null });
