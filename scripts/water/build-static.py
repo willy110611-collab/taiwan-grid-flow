@@ -114,10 +114,11 @@ def reservoirs():
     out, miss = [], []
     for rid, (yr, r) in latest.items():
         name = re.sub(r'\s', '', str(pick(r, 'ReservoirName', 'reservoirname', '水庫名稱') or ''))
-        cap = pick(r, 'CurruntEffectiveCapacity', 'CurrentEffectiveCapacity', 'currunteffectivecapacity', '目前有效容量')
+        cap = pick(r, 'CurruntEffectiveCapacity', 'CurrentEffectiveCapacity', 'currunteffectivecapacity', '目前有效容量', '設計有效容量')  # 目前沒填（例如翡翠）用設計值
         try: cap = float(cap)
         except (TypeError, ValueError): cap = None
-        cands = named.get(name) or named.get(name.replace('水庫', '') + '水庫') or next((v for k, v in named.items() if name and (k.startswith(name.replace('水庫', '')) and '水庫' in k)), None)
+        bare = name.replace('水庫', '')
+        cands = named.get(name) or named.get(bare) or named.get(bare + '水庫') or next((v for k, v in named.items() if name and (k.startswith(name.replace('水庫', '')) and '水庫' in k)), None)
         if not cands: miss.append(name); continue
         out.append({'id': rid, 'n': name, 'p': cands[0], 'cap': cap, 'area': str(pick(r, 'Area', 'area', '地區別') or ''), 'river': str(pick(r, 'RiverName', 'rivername', '河川名稱') or '')})
     json.dump({'source': '經濟部水利署 水庫基本資料（data.gov.tw 32726）；位置：OpenStreetMap 水庫範圍中心（ODbL）', 'reservoirs': out, 'unmatched': miss},
