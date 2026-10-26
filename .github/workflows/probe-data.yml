@@ -1,4 +1,4 @@
-# 一次性：評估「台灣自來水版」可用的政府開放資料（水利署、台水、北水）與 OSM 水務設施數量，提交回這個分支（之後刪除）
+# 一次性（第 2 次：遇到連不到的網址不中斷）：評估「台灣自來水版」可用的政府開放資料（水利署、台水、北水）與 OSM 水務設施數量，提交回這個分支（之後刪除）
 name: Probe data
 on:
   push:
@@ -13,12 +13,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: 抓樣本
         run: |
+          set +e
           mkdir -p probe
           UA="taiwan-grid-flow/1.0 (https://github.com/willy110611-collab/taiwan-grid-flow)"
           probe() { # 名稱 網址
             code=$(curl -sSL -A "$UA" -H "Origin: https://willy110611-collab.github.io" --max-time 60 -D probe/$1.h -o probe/$1.body -w '%{http_code} %{size_download} %{time_total}' "$2" || echo "fail")
             echo "$1 $code $2" >> probe/summary.txt
-            head -c 5000 probe/$1.body > probe/$1.txt; rm -f probe/$1.body
+            head -c 5000 probe/$1.body > probe/$1.txt 2>/dev/null; rm -f probe/$1.body; true
           }
           # data.gov.tw 資料集描述（含下載網址）
           for id in 45501 36695 32733 143020 36602 152910 32563 62881 152911 25677 156471 58694 133170 95124; do
