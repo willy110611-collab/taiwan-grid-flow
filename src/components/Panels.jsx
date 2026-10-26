@@ -143,7 +143,7 @@ export function HighlightsPanel({ hl, live, records, dayRows, yRows, onPlant, on
             </li>
             <li>
               <span className="hl-k">{t('全台負載最高')}</span>
-              <span className="hl-v">{hl.loadPeak.hm}</span>
+              <span className="hl-v time">{hl.loadPeak.hm}</span>
               <span className="hl-n">{fmtMw(hl.loadPeak.load)} <small>MW</small></span>
             </li>
             {hl.northIn != null ? (

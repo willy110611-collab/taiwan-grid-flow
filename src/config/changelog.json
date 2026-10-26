@@ -1,13 +1,15 @@
 {
-  "version": "0.8.54",
+  "version": "0.8.55",
   "notesEn": [
+    "English: unit names in plant cards and the finder now use the plant's English name (e.g. Taichung New CC#1-2); data sources and air-station county groups in English",
+    "Today's highlights, replay and the status badge now show Taipower's data time (they sometimes showed the time the data arrived, about 10 minutes later)",
     "Data check: Ho-Ping plant now counted in the North as Taipower does; Shuili and Jugong hydro moved to Sun Moon Lake; carbon low/high labels compared on the same basis as the official factor",
     "Corrected note: hydro units without a known location are drawn at the Mingtan and Tachien nodes for now",
-    "The Chinese name is now 台灣脈動",
-    "Water mode is paused for now and will return once it is ready",
-    "New 💧 Water mode (Power/Water switch at the top): live storage for 37 major reservoirs (hourly, Water Resources Agency), 479 treatment plants with their sources and supply areas, and drought alerts"
+    "The Chinese name is now 台灣脈動"
   ],
   "notes": [
+    "英文介面：電廠卡與找電廠的機組名改用電廠英文名（例如 Taichung New CC#1-2）、資料來源改英文、空品測站縣市分組改英文",
+    "今日亮點、回放與狀態列的時間改用台電資料時間（原本有時顯示收到資料的時間，晚約 10 分鐘）",
     "資料檢核：和平電廠依台電分區改算在北部；水里、鉅工水力改歸日月潭一帶；碳排「偏低／偏高」改用與官方係數相同的口徑比較，說明也寫清楚",
     "說明文字更正：對不到位置的水力機組暫時畫在明潭、德基兩個節點",
     "名稱改為「台灣脈動」",

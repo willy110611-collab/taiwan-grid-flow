@@ -14,6 +14,8 @@ import { PLANTS } from '../config/geo.js';
  */
 export const twDateKey = (d = new Date()) => new Date(d.getTime() + 8 * 3600e3).toISOString().slice(0, 10);
 export const twHM = (t) => new Date(t + 8 * 3600e3).toISOString().slice(11, 16);
+/** 一筆紀錄的台電資料時間（HH:MM）；t 是收到資料的時間，可能晚 10 分鐘以上 */
+export const rowHM = (r) => String(r.timestamp || '').match(/(\d{1,2}):(\d{2})$/)?.slice(1).map((x) => x.padStart(2, '0')).join(':') || twHM(r.t);
 const r1 = (v) => Math.round(v * 10) / 10;
 
 export function greenPct(totals) {

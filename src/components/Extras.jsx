@@ -4,7 +4,7 @@ import { REGION_KEYS, PLANTS, plantName } from '../config/geo.js';
 import { EVIDENCE } from '../config/energy.js';
 import { Panel } from './Panels.jsx';
 import { Icon, fmtMw, rgb } from './widgets.jsx';
-import { twHM } from '../data/history.js';
+import { rowHM } from '../data/history.js';
 import { t, tx, tr, useT } from '../i18n.js';
 
 /* ───────────── 供電燈號 ───────────── */
@@ -244,7 +244,7 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
         {replay.playing ? <svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" /></svg> : <svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" /></svg>}
       </button>
       <div className="replay-time">
-        <b>{twHM(cur.t)}</b>
+        <b>{rowHM(cur)}</b>
         <small>{cur.reconstructed ? t('回放 · 電廠出力依燃料曲線推估') : t('回放')}</small>
       </div>
       {hasYesterday && (

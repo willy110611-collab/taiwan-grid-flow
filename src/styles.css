@@ -208,6 +208,7 @@ a:hover { text-decoration: underline; }
 .hl-v { color: var(--ink); font-size: 13.5px; grid-row: 2; }
 .hl-v.gold { color: var(--gold); font-family: var(--mono); }
 .hl-v.green { color: var(--green); font-family: var(--mono); }
+.hl-v.time { font-family: var(--mono); }
 .hl-n { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-family: var(--mono); font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .hl-n small { font-size: 10px; color: var(--ink-faint); }
 .hl-chart { margin-top: 6px; }
@@ -366,6 +367,8 @@ a:hover { text-decoration: underline; }
 .speeds { display: flex; gap: 2px; }
 .speeds button { border: 0; background: none; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); padding: 4px 6px; border-radius: 6px; }
 .speeds button.on { color: var(--ink); background: rgba(255, 255, 255, 0.08); }
+/* 點擊目標至少 24px（WCAG 2.2 最小目標尺寸） */
+.lang-btn, .speeds button, .day-sw button { min-height: 24px; }
 
 
 /* ── 我的家 / 空品 ── */

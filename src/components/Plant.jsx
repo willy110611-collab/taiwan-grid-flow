@@ -7,7 +7,7 @@ import { nearestWind } from '../data/useAir.js';
 import { solarSun } from '../data/parseGenary.js';
 import { windText } from './Life.jsx';
 import { useT, isEn, tx, tr } from '../i18n.js';
-import { twHM } from '../data/history.js';
+import { rowHM } from '../data/history.js';
 import { PlantHistory } from './PlantHistory.jsx';
 import { shareLink, plantLink } from '../share.js';
 import { NuclearStatus } from './Nuclear.jsx';
@@ -34,7 +34,7 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
   if (!cfg) return null;
   // E2：今天 00:00 到現在的出力（回放用的歷史紀錄；打開 App 之前的時段依燃料曲線推估）
   // hm 用台電資料時間（timestamp），不是抓取時間
-  const series = (rows || []).map((r) => ({ t: r.t, hm: String(r.timestamp || '').match(/\d{1,2}:\d{2}$/)?.[0] || twHM(r.t), mw: r.plants?.find((p) => p.id === id)?.mw ?? 0, est: !!r.reconstructed }));
+  const series = (rows || []).map((r) => ({ t: r.t, hm: rowHM(r), mw: r.plants?.find((p) => p.id === id)?.mw ?? 0, est: !!r.reconstructed }));
   const peak = series.reduce((a, x) => (x.mw > (a?.mw ?? -1) ? x : a), null);
   const low = series.reduce((a, x) => (x.mw < (a?.mw ?? Infinity) ? x : a), null);
   const share = async () => {

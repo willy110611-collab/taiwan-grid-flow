@@ -5,7 +5,7 @@ import { sunTimes } from '../engine/daylight.js';
 import { useTween, useFrequency, useClock, fmtTime, fmtDate, fmtMw, rgb, Icon } from './widgets.jsx';
 import { HighlightsPanel, InfoPanel } from './Panels.jsx';
 import { SupplyChip, DemandPanel, BadgePanel, BadgeToast, AlertBanner, ReplayBar } from './Extras.jsx';
-import { twHM } from '../data/history.js';
+import { rowHM } from '../data/history.js';
 import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 import { PlantPanel } from './Plant.jsx';
 import { StorePanel } from './Store.jsx';
@@ -118,7 +118,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
         <div className="brand-en">TAIWAN GRID FLOW</div>
         <div className={`badge ${live ? 'live' : 'sim'}`}>
           <i />
-          {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('回放')} ${twHM(snapshot.t)}` : snapshot ? (snapshot.stale ? `${t('讀不到最新 · 顯示')} ${twHM(snapshot.t)}` : snapshot.cached ? `${t('更新中 · 上次')} ${twHM(snapshot.t)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
+          {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('回放')} ${rowHM(snapshot)}` : snapshot ? (snapshot.stale ? `${t('讀不到最新 · 顯示')} ${rowHM(snapshot)}` : snapshot.cached ? `${t('更新中 · 上次')} ${rowHM(snapshot)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
         </div>
         {!wallpaper && sound && <button className="lang-btn snd-btn" onClick={toggleSound} aria-label={tx('關閉背景音', 'Turn off background sound')} title={tx('關閉背景音', 'Turn off background sound')}>{Icon.sound}</button>}
         {!wallpaper && (

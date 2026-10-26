@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { PLANTS } from '../config/geo.js';
-import { greenPct, twHM } from './history.js';
+import { greenPct, rowHM } from './history.js';
 
 /**
  * 今日亮點（仿軌島「亮點」面板）— 由今日歷史 rows 計算
@@ -8,7 +8,7 @@ import { greenPct, twHM } from './history.js';
 export function useHighlights(snapshot, rows, stats, anomalies) {
   return useMemo(() => {
     if (!snapshot || !rows.length) return null;
-    const enriched = rows.map((r) => ({ hm: twHM(r.t), load: r.total, solar: r.totals.solar || 0, greenPct: greenPct(r.totals) }));
+    const enriched = rows.map((r) => ({ hm: rowHM(r), load: r.total, solar: r.totals.solar || 0, greenPct: greenPct(r.totals) }));
     const max = (k) => enriched.reduce((a, r) => (r[k] > a[k] ? r : a), enriched[0]);
     const topNow = [...snapshot.plants].sort((a, b) => b.mw - a.mw)[0];
     const solarPeak = max('solar');
