@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.8
+//  台灣光脈動 — Cloudflare Worker 中繼站 v8.9
+//  v8.9：/water/tainan-pipes.json 轉送臺南市「公共管線圖資－給水系統管線」（soa.tainan.gov.tw 擋海外主機；給 Actions 定期轉檔用）
 //  v8.8：低碳時段通知（訂閱 lowc）：每天依昨日燃料別曲線推估 07–22 點最低碳的 2 小時，時段開始時發 App 通知（中英）
 //  v8.7：App 通知依訂閱語言（lang：zh／en）發中文或英文；網頁換語言時會重新登記
 //  v8.6：意見回饋改為每則一個鍵 fb:日期:時間（同時送出不互相覆蓋）、60 秒限制改用 KV（只存 IP 雜湊、60 秒自動刪）、每天滿 100 則回 503 full
@@ -79,6 +80,10 @@ export default {
       if (TP_FILES.has(name)) return await cached(ctx, name, 120, () => upstream(TP + name, name));
       if (name === 'forecast.csv') return await cached(ctx, name, 3600, () => upstream(FORECAST, name));
       if (name.startsWith('open/')) return await openRoute(ctx, name.slice(5));
+      if (name === 'water/tainan-pipes.json') { // v8.9：只轉送這一個固定網址（不是開放代理），邊收邊傳不佔記憶體，CDN 快取 1 天
+        const r = await fetch(TAINAN_PIPES, { headers: UA, cf: { cacheTtl: 86400, cacheEverything: true } });
+        return new Response(r.body, { status: r.status, headers: { ...CORS, 'Content-Type': r.headers.get('Content-Type') || 'application/json' } });
+      }
       // v8.1：颱風停電暫停（台電 psvs1 不讓海外主機讀，原本要等約 24 秒才逾時）→ 直接回應；有新來源時拿掉這行
       if (name === 'typhoon.json' || name === 'typhoon/county.json') return new Response(JSON.stringify({ error: '颱風停電資料暫停提供' }), { status: 503, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=3600' } });
       if (name === 'typhoon.json') return await cached(ctx, name, 300, () => typhoon());
@@ -835,6 +840,8 @@ async function alertRoute(url, env) {
 /* ───────── v7：台電開放資料原檔轉送（給 GitHub Actions 建置用，GitHub 主機直連台電會被擋）─────────
  *  只轉送固定幾個檔案；不解析（避免超過 Worker CPU 限制），解析在建置時做 */
 const OPEN = 'https://service.taipower.com.tw/data/opendata/apply/file/';
+// 臺南市公共管線圖資－給水系統管線（data.gov.tw 122507，政府資料開放授權第 1 版）
+const TAINAN_PIPES = 'https://soa.tainan.gov.tw/Api/Service/GetGis/32b5cb9a-2939-4655-b2cc-8031dd20f01e';
 const OPEN_FILES = { 'unit-history.json': ['d006010/001.json', 12 * 3600], 'outage.zip': ['d077004/001.zip', 3600], 'supply-history.csv': ['d006005/001.csv', 6 * 3600], 'renew.csv': ['d007011/001.csv', 12 * 3600] };
 async function openRoute(ctx, file) {
   const kwh = file.match(/^kwh-(\d{3})\.csv$/);
