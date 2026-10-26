@@ -1036,4 +1036,5 @@ button:not(:disabled):active { transform: scale(0.95); }
 @media (max-width: 380px) {
   .badge { letter-spacing: 0.12em; }
   .lang-btn { margin-left: 5px; padding: 3px 8px; }
+  html[lang='en'] .filters button { padding: 5px 4px; letter-spacing: 0; gap: 3px; font-size: 10.5px; } /* 英文字較長，6 個篩選要擠得下 */
 }

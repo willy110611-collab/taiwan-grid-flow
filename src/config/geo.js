@@ -39,6 +39,7 @@ export function unitName(unit, p) {
   const extra = rest === '' || rest === '廠' ? '' : rest === '新' ? ' New' : null;
   if (extra === null) return tr(unit);
   const tail = unit.slice(head.length);
+  if (/[\u4e00-\u9fff]/.test(tail)) return tr(unit); // 例如海龍「龍A風」：中英夾雜不如照原文
   return `${p.en}${extra}${tail ? ' ' : ''}${tail}`;
 }
 
