@@ -1,13 +1,13 @@
 {
-  "version": "0.8.59",
+  "version": "0.8.60",
   "notesEn": [
+    "Desktop: the Overview button no longer covers the legend; Esc ends Drift; Home/End keys work in the More menu; grade labels fit in Info → Accuracy",
     "Phone in landscape: panels are readable and scroll; the map re-centres when you rotate back",
     "Back button while picking Home on the map now cancels picking instead of leaving the site",
-    "Plant cards no longer mix in yesterday’s data after replaying yesterday",
-    "Home: search your township in English (official MOI names, e.g. Xitun); outage and usage comparisons, and unit-drop alerts now use English names",
-    "Installing as an app on Android now shows screenshots"
+    "Plant cards no longer mix in yesterday’s data after replaying yesterday"
   ],
   "notes": [
+    "電腦版：「全島」按鈕不再蓋住右下圖例；放空時按 Esc 可以結束；「更多」選單支援 Home／End 鍵",
     "手機橫放時面板可以正常捲動閱讀；轉回直式時地圖重新置中",
     "在地圖上點選「我的家」時按返回鍵，改為取消選點（不會離開網頁）",
     "回放「昨天」之後，電廠卡的今日數據不再混到昨天",
