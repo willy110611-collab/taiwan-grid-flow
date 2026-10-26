@@ -309,13 +309,23 @@ export default function App() {
 
   // 返回鍵（Android、瀏覽器上一頁）：面板開著時先關面板，不直接離開網頁
   //  面板打開時推一筆歷史紀錄；按返回 → popstate 關面板；用 ✕ 關掉時把那筆紀錄退掉
-  const panelOpen = !!ui.panel;
+  //  「在地圖上點選我的家」也算：開始選點時面板會關，但不能把紀錄退掉，否則下一次返回就離開網頁
+  const panelOpen = !!ui.panel || !!ui.picking;
   useEffect(() => {
     if (panelOpen && !history.state?.tgfPanel) history.pushState({ ...(history.state || {}), tgfPanel: true }, '');
     else if (!panelOpen && history.state?.tgfPanel) history.back();
   }, [panelOpen]);
   useEffect(() => {
-    const onPop = () => setUiState((s) => (s.panel ? { ...s, panel: null } : s));
+    const onPop = () => {
+      if (pickCancel.current) { // 選點中按返回＝取消選點，回到「我的家」（和 Esc、取消一樣）
+        pickCancel.current();
+        pickCancel.current = null;
+        setUiState((s) => ({ ...s, picking: false, panel: 'home' }));
+        history.pushState({ ...(history.state || {}), tgfPanel: true }, ''); // 回到「我的家」面板：補回一筆，下一次返回才是關面板
+        return;
+      }
+      setUiState((s) => (s.panel ? { ...s, panel: null } : s));
+    };
     addEventListener('popstate', onPop);
     return () => removeEventListener('popstate', onPop);
   }, []);

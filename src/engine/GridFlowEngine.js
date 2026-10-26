@@ -149,7 +149,17 @@ export class GridFlowEngine {
       const cv = this.map.getCanvas();
       if (Math.abs(cv.clientHeight - c.clientHeight) > 1 || Math.abs(cv.clientWidth - c.clientWidth) > 1) this.map.resize();
     };
-    this.resizeObs = new ResizeObserver(() => { this.map.resize(); });
+    // 轉向（直式↔橫式）或視窗大小明顯改變：沒動過地圖時重新把全島放好（否則轉回來台灣會偏一邊）
+    let lastW = container.clientWidth, lastH = container.clientHeight, refitT = 0;
+    this.resizeObs = new ResizeObserver(() => {
+      this.map.resize();
+      const w = container.clientWidth, h = container.clientHeight;
+      if (Math.abs(w - lastW) > lastW * 0.15 || Math.abs(h - lastH) > lastH * 0.15 || (w > h) !== (lastW > lastH)) {
+        lastW = w; lastH = h;
+        clearTimeout(refitT);
+        refitT = setTimeout(() => this.refitIfIdle(), 300);
+      }
+    });
     this.resizeObs.observe(container);
     this.onVis = () => { if (!document.hidden) setTimeout(() => { fix(); this.refitIfIdle?.(); }, 250); };
     document.addEventListener('visibilitychange', this.onVis);

@@ -1038,3 +1038,8 @@ button:not(:disabled):active { transform: scale(0.95); }
   .lang-btn { margin-left: 5px; padding: 3px 8px; }
   html[lang='en'] .filters button { padding: 5px 4px; letter-spacing: 0; gap: 3px; font-size: 10.5px; } /* 英文字較長，6 個篩選要擠得下 */
 }
+/* 手機橫向（寬但很矮）：面板改成右側整條，否則只剩標題列可看 */
+@media (min-width: 701px) and (max-height: 560px) {
+  .panel { top: calc(10px + var(--safe-t)); bottom: calc(88px + var(--safe-b)); max-height: none; z-index: 5; } /* 下緣留給工具列 */
+  .hud:has(.replay) .clock { display: none; } /* 回放列會蓋住時鐘，回放列本身有時間 */
+}
