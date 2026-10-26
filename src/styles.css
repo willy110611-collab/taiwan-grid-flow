@@ -179,8 +179,8 @@ a:hover { text-decoration: underline; }
 .icon-btn:hover { color: var(--ink); background: rgba(255, 255, 255, 0.06); }
 .panel-body { padding: 4px 18px 18px; overflow-y: auto; font-size: 12.5px; line-height: 1.7; color: var(--ink-dim); }
 
-.tabs { display: flex; gap: 4px; margin: 6px 0 12px; border-bottom: 1px solid var(--line); }
-.tabs button { border: 0; background: none; cursor: pointer; padding: 8px 10px; font-size: 12px; letter-spacing: 0.2em; color: var(--ink-faint); border-bottom: 1px solid transparent; margin-bottom: -1px; }
+.tabs { display: flex; gap: 2px; margin: 6px 0 12px; border-bottom: 1px solid var(--line); }
+.tabs button { border: 0; background: none; cursor: pointer; padding: 8px 8px; font-size: 12px; letter-spacing: 0.1em; color: var(--ink-faint); border-bottom: 1px solid transparent; margin-bottom: -1px; }
 .tabs button.on { color: var(--ink); border-bottom-color: var(--green); }
 
 .doc dl { margin: 10px 0; display: grid; grid-template-columns: 96px 1fr; gap: 8px 12px; }
@@ -890,10 +890,11 @@ html:lang(en) .evidence li { grid-template-columns: 96px 1fr; } /* 英文等級�
 }
 
 /* 資訊分頁變 5 個：手機可左右滑 */
-.tabs { overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: 24px; } /* 右邊淡出：提示還能往右滑 */
+.tabs { overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent); padding-right: 8px; } /* 右邊淡出：提示還能往右滑 */
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button { flex: none; white-space: nowrap; }
 @media (max-width: 600px) { .tabs button { padding: 8px 7px; letter-spacing: 0.08em; } }
+html:lang(en) .tabs button { padding: 8px 6px; letter-spacing: 0.02em; } /* 英文分頁名稱較長，盡量一列放得下 */
 
 /* 同時在線人數（左上小字） */
 .online-count { margin-top: 6px; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-faint); }

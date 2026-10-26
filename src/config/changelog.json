@@ -1,12 +1,13 @@
 {
-  "version": "0.8.60",
+  "version": "0.8.61",
   "notesEn": [
+    "Info panel tabs now fit on one row on desktop (shorter English names: Sources, By county)",
     "Desktop: the Overview button no longer covers the legend; Esc ends Drift; Home/End keys work in the More menu; grade labels fit in Info → Accuracy",
     "Phone in landscape: panels are readable and scroll; the map re-centres when you rotate back",
-    "Back button while picking Home on the map now cancels picking instead of leaving the site",
-    "Plant cards no longer mix in yesterday’s data after replaying yesterday"
+    "Back button while picking Home on the map now cancels picking instead of leaving the site"
   ],
   "notes": [
+    "「資訊」面板的分頁在電腦版也能一列放下，不會切到最後一個",
     "電腦版：「全島」按鈕不再蓋住右下圖例；放空時按 Esc 可以結束；「更多」選單支援 Home／End 鍵",
     "手機橫放時面板可以正常捲動閱讀；轉回直式時地圖重新置中",
     "在地圖上點選「我的家」時按返回鍵，改為取消選點（不會離開網頁）",

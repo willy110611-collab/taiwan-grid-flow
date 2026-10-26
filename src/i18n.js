@@ -76,7 +76,7 @@ const EN = {
   '太陽能': 'Solar', '風力': 'Wind', '水力': 'Hydro', '其他再生': 'Other RE', '燃氣': 'LNG', '燃煤': 'Coal', '汽電共生': 'Co-gen', '燃油': 'Oil', '儲能': 'Storage',
   // 面板標題
   '今日亮點': "Today's highlights", '發電組成': 'Generation mix', '徽章簿': 'Badges',
-  '資料來源': 'Data sources', '準確度': 'Accuracy', '關於': 'About', '連線診斷': 'Connection check', '正常': 'OK',
+  '資料來源': 'Sources', '準確度': 'Accuracy', '關於': 'About', '連線診斷': 'Connection check', '正常': 'OK',
   // 巡航場景
   '全島能量網': 'Island energy web', '北部負載中心': 'Northern load center', '中部火力走廊': 'Central thermal corridor', '西部能量動脈': 'Western energy artery',
   '嘉南光電星海': 'Chiayi–Tainan solar sea', '南部電源基地': 'Southern power base', '彰濱離岸風場': 'Changhua offshore wind', '離島微光': 'Outlying islands',
@@ -134,7 +134,7 @@ const EN = {
   '示範模式（模擬資料）': 'Demo mode (simulated data)',
   '日射量資料不足或過舊': 'Solar radiation data missing or stale',
   '讀不到最新 · 顯示': 'No new data · showing', '電廠': 'Plants', '更多': 'More', '店家用電試算': 'Shop energy', '今日紀錄': 'Today’s records', '收集成就': 'Collectibles', '說明・資料來源': 'Guide & sources', '電腦版': 'Desktop', '線路：示意': 'Lines: schematic', '背景音：開': 'Sound: on', '背景音：關': 'Sound: off', '震動：開': 'Vibration: on', '震動：關': 'Vibration: off', '意見回饋': 'Feedback', '線路：真實': 'Lines: real', '光流路線：真實輸電線（OpenStreetMap）或示意光纖': 'Flow routes: real transmission lines (OpenStreetMap) or schematic',
-  '家電': 'Appliances', '電費試算・小手冊': 'Costs & tips', '家電電費': 'Appliance costs', '颱風停電': 'Typhoon outages', '縣市綠電': 'Green by county',
+  '家電': 'Appliances', '電費試算・小手冊': 'Costs & tips', '家電電費': 'Appliance costs', '颱風停電': 'Typhoon outages', '縣市綠電': 'By county',
   // 語言
   '中文': '中文', 'English': 'English'
 };
