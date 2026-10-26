@@ -1,13 +1,13 @@
 {
-  "version": "0.8.62",
+  "version": "0.8.63",
   "notesEn": [
+    "Phone in landscape: the whole-island view now leaves room for the filter bar and toolbar",
     "Your Home name follows the interface language",
     "Back button and Esc are more predictable: one step at a time (cancel picking → close panel → end Drift/Replay)",
-    "Info panel tabs now fit on one row on desktop (shorter English names: Sources, By county)",
-    "Desktop: the Overview button no longer covers the legend; Esc ends Drift; Home/End keys work in the More menu; grade labels fit in Info → Accuracy",
-    "Phone in landscape: panels are readable and scroll; the map re-centres when you rotate back"
+    "Info panel tabs now fit on one row on desktop (shorter English names: Sources, By county)"
   ],
   "notes": [
+    "手機橫放時，全島視角避開上方篩選列與下方工具列",
     "「我的家」地名跟著介面語言切換（中文介面不會出現英文地名）",
     "返回鍵更穩：選點中返回＝取消選點，再返回才關面板；Esc 一次只做一件事（先關面板，再結束放空或回放）",
     "「資訊」面板的分頁在電腦版也能一列放下，不會切到最後一個",
