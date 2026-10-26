@@ -73,7 +73,9 @@ function simulatedDay(now = Date.now()) {
 function reconstructDay(snap, fuel = snap.curves?.fuel, areaRows = snap.curves?.areas, dayOffset = 0) {
   if (!fuel?.length) return null;
   const areaByHm = new Map((areaRows || []).map((r) => [r.hm, r.load]));
-  const tw = new Date(snap.t + (8 - 24 * dayOffset) * 3600e3);
+  // 以台電資料時間為準（剛過午夜時收到的可能還是前一天 23:50 的資料）；解析不了才用收到的時間
+  const dataT = Date.parse(String(snap.timestamp || '').replace(' ', 'T') + ':00+08:00');
+  const tw = new Date((Number.isFinite(dataT) ? dataT : snap.t) + (8 - 24 * dayOffset) * 3600e3);
   const ymd = tw.toISOString().slice(0, 10);
   const midnight = Date.UTC(tw.getUTCFullYear(), tw.getUTCMonth(), tw.getUTCDate()) - 8 * 3600e3;
 
