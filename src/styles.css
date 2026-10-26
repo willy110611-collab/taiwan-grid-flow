@@ -978,3 +978,12 @@ button:not(:disabled):active { transform: scale(0.95); }
 .fb-done { text-align: center; padding: 10px 0; }
 .fb-done b { display: block; color: var(--ink); font-size: 15px; font-weight: 500; margin-bottom: 6px; }
 .fb-done .upd-btns { justify-content: center; }
+
+/* 點地圖的光環（引擎 tapRipple） */
+.tap-rp {
+  position: absolute; pointer-events: none; z-index: 2; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%;
+  border: 1.5px solid var(--c); box-shadow: 0 0 14px var(--c), inset 0 0 8px var(--c);
+  animation: tapRp 0.42s ease-out forwards; --s: 5;
+}
+.tap-rp.core { border: 0; background: radial-gradient(circle, var(--c), transparent 70%); animation-duration: 0.3s; --s: 2.4; }
+@keyframes tapRp { from { transform: scale(0.4); opacity: 0.95; } to { transform: scale(var(--s)); opacity: 0; } }

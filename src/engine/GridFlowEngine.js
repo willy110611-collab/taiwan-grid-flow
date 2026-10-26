@@ -173,11 +173,14 @@ export class GridFlowEngine {
           if (best) id = best.id;
         }
         this.setHover(id);
+        if (id) { this.tapRipple(info.x, info.y, this.plants.find((p) => p.id === id)?.color); this.plantTapAt = performance.now(); }
         if (id && this.mode !== 'wallpaper') this.onPlantSelect?.(id); // 點電廠 → 打開電廠詳細卡
       },
       getCursor: ({ isHovering }) => (isHovering ? 'pointer' : this.map?.dragPan.isEnabled() ? 'grab' : 'default')
     });
     this.map.addControl(this.overlay);
+    // 點到空白處（deck 沒點到東西時不會呼叫 onClick）→ 淡白光環；點到電廠的由上面處理
+    this.map.on('click', (e) => setTimeout(() => { if (performance.now() - (this.plantTapAt || 0) > 120) this.tapRipple(e.point.x, e.point.y, null); }, 0));
 
     // 放空巡航：桌布模式場景停留 3–5 分鐘；App 模式 60–90 秒
     this.cruise = new Cruise(this.map, { dwell: wallpaper ? [180, 300] : [60, 90], onShot, isDay: () => (this.lastDay?.elev ?? 10) > 3 });
@@ -1025,6 +1028,22 @@ export class GridFlowEngine {
 
   /** 小快取：key 沒變就回傳上次的結果（讓每幀重建的圖層拿到同一個 data 陣列，deck.gl 就不用重新排版文字） */
   /** 電廠標籤（畫在電廠點右側，約 x −40～+260、y −40～+90 px）範圍內的文字先拿掉；標籤淡出期間也算 */
+  /** 點地圖的光環回饋：空白處淡白、電廠用燃料顏色；約 0.4 秒消失（系統要求減少動態時不顯示） */
+  tapRipple(x, y, color) {
+    if (this.mode === 'wallpaper' || REDUCED_MOTION || !Number.isFinite(x)) return;
+    const box = this.map?.getContainer();
+    if (!box) return;
+    const c = color ? `rgb(${color.map(Math.round).join(',')})` : 'rgba(220,235,255,0.9)';
+    for (const cls of ['tap-rp', 'tap-rp core']) {
+      const d = document.createElement('i');
+      d.className = cls;
+      d.style.cssText = `left:${x}px;top:${y}px;--c:${c}`;
+      d.addEventListener('animationend', () => d.remove(), { once: true });
+      box.appendChild(d);
+      setTimeout(() => d.remove(), 800); // 保險：分頁在背景時 animationend 可能不觸發
+    }
+  }
+
   clearOfLabel(name, items) {
     const id = this.hover.id || (this.hover.alpha > 0.3 ? this.hover.shownId : null);
     const hp = id && this.plants.find((p) => p.id === id);
@@ -1074,6 +1093,7 @@ export class GridFlowEngine {
   }
 }
 
+const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CAN_HOVER = typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches;
 
 /** hover 標籤第 5 行：煙道排放（環境部 CEMS 1 小時值，取該廠最高的一根煙囪） */

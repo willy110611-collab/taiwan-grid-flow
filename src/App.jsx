@@ -8,7 +8,10 @@ import { useBadges } from './data/badges.js';
 import { PLANTS } from './config/geo.js';
 import { useAnomalies } from './data/useAnomalies.js';
 import { useAir, useSun, nearestStation } from './data/useAir.js';
-import { useHome, useNotify, townName } from './data/useHome.js';
+import { useHome, useNotify, townName, enablePush } from './data/useHome.js';
+import { pushExtra } from './data/openData.js';
+import { useLang } from './i18n.js';
+import { APP } from './config/app.js';
 import { usageAdvice } from './data/advice.js';
 import { homeSummary } from './components/Life.jsx';
 import { getPowerPref } from './power.js';
@@ -76,6 +79,19 @@ export default function App() {
   const air = useAir();
   const sun = useSun(); // 太陽能依各地即時日照分配（中繼站需設定 CWA_KEY）
   const { home, setHome } = useHome();
+  // App 通知的語言跟著介面：換語言（或舊訂閱還沒記語言）就重新登記一次，不發測試通知
+  const [lang] = useLang();
+  useEffect(() => {
+    if (!(home.push || home.outD3 || home.outD1) || home.pushLang === lang) return undefined;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return undefined;
+    const id = setTimeout(async () => {
+      const cfg = await fetch(`${APP.relayUrl}/config.json`).then((r) => r.json()).catch(() => null);
+      if (!cfg?.vapidPublic) return;
+      enablePush(APP.relayUrl, cfg.vapidPublic, home.push ? home.pushSite : null, { test: false, extra: pushExtra(home) })
+        .then((j) => { if (j?.lang === lang) setHome({ pushLang: lang }); }).catch(() => {}); // 中繼站 v8.7 起才會記語言（回傳 lang）
+    }, 3000);
+    return () => clearTimeout(id);
+  }, [lang, home.push, home.outD3, home.outD1]); // eslint-disable-line react-hooks/exhaustive-deps
   setHomeRef.current = setHome;
   const advice = useMemo(
     () => usageAdvice(shown, rows, snapshot?.curves?.yesterday, { touUser: home.touUser }),

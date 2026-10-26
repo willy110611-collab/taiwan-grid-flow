@@ -57,7 +57,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 2026-10-25 已用 OSM power=plant 交叉核對：火力、核能、離島電廠位置都在 1.3 km 內（綠島 OSM 沒有）；新增豐德、海湖、新桃、國光、星元、星能節點（原本豐德沒對應、海湖／新桃／國光併在大潭、星元併在麥寮、星彰併在彰濱風電）。PLANTS 的 `fuel` 欄位＝電廠主燃料（麥寮 coal、澎湖／金門 oil），電廠卡用來說明主要機組不在資料裡。台電即時資料目前沒有麥寮燃煤機組，麥寮節點只剩雲林風力（CEMS 仍有麥寮汽電煙道資料）。仍對不到的：汽電共生（627 MW）、其它購電太陽能／風力、中威大安、創維風、小水力、電池。
 - 詳細待辦另見 claude.ai「APP」專案的《台灣光脈搏_待辦清單》（舊名）。
 
-### 其他國家（2026-10-26 用一次性 Actions 實測，待使用者決定）
+### 其他國家（2026-10-26 用一次性 Actions 實測；使用者決定暫不做）
 - 澳洲 AEMO：`visualisations.aemo.com.au/aemo/apps/api/report/ELEC_NEM_SUMMARY`（5 州需求、價格、互聯線，CORS *，瀏覽器可直接讀）；逐機組 `nemweb.com.au/Reports/Current/Dispatch_SCADA/` 每 5 分鐘一個 ZIP（約 3.7 KB、約 520 個 DUID，無 CORS → 要中繼站解壓）。機組座標要另外對（GEM，CC BY）。
 - 英國 Elexon：`data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST`（燃料別 5 分鐘）、`PN/stream`（逐機組計畫值，40 分鐘約 1.1 MB）、`B1610`（實測，約晚 5 天）、`reference/bmunits/all`（有 GSP 區，無座標）；全部 CORS *。NESO `api.carbonintensity.org.uk/regional` 有 14 區發電組成。
 - 法國 RTE éCO2mix（odre.opendatasoft.com）CORS *。
@@ -86,7 +86,8 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 回饋的「同 IP 60 秒一則」與每日 100 則計數都用 KV，KV 最終一致（同機房可能 60 秒內讀不到剛寫的值）→ 只是概略限制；被灌爆再改用 Durable Object 計數。
 - 中繼站開了 observability（Workers Logs）：尚未確認是否記錄 IP；介面目前寫「IP 位址不會寫入資料庫；送回饋時只暫存 60 秒防重複」。
 - 開放 LINE 給所有好友（`LINE_FRIENDS=1`）前，先在「本站伺服器與你的資料」補 LINE 使用者 ID 的保存說明（封鎖即刪）。
-- 待改：App 通知內文只有中文（更新提示已有 notesEn）。`public/donate-qr.png` 仍在 repo 會公開，待使用者決定是否移除。
+- 付款 QR（donate-qr.png）2026-10-26 依使用者決定移出 repo（git 歷史仍有舊檔；要徹底清除需改寫歷史，未做）。
+- App 通知語言：訂閱存 `lang`（zh／en，中繼站 v8.7 起）；網頁換語言時自動重新登記（`home.pushLang`，中繼站回傳 lang 才記）。新增通知種類要同時寫中英文。
 - 使用者看得到的「本站伺服器與你的資料」（資訊 → 資料來源）要和中繼站實際保存的內容一致：通知訂閱（關閉即刪）、回饋 180 天、在線代碼 12 分鐘、錯誤回報約 30 天、不存 IP。改中繼站保存方式時要一起改這段文字。
 
 ## 資料需定期更新

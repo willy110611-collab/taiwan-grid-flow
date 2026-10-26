@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_HOME } from '../config/geo.js';
 import { regionAt } from '../map/baseStyle.js';
 import { TOWNS } from '../config/towns.js';
+import { isEn } from '../i18n.js';
 
 /** 座標 → 最近的鄉鎮市區名稱（例如「台中市西屯區」） */
 export function townName(pos) {
@@ -102,8 +103,9 @@ export async function enablePush(relayUrl, vapidPublic, site, { test = true, ext
   if ((await Notification.requestPermission()) !== 'granted') throw new Error('通知權限未允許（可到手機設定 → 通知 開啟）');
   const reg = await navigator.serviceWorker.ready;
   const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(vapidPublic) }));
-  const r = await fetch(`${relayUrl}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), site, test, ...extra }) });
+  const r = await fetch(`${relayUrl}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), site, test, lang: isEn() ? 'en' : 'zh', ...extra }) });
   if (!r.ok) throw new Error('通知服務暫時無法使用，請稍後再試'); // 原因（KV 未綁定、格式等）寫在手冊，訪客只需要知道暫時無法使用
+  return r.json().catch(() => ({}));
 }
 
 export async function disablePush(relayUrl) {

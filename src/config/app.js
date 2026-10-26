@@ -12,7 +12,7 @@ export const APP = {
   // 小額贊助：填入網址才會顯示按鈕（可放多個平台）
   donate: [
     // 暫時關閉；要開啟時取消下一行註解
-    // { label: '用 Portaly 贊助', url: 'https://portaly.cc/tp6ej04jo3', qr: './donate-qr.png' }
+    // { label: '用 Portaly 贊助', url: 'https://portaly.cc/tp6ej04jo3' } // 付款 QR 已移出 repo（不公開）
   ],
   // 颱風停電（D2）：台電 psvs1 擋海外主機、也不給跨網站讀取，暫停使用；有新的資料來源再改成 true
   typhoon: false,
