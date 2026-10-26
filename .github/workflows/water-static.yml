@@ -10,7 +10,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: 產生資料
@@ -20,4 +20,4 @@ jobs:
       - name: 提交回分支
         run: |
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
-          git add public/water && git commit -m "水模式靜態資料（臺北管線、淨水場、水庫）" && git push
+          git add public/water && git commit -m "水模式靜態資料（臺北管線、淨水場、水庫）" && git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin HEAD:"${GITHUB_REF_NAME}"

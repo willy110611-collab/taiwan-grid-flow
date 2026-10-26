@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/opendata.mjs && vite build",
+    "build": "node scripts/opendata.mjs && node scripts/water-live.mjs && vite build",
     "preview": "vite preview",
     "wallpaper": "vite build && vite preview",
     "check": "node scripts/check-i18n.mjs && node scripts/check-geo.mjs",
