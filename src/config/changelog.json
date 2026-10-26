@@ -1,13 +1,17 @@
 {
-  "version": "0.8.55",
+  "version": "0.8.56",
   "notesEn": [
+    "Tablets: opening a panel no longer shrinks the map; the clock is no longer hidden behind the toolbar",
+    "Small phones (360 px wide): buttons no longer overlap the numbers at top right",
+    "When Taipower can’t be reached and the map is simulated, Home no longer gives usage advice",
     "English: unit names in plant cards and the finder now use the plant's English name (e.g. Taichung New CC#1-2); data sources and air-station county groups in English",
-    "Today's highlights, replay and the status badge now show Taipower's data time (they sometimes showed the time the data arrived, about 10 minutes later)",
-    "Data check: Ho-Ping plant now counted in the North as Taipower does; Shuili and Jugong hydro moved to Sun Moon Lake; carbon low/high labels compared on the same basis as the official factor",
-    "Corrected note: hydro units without a known location are drawn at the Mingtan and Tachien nodes for now",
-    "The Chinese name is now 台灣脈動"
+    "Today's highlights, replay and the status badge now show Taipower's data time (they sometimes showed the time the data arrived, about 10 minutes later)"
   ],
   "notes": [
+    "平板：打開面板時地圖不再縮成一小塊；直式時鐘不被工具列蓋住",
+    "小螢幕手機（360 寬）：右上數字不再被按鈕壓到",
+    "連不到台電、畫面暫時是模擬時，「我的家」不給用電建議（顯示「暫時無法判斷」）",
+    "電廠卡「過去發電量」：水里、鉅工改算在日月潭一帶，與即時資料一致",
     "英文介面：電廠卡與找電廠的機組名改用電廠英文名（例如 Taichung New CC#1-2）、資料來源改英文、空品測站縣市分組改英文",
     "今日亮點、回放與狀態列的時間改用台電資料時間（原本有時顯示收到資料的時間，晚約 10 分鐘）",
     "資料檢核：和平電廠依台電分區改算在北部；水里、鉅工水力改歸日月潭一帶；碳排「偏低／偏高」改用與官方係數相同的口徑比較，說明也寫清楚",
