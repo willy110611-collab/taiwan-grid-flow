@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { APP } from '../config/app.js';
 import { TOWNS } from '../config/towns.js';
 import { townName } from './useHome.js';
+import { isEn } from '../i18n.js';
 
 /**
  * 台電開放資料（D1 計畫停電、D3 鄉鎮用電、D4 歷年供需、D6 縣市綠電）
@@ -41,8 +42,10 @@ export function homeTown(home) {
   if (!home?.pos) return null;
   const key = townName(home.pos);
   const t = TOWNS.find((x) => x[0] + x[1] === key);
-  return t ? { county: t[0], town: t[1], key } : null;
+  return t ? { county: t[0], town: t[1], key, townEn: t[4]?.split(', ')[0] } : null;
 }
+/** 我的家的地名（顯示用）：英文介面用內政部英文名 */
+export const placeName = (p) => (!p ? '' : isEn() ? p.townEn || countyName(p.county, true) : p.town || p.county);
 
 export const twToday = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
 export const addDays = (ymd, n) => new Date(Date.parse(ymd) + n * 864e5).toISOString().slice(0, 10);

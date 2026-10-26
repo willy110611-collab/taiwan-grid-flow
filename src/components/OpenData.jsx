@@ -8,7 +8,7 @@ import { loadStore } from '../data/store.js';
 import { enablePush, disablePush } from '../data/useHome.js';
 import {
   useSiteJson, homeTown, twToday, addDays, daysUntil, weekday, outageHits, norm,
-  typhoonActive, typhoonCounty, pushExtra, countyName, APPLIANCES, HANDBOOK
+  typhoonActive, typhoonCounty, pushExtra, countyName, placeName, APPLIANCES, HANDBOOK
 } from '../data/openData.js';
 
 const n0 = (v) => Math.round(v).toLocaleString();
@@ -99,7 +99,7 @@ export function OutageSection({ home, setHome, line, onMarks }) {
           {mine.length > 1 && <p className="fine warm">{tx(`另外還有 ${mine.length - 1} 筆，見下方清單。`, `${mine.length - 1} more listed below.`)}</p>}
         </div>
       ) : (
-        <p className="fine green">{tx(`未來 7 天${place.town || place.county}${home.outRoad ? `「${home.outRoad}」` : ''}沒有計畫性停電公告。`, `No planned outages announced for ${place.town || place.county}${home.outRoad ? ` (${home.outRoad})` : ''} in the next 7 days.`)}</p>
+        <p className="fine green">{tx(`未來 7 天${placeName(place)}${home.outRoad ? `「${home.outRoad}」` : ''}沒有計畫性停電公告。`, `No planned outages announced for ${placeName(place)}${home.outRoad ? ` (${home.outRoad})` : ''} in the next 7 days.`)}</p>
       )}
 
       {data && place && (
@@ -116,7 +116,7 @@ export function OutageSection({ home, setHome, line, onMarks }) {
             {[['today', tx('今天', 'Today')], ['tomorrow', tx('明天', 'Tomorrow')], ['week', tx('7 天內', 'Next 7 days')]].map(([k, label]) => (
               <button key={k} className={range === k ? 'on' : ''} onClick={() => setRange(k)}>{label}</button>
             ))}
-            <button className={near ? 'on' : ''} onClick={() => setNear(!near)}>{near ? tx(`只看${place.town || place.county}`, `${place.town || place.county} only`) : tx(`整個${place.county}`, `All of ${countyName(place.county, true)}`)}</button>
+            <button className={near ? 'on' : ''} onClick={() => setNear(!near)}>{near ? tx(`只看${placeName(place)}`, `${placeName(place)} only`) : tx(`整個${place.county}`, `All of ${countyName(place.county, true)}`)}</button>
           </div>
           {shown.length ? (
             <ul className="out-list">
@@ -178,12 +178,12 @@ export function TownCompare({ home, setHome }) {
   );
   return (
     <section className="life-sec">
-      <div className="hl-k">{tx(`你家 vs ${place.town || place.county}住宅平均`, `You vs ${place.town || place.county} homes`)}　<span className="muted">{tx('每戶每月', 'per home per month')}</span></div>
+      <div className="hl-k">{tx(`你家 vs ${placeName(place)}住宅平均`, `You vs ${placeName(place)} homes`)}　<span className="muted">{tx('每戶每月', 'per home per month')}</span></div>
       {!data ? <Loading error={error} /> : (
         <>
           <div className="cmp">
             <Bar name={tx('你家', 'You')} v={mine} color="rgb(110,240,190)" />
-            <Bar name={place.town || place.county} v={town} color="rgb(170,185,215)" />
+            <Bar name={placeName(place)} v={town} color="rgb(170,185,215)" />
             <Bar name={countyName(place.county, isEn())} v={county} color="rgb(95,110,140)" />
           </div>
           {mine ? (
@@ -198,7 +198,7 @@ export function TownCompare({ home, setHome }) {
           </div>
           {tw?.avg && (
             <>
-              <div className="hl-k" style={{ marginTop: 10 }}>{tx(`${place.town || place.county}近 12 個月`, `${place.town || place.county}, last 12 months`)}</div>
+              <div className="hl-k" style={{ marginTop: 10 }}>{tx(`${placeName(place)}近 12 個月`, `${placeName(place)}, last 12 months`)}</div>
               <Sparkline values={tw.avg.map((v) => v ?? 0)} color="rgb(110,240,190)" />
               <div className="spark-axis"><span>{data.months[0]?.replace('-', '/')}</span><span>{tx(`全年平均 ${tw.year ?? '—'} 度`, `Year avg ${tw.year ?? '—'} kWh`)}</span><span>{ym?.replace('-', '/')}</span></div>
             </>
