@@ -110,7 +110,7 @@ export function BadgePanel({ badges, live, onClose }) {
   const { earned, progress } = badges;
   const count = BADGES.filter((b) => earned[b.id]).length;
   const toggle = (id) => { setHover(null); setSel((cur) => (cur === id ? null : id)); };
-  const groups = [['grid', tx('電網徽章', 'Grid badges'), tx('真實電網出現這個狀態的當下打開才拿得到', 'Earned only when the real grid is in that state while the app is open')], ['explore', tx('探索徽章', 'Explorer badges'), tx('使用光脈動的各種方式', 'Ways to use the app')]];
+  const groups = [['grid', tx('電網徽章', 'Grid badges'), tx('真實電網出現這個狀態的當下打開才拿得到', 'Earned only when the real grid is in that state while the app is open')], ['explore', tx('探索徽章', 'Explorer badges'), tx('使用台灣脈動的各種方式', 'Ways to use the app')]];
   return (
     <Panel title="徽章簿" meta={`${count} / ${BADGES.length}`} onClose={onClose}>
       {!live && <p className="fine warm">{tx('目前是模擬資料，電網徽章暫停頒發（接上台電即時資料後才會取得）。', 'Simulated data — grid badges are paused until live Taipower data is connected.')}</p>}

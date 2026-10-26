@@ -109,7 +109,7 @@ export const BADGES = [
   },
   {
     id: 'streak-7', name: '連續觀測', kind: 'explore', rarity: '少見', color: [255, 150, 92],
-    desc: '連續 7 天打開光脈動。', hint: '每天來看一眼',
+    desc: '連續 7 天打開台灣脈動。', hint: '每天來看一眼',
     nameEn: 'Streak Watcher', descEn: `Open the app 7 days in a row.`, hintEn: 'Take a look every day',
     glyph: 'M12 3c3 4 5 6 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3.5 2 3.5 0-3-1-6 1-9z',
     check: ({ progress }) => streak(progress.days || []) >= 7,

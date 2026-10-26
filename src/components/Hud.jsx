@@ -114,7 +114,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
     <div className={`hud ${wallpaper ? 'is-wallpaper' : ''} ${W ? 'water-mode' : ''}`}>
       {!wallpaper && waterUi?.enabled && <ModeSwitch water={W} onChange={(on) => { setMore(false); waterUi.setWater(on); }} />}
       <header className="brand">
-        <div className="brand-zh">台灣光脈動</div>
+        <div className="brand-zh">台灣脈動</div>
         <div className="brand-en">TAIWAN GRID FLOW</div>
         <div className={`badge ${live ? 'live' : 'sim'}`}>
           <i />
@@ -128,7 +128,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
         )}
         {!wallpaper && <RefreshBtn />}
         {!wallpaper && live && !replay?.on && Number.isFinite(snapshot?.online) && snapshot.online > 0 && (
-          <div className="online-count" title={tx('最近 12 分鐘有開著光脈動的分頁數', 'Tabs with Taiwan Grid Flow open in the last 12 minutes')}>
+          <div className="online-count" title={tx('最近 12 分鐘有開著台灣脈動的分頁數', 'Tabs with Taiwan Grid Flow open in the last 12 minutes')}>
             {snapshot.online === 1 ? tx('目前只有你在線', 'Only you online') : tx(`${snapshot.online.toLocaleString()} 人同時在線`, `${snapshot.online.toLocaleString()} online now`)}
           </div>
         )}

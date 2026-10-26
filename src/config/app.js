@@ -1,7 +1,7 @@
 import CHANGELOG from './changelog.json';
 
 export const APP = {
-  name: '台灣光脈動',
+  name: '台灣脈動',
   en: 'Taiwan Grid Flow',
   version: CHANGELOG.version, // 版本號與更新說明統一寫在 changelog.json
   designer: '無聊的人',

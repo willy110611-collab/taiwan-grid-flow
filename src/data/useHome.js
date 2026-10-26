@@ -56,7 +56,7 @@ export function locate(setHome) {
 }
 
 /**
- * 網頁通知：開著光脈動（含桌布、手機加到主畫面）時，事件發生就跳系統通知。
+ * 網頁通知：開著台灣脈動（含桌布、手機加到主畫面）時，事件發生就跳系統通知。
  * 每種事件每天最多一次。完全關閉 App 後的提醒請用 LINE（Cloudflare 排程）。
  */
 export function useNotify(enabled, events) {
@@ -72,7 +72,7 @@ export function useNotify(enabled, events) {
       if (sent.current.has(key) || stored) continue;
       sent.current.add(key);
       try { localStorage.setItem(`tgf-notified-${key}`, '1'); } catch { /* 略 */ }
-      try { new Notification('台灣光脈動', { body: ev.text, icon: './icon-192.png', tag: ev.kind }); } catch { /* 部分瀏覽器只允許 Service Worker 通知 */ }
+      try { new Notification('台灣脈動', { body: ev.text, icon: './icon-192.png', tag: ev.kind }); } catch { /* 部分瀏覽器只允許 Service Worker 通知 */ }
     }
   }, [enabled, events]);
 }
@@ -90,7 +90,7 @@ const urlB64 = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/
 
 export function pushSupport() {
   if (!('serviceWorker' in navigator)) return { ok: false, why: '此瀏覽器不支援 App 通知' };
-  if (isIOS() && !standalone()) return { ok: false, why: 'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈動開啟（iOS 16.4 以上）', ios: true };
+  if (isIOS() && !standalone()) return { ok: false, why: 'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開台灣脈動開啟（iOS 16.4 以上）', ios: true };
   if (!('PushManager' in window) || typeof Notification === 'undefined') return { ok: false, why: '此瀏覽器不支援 App 通知' };
   return { ok: true };
 }

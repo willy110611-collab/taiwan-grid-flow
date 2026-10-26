@@ -245,7 +245,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
             <span>{tx('低碳時段開始時也通知（每天一次，依昨天同時段推估最低碳的 2 小時）', 'Also notify when the low-carbon window starts (once a day; the cleanest 2 hours estimated from yesterday)')}</span>
           </label>
         )}
-        {!home.push && pushSupport().ios && <p className="fine">{tx('iPhone：Safari「分享 → 加入主畫面」後，從主畫面打開光脈動再開啟這個開關。', 'iPhone: in Safari tap Share → Add to Home Screen, open the app from the Home Screen, then turn this on.')}</p>}
+        {!home.push && pushSupport().ios && <p className="fine">{tx('iPhone：Safari「分享 → 加入主畫面」後，從主畫面打開台灣脈動再開啟這個開關。', 'iPhone: in Safari tap Share → Add to Home Screen, open the app from the Home Screen, then turn this on.')}</p>}
 
         {/* LINE */}
         {line?.lineFriendUrl && (
@@ -267,7 +267,7 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
               try { await requestNotify(); setHome({ notify: true }); setMsg(''); } catch (err) { setMsg(tr(err.message)); }
             }}
           />
-          <span>{tx('開著光脈動時另外提醒：機組異常、低碳時段開始', 'While the app is open, also alert me to unit anomalies and the start of low-carbon periods')}</span>
+          <span>{tx('開著台灣脈動時另外提醒：機組異常、低碳時段開始', 'While the app is open, also alert me to unit anomalies and the start of low-carbon periods')}</span>
         </label>
       </section>
     </Panel>

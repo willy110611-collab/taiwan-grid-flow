@@ -1,4 +1,4 @@
-# 台灣光脈動 Taiwan Grid Flow（舊名：台灣光脈搏） — 給 Claude 的交接說明
+# 台灣脈動 Taiwan Grid Flow（舊名：台灣光脈動、台灣光脈搏） — 給 Claude 的交接說明
 
 即時台電發電／用電視覺化網頁（React 18 + Vite 6 + MapLibre + deck.gl），GitHub Pages 部署，手機版是 PWA。
 設計者：無聊的人。回覆一律用**繁體中文**，精簡。
@@ -59,6 +59,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 小水力、石門、陸域小風場等對不到節點的機組依比例分配到同燃料電廠（量小）。
 - 2026-10-25 已用 OSM power=plant 交叉核對：火力、核能、離島電廠位置都在 1.3 km 內（綠島 OSM 沒有）；新增豐德、海湖、新桃、國光、星元、星能節點（原本豐德沒對應、海湖／新桃／國光併在大潭、星元併在麥寮、星彰併在彰濱風電）。PLANTS 的 `fuel` 欄位＝電廠主燃料（麥寮 coal、澎湖／金門 oil），電廠卡用來說明主要機組不在資料裡。台電即時資料目前沒有麥寮燃煤機組，麥寮節點只剩雲林風力（CEMS 仍有麥寮汽電煙道資料）。仍對不到的：汽電共生（627 MW）、其它購電太陽能／風力、中威大安、創維風、小水力、電池。
 - 詳細待辦另見 claude.ai「APP」專案的《台灣光脈搏_待辦清單》（舊名）。
+- 2026-10-26 改名「台灣脈動」（英文仍是 Taiwan Grid Flow）；網頁、manifest、分享圖（public/og-image.jpg 用 PIL 重畫標題）、中繼站推播文字都已改。git 歷史與舊版更新說明保留舊名。
 
 ### 其他國家（2026-10-26 用一次性 Actions 實測；使用者決定暫不做）
 - 澳洲 AEMO：`visualisations.aemo.com.au/aemo/apps/api/report/ELEC_NEM_SUMMARY`（5 州需求、價格、互聯線，CORS *，瀏覽器可直接讀）；逐機組 `nemweb.com.au/Reports/Current/Dispatch_SCADA/` 每 5 分鐘一個 ZIP（約 3.7 KB、約 520 個 DUID，無 CORS → 要中繼站解壓）。機組座標要另外對（GEM，CC BY）。

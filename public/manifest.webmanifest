@@ -1,6 +1,6 @@
 {
-  "name": "台灣光脈動 Taiwan Grid Flow",
-  "short_name": "光脈動",
+  "name": "台灣脈動 Taiwan Grid Flow",
+  "short_name": "台灣脈動",
   "description": "台電即時發電與用電，畫成流動的光。每 10 分鐘更新。",
   "lang": "zh-Hant",
   "start_url": "./",

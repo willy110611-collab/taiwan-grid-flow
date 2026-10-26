@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣光脈動 — Cloudflare Worker 中繼站 v8.9
+//  台灣脈動 — Cloudflare Worker 中繼站 v8.10
+//  v8.10：名稱改「台灣脈動」（推播、LINE 訊息）
 //  v8.9：/water/tainan-pipes.json 轉送臺南市「公共管線圖資－給水系統管線」（soa.tainan.gov.tw 擋海外主機；給 Actions 定期轉檔用）
 //  v8.8：低碳時段通知（訂閱 lowc）：每天依昨日燃料別曲線推估 07–22 點最低碳的 2 小時，時段開始時發 App 通知（中英）
 //  v8.7：App 通知依訂閱語言（lang：zh／en）發中文或英文；網頁換語言時會重新登記
@@ -119,11 +120,11 @@ export default {
       const text = `⚡ 今日供電${sup.label}，尖峰預估備轉 ${sup.rate}%（${sup.hours}）。建議尖峰時段減少用電。`;
       if (users.length && !(await env.NOTIFY.get(`${today}:supply`))) {
         const to = users.filter((u) => u.supply !== false).map((u) => u.id);
-        if (await send(env, to, `台灣光脈動 ${text}`)) await env.NOTIFY.put(`${today}:supply`, '1', { expirationTtl: 2 * 86400 });
+        if (await send(env, to, `台灣脈動 ${text}`)) await env.NOTIFY.put(`${today}:supply`, '1', { expirationTtl: 2 * 86400 });
       }
       if (subs.length && !(await env.NOTIFY.get(`${today}:psupply`))) {
         const en = { title: 'Taiwan Grid Flow · Supply alert', body: `⚡ Taiwan’s power supply today: ${sup.labelEn}. Forecast peak operating reserve ${sup.rate}% (${sup.hours}). Please use less power during the peak.` };
-        await pushAll(env, subs.filter((p) => p.alerts !== false), (p) => (p.lang === 'en' ? en : { title: '台灣光脈動・供電提醒', body: text })); // v7：只訂停電提醒的不收
+        await pushAll(env, subs.filter((p) => p.alerts !== false), (p) => (p.lang === 'en' ? en : { title: '台灣脈動・供電提醒', body: text })); // v7：只訂停電提醒的不收
         await env.NOTIFY.put(`${today}:psupply`, '1', { expirationTtl: 2 * 86400 });
       }
     }
@@ -140,7 +141,7 @@ export default {
       if (!win.none && hm >= win.from && hm < win.to) {
         await pushAll(env, lowSubs, (p) => (p.lang === 'en'
           ? { title: 'Taiwan Grid Flow · Low-carbon window', body: `🌿 Electricity should be cleanest from now until about ${win.to} (estimated from the same hours yesterday). A good time for laundry, the dryer or charging.` }
-          : { title: '台灣光脈動・低碳時段', body: `🌿 現在到 ${win.to} 左右電力碳排較低（依昨天同時段推估），適合洗衣、烘衣、充電。` }));
+          : { title: '台灣脈動・低碳時段', body: `🌿 現在到 ${win.to} 左右電力碳排較低（依昨天同時段推估），適合洗衣、烘衣、充電。` }));
         await env.NOTIFY.put(`${today}:plowc`, '1', { expirationTtl: 2 * 86400 });
       }
     }
@@ -159,7 +160,7 @@ export default {
       if (!targets.length || (await env.NOTIFY.get(key))) continue;
       await pushAll(env, targets, (p) => (p.lang === 'en'
         ? { title: 'Taiwan Grid Flow · Air quality', body: `😷 ${x.site} station AQI ${x.aqi} (${AQI_EN[x.status] || x.status}), PM2.5 ${x.pm25 ?? '—'}. Sensitive groups should limit time outdoors; consider a mask.` }
-        : { title: '台灣光脈動・空品提醒', body: aqiText(x) }));
+        : { title: '台灣脈動・空品提醒', body: aqiText(x) }));
       await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
     }
 
@@ -169,7 +170,7 @@ export default {
       const ids = users.filter((u) => u.site === site && u.aqi !== false).map((u) => u.id);
       const key = `${today}:aqi:${site}`;
       if (!ids.length || (await env.NOTIFY.get(key))) continue;
-      if (await send(env, ids, `台灣光脈動 ${aqiText(x)}`)) await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
+      if (await send(env, ids, `台灣脈動 ${aqiText(x)}`)) await env.NOTIFY.put(key, '1', { expirationTtl: 2 * 86400 });
     }
   }
 };
@@ -277,7 +278,7 @@ async function pushRoute(req, env, name) {
   await kvPutJson(env, key, { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, lang, lowc, since: twDate() });
   if (body.test) await pushOne(env, sub, lang === 'en'
     ? { title: 'Taiwan Grid Flow', body: `Notifications are on${site ? ` (${site} station)` : ''}. We’ll let you know when air quality is poor or power supply is tight.` }
-    : { title: '台灣光脈動', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
+    : { title: '台灣脈動', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
   return json({ ok: true, site, town, outage, lang });
 }
 
@@ -357,7 +358,7 @@ async function verify(env, body, sig) {
   return btoa(String.fromCharCode(...new Uint8Array(mac))) === sig;
 }
 
-const HELP = `台灣光脈動 提醒小幫手 ⚡
+const HELP = `台灣脈動 提醒小幫手 ⚡
 
 📍 傳「測站名稱」登記你家附近的空品測站，例如：西屯、二林、忠明
 
@@ -371,7 +372,7 @@ const HELP = `台灣光脈動 提醒小幫手 ⚡
 ・「停止」不再通知
 
 空品 AQI ≥ 101（對人體有害）或供電非綠燈才通知，每天最多一次，只在 07–22 點發送。
-📲 想收更多免費通知：在光脈搏 App「我的家 → 提醒」開啟 App 通知。`;
+📲 想收更多免費通知：在台灣脈動 App「我的家 → 提醒」開啟 App 通知。`;
 
 async function lineWebhook(req, env, ctx) {
   const body = await req.text();
@@ -587,9 +588,9 @@ async function watchdog(env) {
     }
     const flag = await env.NOTIFY.get(`watch:${k}`);
     if (hit && !flag) {
-      if (await send(env, [env.LINE_TO], `⚠ 台灣光脈動 資料停更：${hit[1]}`)) await env.NOTIFY.put(`watch:${k}`, '1', { expirationTtl: 6 * 3600 });
+      if (await send(env, [env.LINE_TO], `⚠ 台灣脈動 資料停更：${hit[1]}`)) await env.NOTIFY.put(`watch:${k}`, '1', { expirationTtl: 6 * 3600 });
     } else if (!hit && flag) {
-      await send(env, [env.LINE_TO], `✅ 台灣光脈動：${{ grid: '台電機組資料', aqi: '環境部空品', format: '台電資料格式' }[k]}已恢復正常`);
+      await send(env, [env.LINE_TO], `✅ 台灣脈動：${{ grid: '台電機組資料', aqi: '環境部空品', format: '台電資料格式' }[k]}已恢復正常`);
       await env.NOTIFY.delete(`watch:${k}`);
     }
   }
@@ -737,7 +738,7 @@ async function errorAlerts(env) {
     if (g.n < (severe ? 1 : 3)) continue;
     const flag = `erralert:${day}:${k}`;
     if (await env.NOTIFY.get(flag)) continue;
-    const ok = await send(env, [env.LINE_TO], `⚠ 台灣光脈動 網站錯誤（今天 ${g.n} 次）\n版本 v${g.v}・${g.where}・${g.device}\n${g.msg}\n\n傳「錯誤紀錄」看最近 7 天`);
+    const ok = await send(env, [env.LINE_TO], `⚠ 台灣脈動 網站錯誤（今天 ${g.n} 次）\n版本 v${g.v}・${g.where}・${g.device}\n${g.msg}\n\n傳「錯誤紀錄」看最近 7 天`);
     if (ok) await env.NOTIFY.put(flag, '1', { expirationTtl: 2 * 86400 });
   }
 }
@@ -777,7 +778,7 @@ async function feedbackRoute(req, env, ctx) {
   // 每天前 10 則用 LINE 通知管理者（主動推播有每月上限，其餘傳「回饋」查）
   if (env.LINE_TOKEN && env.LINE_TO && n < 10) {
     const info = e.ctx ? `\nv${e.ctx.v}・${e.ctx.device === 'mobile' ? '手機' : '電腦'}・${e.ctx.lang === 'en' ? '英文' : '中文'}${e.ctx.view ? `・${e.ctx.view}` : ''}` : '';
-    ctx.waitUntil(send(env, [env.LINE_TO], `💬 台灣光脈動 意見回饋（${FB_KIND[e.kind]}）\n${text}${e.contact ? `\n聯絡：${e.contact}` : ''}${info}\n\n傳「回饋」看最近 7 天`).catch(() => {}));
+    ctx.waitUntil(send(env, [env.LINE_TO], `💬 台灣脈動 意見回饋（${FB_KIND[e.kind]}）\n${text}${e.contact ? `\n聯絡：${e.contact}` : ''}${info}\n\n傳「回饋」看最近 7 天`).catch(() => {}));
   }
   return json({ ok: true });
 }
@@ -824,8 +825,8 @@ async function errorSummary(env, days) {
  *  GitHub Actions 每小時用真實資料打開網站；失敗才呼叫 /alert?type=site
  *  只接受固定幾種類型、訊息內容寫死在這裡；同一類型 3 小時內只通知一次 */
 const ALERTS = {
-  site: '⚠ 台灣光脈動 每小時檢查失敗：正式網站用真實資料打開時出錯，詳見 GitHub Actions「健康檢查」',
-  data: '⚠ 台灣光脈動 每小時檢查：網站上的台電資料超過 1 小時沒更新，詳見 GitHub Actions「健康檢查」'
+  site: '⚠ 台灣脈動 每小時檢查失敗：正式網站用真實資料打開時出錯，詳見 GitHub Actions「健康檢查」',
+  data: '⚠ 台灣脈動 每小時檢查：網站上的台電資料超過 1 小時沒更新，詳見 GitHub Actions「健康檢查」'
 };
 async function alertRoute(url, env) {
   const type = url.searchParams.get('type');
@@ -933,7 +934,7 @@ async function outageDaily(env) {
       const where = `${p.town}${roads.length ? ` ${roads.slice(0, 4).join('、')}${roads.length > 4 ? ` 等 ${roads.length} 處` : ''}` : ''}`;
       await pushOne(env, p.sub, p.lang === 'en'
         ? { title: 'Taiwan Grid Flow · Planned outage', body: `${n === 1 ? 'Tomorrow' : 'In 3 days'}, ${'Sun Mon Tue Wed Thu Fri Sat'.split(' ')[wd]} ${md}, ${times}: planned power outage in ${p.town}${roads.length ? ` (${roads.slice(0, 4).join(', ')}${roads.length > 4 ? ` and ${roads.length - 4} more` : ''})` : ''}. Taipower’s notice is authoritative; call 1911 for details.` }
-        : { title: '台灣光脈動・計畫停電提醒', body: `${when}，${where}有計畫性停電（${hits[0].office}）。實際範圍以台電通知為準，可撥 1911 查詢。` });
+        : { title: '台灣脈動・計畫停電提醒', body: `${when}，${where}有計畫性停電（${hits[0].office}）。實際範圍以台電通知為準，可撥 1911 查詢。` });
     }
   }
 }

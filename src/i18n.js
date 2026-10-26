@@ -130,7 +130,7 @@ const EN = {
   '通知權限未允許': 'Notification permission not granted', '通知服務暫時無法使用，請稍後再試': 'Notifications are temporarily unavailable; please try again later',
   '通知權限未允許（可到手機設定 → 通知 開啟）': 'Notification permission not granted (enable it in your phone’s Settings → Notifications)',
   '此瀏覽器不支援 App 通知': 'This browser does not support app notifications',
-  'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開光脈動開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
+  'iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開台灣脈動開啟（iOS 16.4 以上）': 'On iPhone, use Safari Share → Add to Home Screen first, then open the app from the Home Screen to turn this on (iOS 16.4+)',
   '示範模式（模擬資料）': 'Demo mode (simulated data)',
   '日射量資料不足或過舊': 'Solar radiation data missing or stale',
   '讀不到最新 · 顯示': 'No new data · showing', '電廠': 'Plants', '更多': 'More', '店家用電試算': 'Shop energy', '今日紀錄': 'Today’s records', '收集成就': 'Collectibles', '說明・資料來源': 'Guide & sources', '電腦版': 'Desktop', '線路：示意': 'Lines: schematic', '背景音：開': 'Sound: on', '背景音：關': 'Sound: off', '震動：開': 'Vibration: on', '震動：關': 'Vibration: off', '意見回饋': 'Feedback', '線路：真實': 'Lines: real', '光流路線：真實輸電線（OpenStreetMap）或示意光纖': 'Flow routes: real transmission lines (OpenStreetMap) or schematic',

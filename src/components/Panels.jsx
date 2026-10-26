@@ -409,7 +409,7 @@ export function InfoPanel({ snapshot, air, sun, onClose, initialTab, power = 'au
           </dl>
           {APP.donate?.some((d) => d.url) && (
             <div className="donate">
-              <p>☕ 喜歡光脈動的話，可以請無聊的人喝杯咖啡，支持伺服器與資料費用 🙏</p>
+              <p>☕ 喜歡台灣脈動的話，可以請無聊的人喝杯咖啡，支持伺服器與資料費用 🙏</p>
               <div className="donate-btns">
                 {APP.donate.filter((d) => d.url).map((d) => (
                   <a key={d.url} className="donate-btn" href={d.url} target="_blank" rel="noreferrer">{d.label}</a>
