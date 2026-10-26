@@ -1,0 +1,53 @@
+# 一次性：找臺南／臺北／桃園自來水管線開放資料的下載網址與樣本、台水停水地圖的資料來源與使用規定（之後刪除）
+name: Probe data
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['.github/workflows/probe-data.yml']
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 抓資料
+        run: |
+          set +e
+          mkdir -p probe
+          UA="Mozilla/5.0 (taiwan-grid-flow; https://github.com/willy110611-collab/taiwan-grid-flow)"
+          get() { code=$(curl -sSL -A "$UA" --max-time 120 -o "probe/$1" -w '%{http_code} %{size_download} %{content_type}' "$2"); echo "$1 $code $2" >> probe/summary.txt; }
+          get dgt-122507.json "https://data.gov.tw/api/v2/rest/dataset/122507"
+          get dgt-122507.html "https://data.gov.tw/dataset/122507"
+          get tainan-ckan.json "https://data.tainan.gov.tw/api/3/action/package_search?q=%E7%B5%A6%E6%B0%B4&rows=20"
+          get taipei-ds.json "https://data.taipei/api/dataset/af167303-0e5f-45dd-b624-a01f541565ce"
+          get taipei-search.json "https://data.taipei/api/frontstage/tpeod/dataset.search?q=%E8%87%AA%E4%BE%86%E6%B0%B4%E7%B3%BB%E7%B5%B1%E7%AE%A1%E7%B7%9A"
+          get tycg.html "https://opendata.tycg.gov.tw/datalist/fdc2dc1a-c988-4b1e-aac8-ca109972bb07"
+          get wateroff.html "https://web.water.gov.tw/wateroffmap/map"
+          get water-robots.txt "https://web.water.gov.tw/robots.txt"
+          get water-robots2.txt "https://www.water.gov.tw/robots.txt"
+          get water-terms.html "https://www.water.gov.tw/ch/Contents?nodeId=4693"
+          # 停水地圖頁引用的 js（找資料 API）
+          for js in $(grep -o 'src="[^"]*\.js[^"]*"' probe/wateroff.html | cut -d'"' -f2 | head -8); do
+            case "$js" in http*) u="$js";; /*) u="https://web.water.gov.tw$js";; *) u="https://web.water.gov.tw/wateroffmap/$js";; esac
+            n=$((n+1)); get "wateroff-js-$n.js" "$u"
+          done
+          grep -ohE "(https?:)?/[A-Za-z0-9_./-]*(api|Api|API|json|Json|ashx|GetData|Query)[A-Za-z0-9_./?=&-]*" probe/wateroff* | sort -u | head -40 > probe/wateroff-endpoints.txt
+          # 臺南 CKAN 找到的資源：抓第一個管線資源樣本
+          python3 - <<'PY' > probe/tainan-res.txt
+          import json
+          try:
+            d=json.load(open('probe/tainan-ckan.json'))
+            for p in d['result']['results']:
+              for r in p.get('resources',[]):
+                print(p['title'],'|',r.get('format'),'|',r.get('url'))
+          except Exception as e: print('fail',e)
+          PY
+          u=$(grep -i '給水' probe/tainan-res.txt | grep -iE 'json|geojson|shp|kml|zip|csv' | head -1 | awk -F' \\| ' '{print $3}')
+          [ -n "$u" ] && get tainan-pipe-sample "$u"
+          ls -la probe; for f in probe/*; do s=$(stat -c %s "$f"); [ "$s" -gt 4000000 ] && head -c 4000000 "$f" > "$f.p" && mv "$f.p" "$f" && echo "$f truncated from $s" >> probe/summary.txt; done
+          cat probe/summary.txt probe/tainan-res.txt probe/wateroff-endpoints.txt
+      - name: 提交回分支
+        run: |
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add probe && git commit -m "暫時：管線與停水資料來源樣本" && git push
