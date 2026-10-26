@@ -1,0 +1,10 @@
+dgt-122507.json 200 78 application/json https://data.gov.tw/api/v2/rest/dataset/122507
+dgt-122507.html 200 513039 text/html;charset=utf-8 https://data.gov.tw/dataset/122507
+tainan-ckan.json 404 6147 text/html; charset=utf-8 https://data.tainan.gov.tw/api/3/action/package_search?q=%E7%B5%A6%E6%B0%B4&rows=20
+taipei-ds.json 404 665 text/html;charset=UTF-8 https://data.taipei/api/dataset/af167303-0e5f-45dd-b624-a01f541565ce
+taipei-search.json 405 667 text/html;charset=UTF-8 https://data.taipei/api/frontstage/tpeod/dataset.search?q=%E8%87%AA%E4%BE%86%E6%B0%B4%E7%B3%BB%E7%B5%B1%E7%AE%A1%E7%B7%9A
+tycg.html 200 784157 text/html;charset=utf-8 https://opendata.tycg.gov.tw/datalist/fdc2dc1a-c988-4b1e-aac8-ca109972bb07
+wateroff.html 200 1457 text/html https://web.water.gov.tw/wateroffmap/map
+water-robots.txt 502 153 text/html https://web.water.gov.tw/robots.txt
+water-robots2.txt 200 58 text/plain https://www.water.gov.tw/robots.txt
+water-terms.html 200 76215 text/html; charset=utf-8 https://www.water.gov.tw/ch/Contents?nodeId=4693

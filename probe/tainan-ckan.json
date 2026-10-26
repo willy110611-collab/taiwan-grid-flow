@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW" translate="no">
+<head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/favicon.png"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>&#x627E;&#x4E0D;&#x5230;&#x9801;&#x9762; - 臺南市政府資料開放平台</title>
+    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+</head>
+<body>
+    
+    <!-- Google tag (gtag.js) --> <script async src="https://www.googletagmanager.com/gtag/js?id=G-MES3BN90E0"></script>
+    <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-MES3BN90E0'); </script>
+
+
+
+    <div b-qmaid9tt6r id="app" class="d-flex flex-column vh-100">
+        <nav b-qmaid9tt6r class="navbar navbar-expand-lg">
+            <a b-qmaid9tt6r href="#C" class="show-on-focus" title="跳到主要內容區塊">跳到主要內容區塊</a>
+            <div b-qmaid9tt6r class="container">
+                <a b-qmaid9tt6r href="/" title="首頁">
+                    <h1 b-qmaid9tt6r>
+                        <img b-qmaid9tt6r class="header-logo" src="/assets/images/header_logo.png" alt="">
+                    </h1>
+                </a>
+                <button b-qmaid9tt6r class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span b-qmaid9tt6r class="navbar-toggler-icon"></span>
+                </button>
+                <div b-qmaid9tt6r class="collapse navbar-collapse justify-content-end" id="navbarSupportedContent">
+                    <ul b-qmaid9tt6r class="navbar-nav ms-auto mt-3 mt-lg-0 mb-lg-2 mb-lg-0 col-12 col-md-10 col-lg-8 d-md-flex justify-content-md-between position-relative">
+                        <li b-qmaid9tt6r class="accesskey position-absolute nav">
+                            <a b-qmaid9tt6r href="#U"
+                               title="右上方功能區塊"
+                               id="AU"
+                               accesskey="U"
+                               name="U"
+                               class="nav-link">:::</a>
+                        </li>
+                        <li b-qmaid9tt6r class="nav-item">
+                            <a b-qmaid9tt6r class="nav-link fs-5 fw-bold" aria-current="page" href="/Guid" title="網站導覽">網站導覽</a>
+                        </li>
+                        <li b-qmaid9tt6r class="nav-item">
+                            <a class="nav-link fs-5 fw-bold" aria-current="page" title="資料建議" href="/DataSuggestion">資料建議</a>
+                        </li>
+                        <li b-qmaid9tt6r class="nav-item">
+                            <a class="nav-link fs-5 fw-bold" aria-current="page" title="資料集" href="/DataSet">資料集</a>
+                        </li>
+                        <li b-qmaid9tt6r class="nav-item">
+                            <a b-qmaid9tt6r class="nav-link fs-5 fw-bold" aria-current="page" href="/Example/Index" title="應用展示">應用展示</a>
+                        </li>
+                        <li b-qmaid9tt6r class="nav-item">
+                            <a class="nav-link fs-5 fw-bold" aria-current="page" title="關於平台" href="/About">關於平台</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        <main b-qmaid9tt6r class="container-fluid flex-grow-1 px-0">
+            
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 50vh;">
+    <h1 class="mb-3" style="font-size: 2.5rem; font-weight: 500;">您所訪問的頁面不存在</h1>
+    <p class="text-muted mb-4">請點擊下方按鈕回到首頁。</p>
+    <a href="/" class="btn btn-primary rounded-pill px-5 py-2">回首頁</a>
+</div>
+        </main>
+
+        <footer b-qmaid9tt6r class="bg-footer flex-shrink-0">
+            <div b-qmaid9tt6r class="container py-3">
+                <div b-qmaid9tt6r class="row">
+                    <div b-qmaid9tt6r class="col-12 col-sm-6 position-relative">
+                        <div b-qmaid9tt6r class="accesskey footer">
+                            <a b-qmaid9tt6r href="#Z" title="下方功能區塊" id="AZ" accesskey="Z" name="Z" class="text-decoration-none">:::</a>
+                        </div>
+                        <img b-qmaid9tt6r class="mt-2 me-2" src="/assets/images/footer_logo.png" alt="臺南市政府資料開放平台logo">
+                        <img b-qmaid9tt6r class="mt-2" src="/assets/images/footer_site_name.png" alt="臺南市政府資料開放平台">
+                    </div>
+                    <div b-qmaid9tt6r class="col-12 col-sm-6">
+                        <a title="關於臺南市政府資料開放平台" href="/About?id=e91a821f-f3f2-4ce7-931f-02ca16118579">關於臺南市政府資料開放平台</a><br b-qmaid9tt6r />
+                        <a title=" 隱私權保護、使用及資訊安全政策" href="/About?id=b47e3360-5ed0-405f-b068-0feac9df1aa9">隱私權保護、使用及資訊安全政策</a>
+                        <br b-qmaid9tt6r />
+                        <br b-qmaid9tt6r />
+                        <p b-qmaid9tt6r>
+                            Copyright &copy; 2024 Tainan City Government. All rights reserved.
+                        </p>
+                        <a b-qmaid9tt6r href="https://accessibility.moda.gov.tw/Applications/Detail?category=20250818175925" title="無障礙網站">
+                            <img b-qmaid9tt6r src="/assets/images/footer_acc.png" border="0" width="88" height="31" alt="通過AA無障礙網頁檢測" />
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <script type="module" src="/js/main.js"></script>
+    
+</body>
+</html>
