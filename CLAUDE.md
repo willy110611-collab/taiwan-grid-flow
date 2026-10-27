@@ -54,7 +54,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 ### 其他
 - 英文介面：空品測站名（「我的家」測站選單）仍是中文——環境部 aqx_p_432 沒有英文站名；要英文需中繼站另抓測站基本資料 aqx_p_07 的 siteengname（要部署中繼站）。機組名只在開頭是電廠主名稱時換英文（geo.js `unitName`），水力節點與其他小站照原文。
 - loadpara.json 另有 `yday_*`（昨日尖峰用電、備轉）與 `real_hr_maxi_sply_capacity`（今日實際最大供電能力），網頁目前沒用。
-- 安全（2026-10-27 npm audit）：maplibre-gl 5.6 有署名控制項 XSS 公告 GHSA-jrc7-96c5-q579（修正在 6.4.1）。只在署名字串來自外部時才會被利用；本站署名都寫死在 baseStyle.js 等程式內 → 目前不受影響。升 6.x 是大版本：2026-10-27 試過 6.16（`import maplibregl` 要改 `import * as`），冒煙測試出現大量「reading 'height'」錯誤（deck.gl MapboxOverlay 相容問題），且 gzip 多 37 KB → 等 deck.gl 支援再升。
+- 地圖引擎（v0.8.66，2026-10-27）：maplibre-gl 6.16＋deck.gl 9.4（修 GHSA-jrc7-96c5-q579）。注意：① maplibre 6 的背景執行緒是獨立檔，GridFlowEngine.js 用 `maplibre-gl/dist/maplibre-gl-worker.mjs?url` + `setWorkerUrl` 指定；② maplibre 6 把鏡頭狀態搬到 `map._camera.transform`，deck.gl 9.4 疊圖仍讀 `map.transform` → 在 map 上補 getter（升級 deck.gl 後可檢查是否還需要）；③ `import * as maplibregl`。gzip 比 5.6／9.1 多約 83 KB（maplibre 292、deck 267），worker 另載約 150 KB。package-lock 的 playwright 鎖 1.63（配合本機預裝瀏覽器）。
 - 返回鍵（v0.8.62）：App.jsx 用 history.state.tgfDepth 對應層數（面板 1、地圖選點 2）；介面自己關閉時 history.go 退回並略過那次 popstate。Esc 處理器一律 `e.preventDefault()`、其他處理器先看 `e.defaultPrevented`（面板 → 選點 → 對話框 → 回放／放空，一次只做一件事）。
 - 時間：亮點、回放、狀態列、我的紀錄、今日曲線重建都用台電資料時間（history.js `rowHM`／`dataMs`），不用收到資料的 `t`。
 - 2026-10-27 夜間兩輪無頭瀏覽器 QA（手機直／橫、平板、電腦、鍵盤、英文）問題都已修；剩：手機橫向（高約 400 px）全島視角受地圖邊界 MAX_BOUNDS 限制無法再縮小，島會略壓到篩選列／工具列（v0.8.63 留白已依介面位置計算）。2026-10-27 06:15 日出後用真實資料檢查：太陽能 06:00 起出現、黎明交班徽章、亮點與電廠卡時間都正常。

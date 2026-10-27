@@ -1,4 +1,7 @@
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+// maplibre 6：地圖的背景執行緒是獨立檔案，打包後要明確告訴它在哪裡（否則預設找同目錄的 maplibre-gl-worker.mjs，會找不到）
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { ScatterplotLayer, IconLayer, PathLayer, TextLayer, PolygonLayer } from '@deck.gl/layers';
 import { aqiLevel, nearestWind } from '../data/useAir.js';
@@ -128,6 +131,10 @@ export class GridFlowEngine {
       attributionControl: false,
       fadeDuration: 0
     });
+    // maplibre 6 把鏡頭狀態搬到 map._camera.transform；deck.gl 9.4 疊圖仍讀 map.transform（非公開欄位）→ 補一個相容的存取點
+    if (!('transform' in this.map) && this.map._camera) {
+      Object.defineProperty(this.map, 'transform', { configurable: true, get() { return this._camera._requestedCameraState || this._camera.transform; } });
+    }
     // 「全島」要回到一開始進入時的樣子：記下開場的傾斜與旋轉（有存過視角時用預設的開場值）
     this.homeTilt = initialView ? { pitch: 28, bearing: 0 } : { pitch: this.map.getPitch(), bearing: this.map.getBearing() };
     // 桌布模式預設鎖定：點擊、滾輪、拖曳都無效，避免在桌面上誤觸縮放（按鎖頭才解鎖）
