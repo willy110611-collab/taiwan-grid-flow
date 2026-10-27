@@ -24,7 +24,8 @@ try {
 try {
   const g = JSON.parse(await get(`${SITE}data/genary.json`));
   const a = ageMin(g['']);
-  if (!(a < 60)) problems.push(`網站備份資料 ${Math.round(a)} 分鐘沒更新`);
+  // GitHub 的排程常延遲（*/10 實際常 30–50 分鐘才跑一次），備份只在中繼站失敗時才用 → 2 小時沒更新才算問題
+  if (!(a < 120)) problems.push(`網站備份資料 ${Math.round(a)} 分鐘沒更新`);
   JSON.parse(await get(`${SITE}version.json`));
 } catch (e) { problems.push(`網站讀不到：${e.message}`); }
 
