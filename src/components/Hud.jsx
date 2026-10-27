@@ -133,7 +133,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
         <div className="brand-en">TAIWAN GRID FLOW</div>
         <div className={`badge ${live ? 'live' : 'sim'}`}>
           <i />
-          {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('回放')} ${rowHM(snapshot)}` : snapshot ? (snapshot.stale ? `${t('讀不到最新 · 顯示')} ${rowHM(snapshot)}` : snapshot.cached ? `${t('更新中 · 上次')} ${rowHM(snapshot)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
+          {replay?.on && snapshot ? `REPLAY · ${snapshot.yesterday ? t('昨天') : t('今天')} ${rowHM(snapshot)}` : snapshot ? (snapshot.stale ? `${t('讀不到最新 · 顯示')} ${rowHM(snapshot)}` : snapshot.cached ? `${t('更新中 · 上次')} ${rowHM(snapshot)}` : t(live ? 'LIVE · 台電即時' : 'SIMULATED · 模擬資料')) : 'CONNECTING'}
         </div>
         {!wallpaper && sound && <button className="lang-btn snd-btn" onClick={toggleSound} aria-label={tx('關閉背景音', 'Turn off background sound')} title={tx('關閉背景音', 'Turn off background sound')}>{Icon.sound}</button>}
         {!wallpaper && (
@@ -196,7 +196,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
       )}
 
       <div className={`cruise-caption ${ui.shot ? 'show' : ''}`}>
-        <span>{t('放空巡航')}</span>
+        <span>{t('自動導覽')}</span>
         <b>{t(ui.shot || '')}</b>
       </div>
 
@@ -225,10 +225,10 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
             {Icon.search}<span>{t('電廠')}</span>
           </button>
           <button className={replay?.on ? 'on' : ''} onClick={() => { setMore(false); setUi({ toggleReplay: true }); }}>
-            {Icon.replay}<span>{t('回放')}</span>
+            {Icon.replay}<span>{t('今日重播')}</span>
           </button>
           <button className={ui.cruise ? 'on' : ''} onClick={() => { setMore(false); setUi({ toggleCruise: true }); }}>
-            {Icon.cruise}<span>{t('放空')}</span>
+            {Icon.cruise}<span>{t('自動導覽')}</span>
           </button>
           </>)}
           <button className={more || MORE_PANELS.includes(ui.panel) ? 'on' : ''} onClick={() => setMore(!more)} aria-expanded={more}>

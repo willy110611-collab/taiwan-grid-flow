@@ -66,8 +66,8 @@ const EN = {
   // HUD
   '綠能': 'Green', '火力': 'Thermal', '核能': 'Nuclear', '全部': 'All', '用電': 'Demand', '空品': 'Air',
   'MW · 全台發電': 'MW · generation', 'MW · 全台用電': 'MW · demand',
-  '放空': 'Drift', '我的家': 'Home', '亮點': 'Peaks', '徽章': 'Badges', '回放': 'Replay', '資訊': 'Info', '全螢幕': 'Fullscreen', '全島': 'Overview',
-  '放空巡航': 'Drift cruise', '日出': 'Sunrise', '日落': 'Sunset', '資料': 'Data',
+  '自動導覽': 'Auto tour', '我的家': 'Home', '亮點': 'Peaks', '徽章': 'Badges', '今日重播': 'Replay', '資訊': 'Info', '全螢幕': 'Fullscreen', '全島': 'Overview',
+  '日出': 'Sunrise', '日落': 'Sunset', '資料': 'Data',
   'LIVE · 台電即時': 'LIVE · Taipower', 'SIMULATED · 模擬資料': 'SIMULATED', '尖峰備轉': 'peak reserve', '模擬': 'sim', '更新中 · 上次': 'Updating · last',
   '供電充裕': 'Supply OK', '供電吃緊': 'Supply tight', '供電警戒': 'Supply alert', '限電警戒': 'Rationing alert', '限電準備': 'Rationing prep',
   '適合用電': 'Good time to use', '可以用電': 'OK to use', '建議延後': 'Better to wait', '暫時無法判斷': 'Can’t tell right now', '＋ 設定我的家': '＋ Set home',
@@ -89,8 +89,8 @@ const EN = {
   '煙道即時監測（環境部 CEMS）': 'Stack monitoring (MOENV CEMS)',
   '資料：台灣電力公司「今日電力資訊」各機組發電量，每 10 分鐘更新。': 'Source: Taipower real-time unit output, updated every 10 minutes.',
   // 回放
-  '今天': 'Today', '昨天': 'Yesterday', '回放 · 電廠出力依燃料曲線推估': 'Replay · plant output estimated from fuel curves',
-  'MW · 儲能充電中': 'MW · storage charging', '回放': 'Replay',
+  '今天': 'Today', '昨天': 'Yesterday', '重播 · 電廠出力依燃料曲線推估': 'Replay · plant output estimated from fuel curves',
+  'MW · 儲能充電中': 'MW · storage charging',
   // 亮點／紀錄／試算
   '我的紀錄': 'My records', '這台裝置看過的最高值': 'highest seen on this device', '綠能佔比': 'Green share', '太陽能出力': 'Solar output',
   '風力出力': 'Wind output', '全台用電': 'Demand', '試算：時間電價划算嗎？': 'Calc: is time-of-use cheaper?',

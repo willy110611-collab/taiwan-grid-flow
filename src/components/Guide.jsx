@@ -89,8 +89,8 @@ export const GUIDE = [
   [Icon.plug, '家電', '算一台家電一個月多少度、多付多少電費；電費小手冊整理台電的省電與電價說明，每篇附原始連結。', 'Work out an appliance’s monthly kWh and extra cost; the handbook summarises Taipower’s tips and tariff notes, each linked to the original.'],
   [Icon.store, '店家', '匯入店家智慧電表的用電明細：每月尖峰／離峰圖表、哪種電價最省、把工作移到離峰能再省多少。', 'Import a shop’s smart-meter data: monthly peak/off-peak charts, which tariff is cheapest, and how much more you save by shifting work off-peak.'],
   [Icon.medal, '亮點', '今天太陽能尖峰、綠能最高的時刻、發電組成；今天用電在今年排第幾、去年今天；台灣和各國的碳強度、再生能源比較。', 'Today’s solar peak, greenest moment and generation mix; how today’s demand ranks this year and this day last year; how Taiwan compares with other countries.'],
-  [Icon.replay, '回放', '把今天（或昨天）一整天快轉播放，看太陽能如何撐起白天。', 'Fast-forward through today (or yesterday) to see solar carry the daytime.'],
-  [Icon.cruise, '放空', '自動巡航各地電廠，適合當桌布；按「全島」回到俯視圖。', 'Auto-cruise between plants — great as a wallpaper; tap “Overview” to return to the full view.'],
+  [Icon.replay, '今日重播', '把今天（或昨天）一整天快轉播放，看太陽能如何撐起白天。', 'Fast-forward through today (or yesterday) to see solar carry the daytime.'],
+  [Icon.cruise, '自動導覽', '鏡頭自動巡覽各地電廠，適合當桌布；按「全島」回到俯視圖。', 'Auto-cruise between plants — great as a wallpaper; tap “Overview” to return to the full view.'],
   [Icon.info, '資訊', '資料來源、準確度、連線狀況、各縣市綠電；資料讀不到時看這裡。', 'Data sources, accuracy, connection status and renewables by county — check here when data won’t load.']
 ];
 

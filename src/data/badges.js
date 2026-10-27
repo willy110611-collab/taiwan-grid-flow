@@ -86,8 +86,8 @@ export const BADGES = [
   },
   {
     id: 'island-tour', name: '全島巡禮', kind: 'explore', rarity: '常見', color: [200, 210, 255],
-    desc: `放空巡航看完全部 ${SHOTS.length} 個場景（其中「${SHOTS.filter((x) => x.day).map((x) => x.name).join('、')}」只在白天出現）。`, hint: '白天打開「放空」慢慢看',
-    nameEn: 'Island Tour', descEn: `Watch all ${SHOTS.length} cruise scenes in Drift mode (one of them only appears in daytime).`, hintEn: 'Open Drift in the daytime and take your time',
+    desc: `自動導覽看完全部 ${SHOTS.length} 個場景（其中「${SHOTS.filter((x) => x.day).map((x) => x.name).join('、')}」只在白天出現）。`, hint: '白天打開「自動導覽」慢慢看',
+    nameEn: 'Island Tour', descEn: `Watch all ${SHOTS.length} cruise scenes in Auto tour (one of them only appears in daytime).`, hintEn: 'Open Auto tour in the daytime and take your time',
     glyph: 'M12 3l3 6.5 6.5 2.5-6.5 2.5L12 21l-3-6.5L2.5 12 9 9.5z',
     check: ({ progress }) => seenShots(progress) >= SHOTS.length,
     progress: (p) => `${seenShots(p)} / ${SHOTS.length}`
@@ -102,7 +102,7 @@ export const BADGES = [
   },
   {
     id: 'time-traveler', name: '時光旅人', kind: 'explore', rarity: '常見', color: [180, 150, 255],
-    desc: '用「回放」看完一整段今日電力變化。', hint: '試試回放功能',
+    desc: '用「今日重播」看完一整段今日電力變化。', hint: '試試今日重播',
     nameEn: 'Time Traveler', descEn: `Watch a full day of today’s power with Replay.`, hintEn: 'Try Replay',
     glyph: 'M12 7v5l3 2M4 12a8 8 0 1 0 2.3-5.7M4 3v4h4',
     check: ({ progress }) => !!progress.replayDone

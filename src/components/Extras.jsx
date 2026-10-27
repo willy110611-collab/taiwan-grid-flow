@@ -246,7 +246,7 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
       </button>
       <div className="replay-time">
         <b>{rowHM(cur)}</b>
-        <small>{cur.reconstructed ? t('回放 · 電廠出力依燃料曲線推估') : t('回放')}</small>
+        <small>{cur.reconstructed ? t('重播 · 電廠出力依燃料曲線推估') : t('今日重播')}</small>
       </div>
       {hasYesterday && (
         <div className="speeds day-sw">
@@ -258,14 +258,14 @@ export function ReplayBar({ rows, hasYesterday, replay, setReplay, onFinish }) {
       <input
         type="range" min="0" max={n - 1} step="0.01" value={replay.idx}
         onChange={(e) => setReplay((r) => ({ ...r, idx: Number(e.target.value), playing: false }))}
-        aria-label={tx('回放時間', 'Replay time')}
+        aria-label={tx('重播時間', 'Replay time')}
       />
       <div className="speeds">
         {SPEEDS.map((s) => (
           <button key={s} className={replay.speed === s ? 'on' : ''} onClick={() => setReplay((r) => ({ ...r, speed: s }))}>{s}×</button>
         ))}
       </div>
-      <button className="icon-btn" onClick={() => setReplay((r) => ({ ...r, on: false, playing: false }))} aria-label={tx('結束回放', 'Exit replay')}>{Icon.close}</button>
+      <button className="icon-btn" onClick={() => setReplay((r) => ({ ...r, on: false, playing: false }))} aria-label={tx('結束重播', 'Exit replay')}>{Icon.close}</button>
     </div>
   );
 }

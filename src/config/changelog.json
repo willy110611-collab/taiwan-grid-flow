@@ -1,14 +1,15 @@
 {
-  "version": "0.8.67",
+  "version": "0.8.68",
   "notesEn": [
+    "Toolbar buttons renamed: “Drift” is now “Auto tour” (Replay keeps its name)",
     "Picking Green or Thermal now labels the main plants on the island view with their output, like the Demand view",
     "Green view: Changhua offshore wind farms glow like the other green sources",
     "Map engine updated to MapLibre 6 and deck.gl 9.4 (fixes a MapLibre security advisory)",
     "New look: splash screen and app icon with a Taiwan outline and heartbeat line; logo next to the title",
-    "Cleaner home screen: one energy-filter button, one big green-share number, a simpler clock and a small Home pill",
-    "New plant cards (running-rate ring, fuel legend, today's chart with high/low, unit tiles) and tile-style highlights"
+    "Cleaner home screen: one energy-filter button, one big green-share number, a simpler clock and a small Home pill"
   ],
   "notes": [
+    "工具列改名：「回放」改為「今日重播」、「放空」改為「自動導覽」，一看就知道做什麼",
     "單選綠能、火力時，全島畫面會像用電一樣標出主要電廠名稱與出力",
     "綠能畫面：彰化外海離岸風場改成和其他綠能一樣的光球",
     "地圖引擎更新到 MapLibre 6、deck.gl 9.4（修正 MapLibre 的安全公告）",
