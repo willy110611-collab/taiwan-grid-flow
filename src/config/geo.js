@@ -146,9 +146,9 @@ export const REGIONS = {
   N: { name: '北部', en: 'NORTH',   share: 0.385, label: [121.72, 25.28], anchor: 'start',
        counties: ['臺北市', '新北市', '基隆市', '桃園市', '新竹市', '新竹縣', '宜蘭縣', '連江縣'] },
   C: { name: '中部', en: 'CENTRAL', share: 0.30,  label: [120.22, 24.62], anchor: 'end',
-       counties: ['苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣'] },
+       counties: ['苗栗縣', '臺中市', '彰化縣', '南投縣'] },
   S: { name: '南部', en: 'SOUTH',   share: 0.295, label: [119.98, 22.82], anchor: 'end',
-       counties: ['嘉義市', '嘉義縣', '臺南市', '高雄市', '屏東縣', '澎湖縣', '金門縣'] },
+       counties: ['雲林縣', '嘉義市', '嘉義縣', '臺南市', '高雄市', '屏東縣', '澎湖縣', '金門縣'] }, // 雲林：見 PLANT_REGION 的說明
   E: { name: '東部', en: 'EAST',    share: 0.02,  label: [121.2, 22.98], anchor: 'start', // 放在台東外側偏西：避免被電腦版右側面板蓋住
        counties: ['花蓮縣', '臺東縣'] }
 };
@@ -161,9 +161,11 @@ export const countyRegion = (name = '') => {
 /** 電廠所在供電區 */
 export const PLANT_REGION = {
   datan: 'N', linkou: 'N', chinshan: 'N', kuosheng: 'N', hsiehho: 'N', haihu: 'N', xintao: 'N', kuokuang: 'N',
-  ow_formosa1: 'C', ow_formosa2: 'C', ow_zhongneng: 'C', ow_changfang: 'C', ow_gch12: 'C', ow_gch4: 'C', ow_tpc: 'C', ow_hailong: 'C', ow_yunneng: 'C',
-  taichung: 'C', tunghsiao: 'C', mailiao: 'C', xingyuan: 'C', xingneng: 'C', changbin: 'C', miaoli: 'C', mingtan: 'C', tachien: 'C',
-  sol_changhua: 'C', sol_yunlin: 'C', sol_taichung: 'C', sol_miaoli: 'C', sol_nantou: 'C', sol_taoyuan: 'N', sol_north: 'N', sol_kaohsiung: 'S', sol_east: 'E',
+  // 2026-10-27 依台電各區即時發電量反推（凌晨每 25 分鐘比對 15 次）：雲林（允能、麥寮、雲林太陽能）算南部、苗栗離岸與陸域風場算北部最吻合
+  //  台電沒有公開各區的縣市／電廠對照，這是由實測數字推得；通霄電廠（苗栗）留在中部（改北部反而差更多）
+  ow_formosa1: 'N', ow_formosa2: 'N', ow_zhongneng: 'C', ow_changfang: 'C', ow_gch12: 'C', ow_gch4: 'C', ow_tpc: 'C', ow_hailong: 'C', ow_yunneng: 'S',
+  taichung: 'C', tunghsiao: 'C', mailiao: 'S', xingyuan: 'C', xingneng: 'C', changbin: 'C', miaoli: 'N', mingtan: 'C', tachien: 'C',
+  sol_changhua: 'C', sol_yunlin: 'S', sol_taichung: 'C', sol_miaoli: 'C', sol_nantou: 'C', sol_taoyuan: 'N', sol_north: 'N', sol_kaohsiung: 'S', sol_east: 'E',
   hsinta: 'S', maanshan: 'S', cigu: 'S', chiayi: 'S', pingtung: 'S', nanbu: 'S', talin: 'S', chiahui: 'S', fengde: 'S',
   hoping: 'N', // 台電各區資料把和平電廠算在北部（2026-10-26 查證：東部發電 69 MW，和平同時 1,198 MW）
   penghu: 'X', kinmen: 'X', matsu: 'X', ludao: 'X', lanyu: 'X'

@@ -1,12 +1,13 @@
 {
-  "version": "0.8.63",
+  "version": "0.8.64",
   "notesEn": [
+    "Region fix: based on Taipower's live regional generation, Yunlin plants now count as South and Miaoli wind farms as North",
     "Phone in landscape: the whole-island view now leaves room for the filter bar and toolbar",
     "Your Home name follows the interface language",
-    "Back button and Esc are more predictable: one step at a time (cancel picking → close panel → end Drift/Replay)",
-    "Info panel tabs now fit on one row on desktop (shorter English names: Sources, By county)"
+    "Back button and Esc are more predictable: one step at a time (cancel picking → close panel → end Drift/Replay)"
   ],
   "notes": [
+    "供電區對照修正：依台電各區即時發電量比對，雲林（允能、麥寮、雲林太陽能）改算南部、苗栗離岸與陸域風場改算北部",
     "手機橫放時，全島視角避開上方篩選列與下方工具列",
     "「我的家」地名跟著介面語言切換（中文介面不會出現英文地名）",
     "返回鍵更穩：選點中返回＝取消選點，再返回才關面板；Esc 一次只做一件事（先關面板，再結束放空或回放）",
