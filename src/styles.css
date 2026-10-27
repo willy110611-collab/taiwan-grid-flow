@@ -1039,6 +1039,7 @@ button:not(:disabled):active { transform: scale(0.95); }
 /* 小手機（≤ 380px，例如 360 寬的 Android）：狀態列縮短，語言／更新鈕不壓到右上的數字 */
 @media (max-width: 380px) {
   .badge { letter-spacing: 0.12em; }
+  .brand-en { letter-spacing: 0.3em; }
   .lang-btn { margin-left: 5px; padding: 3px 8px; }
   html[lang='en'] .filters button { padding: 5px 4px; letter-spacing: 0; gap: 3px; font-size: 10.5px; } /* 英文字較長，6 個篩選要擠得下 */
 }
@@ -1047,3 +1048,50 @@ button:not(:disabled):active { transform: scale(0.95); }
   .panel { top: calc(10px + var(--safe-t)); bottom: calc(88px + var(--safe-b)); max-height: none; z-index: 5; } /* 下緣留給工具列 */
   .hud:has(.replay) .clock { display: none; } /* 回放列會蓋住時鐘，回放列本身有時間 */
 }
+
+/* ── 首頁精簡（v0.8.65）：篩選收成一顆按鈕、右上一個大數字、時鐘只留時間與資料時間、我的家變膠囊 ── */
+.hud .filters { padding: 0; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; gap: 0; }
+.hud .filters .fchip {
+  display: flex; align-items: center; gap: 7px; font: inherit; font-size: 12px; letter-spacing: 0.14em; color: var(--ink);
+  padding: 7px 14px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); cursor: pointer; pointer-events: auto;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); min-height: 32px;
+}
+.hud .filters .fchip i { width: 6px; height: 6px; border-radius: 50%; background: var(--dot); box-shadow: 0 0 8px var(--dot); opacity: 1; }
+.hud .filters .fchip .caret { font-size: 9px; opacity: 0.6; margin-left: 2px; }
+.hud .filters .fchip[aria-expanded='true'] { border-color: rgba(110, 240, 190, 0.45); }
+.hud .filters .fmenu {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 30; display: grid; gap: 2px; padding: 6px; min-width: 156px;
+  background: var(--glass-strong); border: 1px solid var(--line); border-radius: 14px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); pointer-events: auto; animation: rise 0.25s ease;
+}
+.hud .filters .fmenu button {
+  display: flex; align-items: center; gap: 9px; font: inherit; font-size: 13px; letter-spacing: 0.12em; color: var(--ink-dim); text-align: left;
+  background: none; border: 0; padding: 8px 12px; border-radius: 10px; cursor: pointer; min-height: 38px;
+}
+.hud .filters .fmenu button i { width: 6px; height: 6px; border-radius: 50%; background: var(--dot); opacity: 0.7; }
+.hud .filters .fmenu button.on { color: var(--ink); background: rgba(255, 255, 255, 0.07); }
+.hud .filters .fmenu button.on i { opacity: 1; box-shadow: 0 0 8px var(--dot); }
+.hud .filters .fmenu button:hover { color: var(--ink); }
+html:lang(en) .hud .filters .fchip, html:lang(en) .hud .filters .fmenu button { letter-spacing: 0.04em; }
+
+.mix .mix-value.green { font-size: 44px; }
+.mix-sub { display: grid; justify-items: end; gap: 3px; margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.mix-sub b { font-weight: 400; color: var(--ink); }
+.mix-sub b.thermal { color: var(--thermal); }
+.mix-sub small { color: var(--ink-faint); margin-left: 4px; }
+.mix .supply { margin-top: 8px; }
+
+.clock-data { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.12em; margin-top: 5px; }
+
+.home-card { padding: 7px 14px; border-radius: 999px; }
+.home-card .hc-advice { justify-content: center; }
+
+@media (max-width: 700px) {
+  .hud .filters { top: auto; bottom: calc(80px + var(--safe-b)); left: var(--gutter); right: auto; transform: none; justify-content: flex-start; }
+  .hud .filters .fmenu { top: auto; bottom: calc(100% + 6px); left: 0; transform: none; }
+  .mix .mix-value.green { font-size: 38px; }
+  .clock { bottom: calc(124px + var(--safe-b)); }
+  .home-card.hc-mobile { bottom: calc(80px + var(--safe-b)); padding: 7px 14px; }
+  .reset-view { bottom: calc(170px + var(--safe-b)) !important; }
+}
+.hud .filters { overflow: visible; mask-image: none; -webkit-mask-image: none; }

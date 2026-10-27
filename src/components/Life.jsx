@@ -61,20 +61,11 @@ export function HomeCard({ sum, advice, onOpen, className = '' }) {
   useT();
   if (!sum || !advice) return null;
   const c = rgb(ADVICE_COLOR[advice.level]);
-  const st = sum.station;
+  // 首頁精簡：只留建議一顆膠囊（碳排、空品等細節在「我的家」面板裡）
   return (
-    <button className={`home-card ${className} ${sum.unset ? 'unset' : ''}`} onClick={onOpen}>
+    <button className={`home-card ${className} ${sum.unset ? 'unset' : ''}`} onClick={onOpen}
+      aria-label={`${t(advice.head)}${sum.unset ? tx('，設定我的家', ', set your home') : tx('，打開我的家', ', open Home')}`}>
       <span className="hc-advice"><i style={{ background: c, boxShadow: `0 0 10px ${c}` }} />{t(advice.head)}</span>
-      <span className="hc-row">
-        <b>{advice.ci?.toFixed(2) ?? '—'}</b><small>{tx('kg CO₂/度', 'kg CO₂/kWh')}</small>
-        {st && (
-          <>
-            <em style={{ color: rgb(aqiLevel(st.aqi).color) }}>AQI {st.aqi ?? '—'}</em>
-            <small className="hc-site">{st.site}</small>
-          </>
-        )}
-      </span>
-      {sum.unset && <span className="hc-set">{t('＋ 設定我的家')}</span>}
     </button>
   );
 }

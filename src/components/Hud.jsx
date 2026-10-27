@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FUELS, THERMAL, LEGEND_ORDER, FILTERS } from '../config/energy.js';
 import { APP } from '../config/app.js';
 import { sunTimes } from '../engine/daylight.js';
@@ -153,18 +153,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
       {W && <WaterFilters layers={waterUi.layers} onChange={waterUi.setLayers} />}
       {W && <WaterStats data={waterUi.data} />}
       {!wallpaper && !W && (
-        <nav className="filters" aria-label={tx('能源篩選', 'Energy filter')}>
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              className={ui.filter === f.id ? 'on' : ''}
-              onClick={() => setUi({ filter: f.id })}
-              style={{ '--dot': rgb(f.dot) }}
-            >
-              <i />{t(f.label)}
-            </button>
-          ))}
-        </nav>
+        <FilterChip filter={ui.filter} setUi={setUi} />
       )}
 
       <section className="mix">
@@ -172,17 +161,12 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
           <span className="mix-label">{t('綠能')}</span>
           <span className="mix-value green">{green.toFixed(1)}<small>%</small></span>
         </div>
-        <div className="mix-row">
-          <span className="mix-label">{t('火力')}</span>
-          <span className="mix-value thermal">{thermal.toFixed(1)}<small>%</small></span>
+        {/* 首頁精簡：只留綠能一個大數字，火力與發電／用電縮成兩行小字 */}
+        <div className="mix-sub">
+          <span>{t('火力')} <b className="thermal">{thermal.toFixed(1)}%</b></span>
+          <span>{tx('發電', 'Generation')} <b>{fmtMw(total)}</b> MW</span>
+          {loadMw ? <span>{tx('用電', 'Demand')} <b>{fmtMw(load)}</b> MW{useTime && useTime !== snapshot?.timestamp?.slice(-5) ? <small>{useTime}</small> : null}</span> : null}
         </div>
-        <div className="mix-bar">
-          {stats?.bars.map((b) => (
-            <span key={b.f} style={{ flexGrow: b.share, background: rgb(FUELS[b.f].color) }} title={t(FUELS[b.f].label)} />
-          ))}
-        </div>
-        <div className="mix-total">{fmtMw(total)} <small>{t('MW · 全台發電')}</small></div>
-        {loadMw ? <div className="mix-total">{fmtMw(load)} <small>{t('MW · 全台用電')}{useTime && useTime !== snapshot?.timestamp?.slice(-5) ? ` ${useTime}` : ''}</small></div> : null}
         {charge > 20 ? <div className="mix-total charge">⇢ {fmtMw(charge)} <small>{t('MW · 儲能充電中')}</small></div> : null}
         <SupplyChip supply={snapshot?.supply} />
         {!wallpaper && <HomeCard className="hc-desktop" sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}
@@ -191,7 +175,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
       {/* 手機：「可以用電」小卡放在右下（時鐘對面），不壓在台灣上 */}
       {!wallpaper && !replay?.on && <HomeCard className="hc-mobile" sum={homeSum} advice={advice} onOpen={() => setUi({ panel: ui.panel === 'home' ? null : 'home' })} />}
 
-      <ClockPanel snapshot={snapshot} daylight={daylight} replayT={replay?.on ? snapshot?.t : null} />
+      <ClockPanel snapshot={snapshot} daylight={daylight} replayT={replay?.on ? snapshot?.t : null} simple={!wallpaper} />
 
       {!wallpaper && <AlertBanner alert={anomaly?.active} onClose={anomaly?.dismiss} />}
       {APP.typhoon && !wallpaper && !anomaly?.active && <TyphoonBanner data={typhoon.data} onOpen={() => { setMore(false); setUi({ panel: 'typhoon' }); }} />}
@@ -358,7 +342,49 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
   );
 }
 
-function ClockPanel({ snapshot, daylight, replayT }) {
+/** 首頁精簡：能源篩選收成一顆按鈕，點開是選單（手機在左下、電腦在上方中間） */
+function FilterChip({ filter, setUi }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const cur = FILTERS.find((f) => f.id === filter) || FILTERS[0];
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.isComposing) return;
+      if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); setOpen(false); ref.current?.querySelector('.fchip')?.focus(); return; }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key) || !ref.current?.contains(document.activeElement)) return;
+      const items = [...ref.current.querySelectorAll('.fmenu button')];
+      const i = items.indexOf(document.activeElement);
+      e.preventDefault();
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : i < 0 ? 0 : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[next]?.focus();
+    };
+    const onDown = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    addEventListener('keydown', onKey, true);
+    addEventListener('pointerdown', onDown, true);
+    return () => { removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onDown, true); };
+  }, [open]);
+  return (
+    <nav className="filters" ref={ref} aria-label={tx('能源篩選', 'Energy filter')}>
+      <button className="fchip" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} style={{ '--dot': rgb(cur.dot) }}>
+        <i />{cur.id === 'all' ? tx('全部能源', 'All energy') : t(cur.label)}<span className="caret" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="fmenu" role="menu">
+          {FILTERS.map((f) => (
+            <button key={f.id} role="menuitemradio" aria-checked={filter === f.id} className={filter === f.id ? 'on' : ''} style={{ '--dot': rgb(f.dot) }}
+              onClick={() => { setUi({ filter: f.id }); setOpen(false); }}>
+              <i />{t(f.label)}
+            </button>
+          ))}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function ClockPanel({ snapshot, daylight, replayT, simple = false }) {
   const t = useT();
   const clock = useClock();
   const now = replayT ? new Date(replayT) : clock;
@@ -372,6 +398,9 @@ function ClockPanel({ snapshot, daylight, replayT }) {
   return (
     <footer className="clock">
       <div className="clock-time">{fmtTime(now)}</div>
+      {simple ? (
+        snapshot?.timestamp ? <div className="clock-data">{tx('台電資料', 'Taipower data')} {rowHM(snapshot)}</div> : null
+      ) : <>
       <div className="clock-meta">
         <span className="freq" title={tx('台電沒有公開即時頻率，這是模擬值', 'Taipower does not publish live frequency; this is simulated')}>{freq.toFixed(2)} Hz <small>{tx('模擬', 'sim')}</small></span>
         <span className="dot">·</span>
@@ -382,6 +411,7 @@ function ClockPanel({ snapshot, daylight, replayT }) {
         {t('日出')} {sun.sunrise}　{t('日落')} {sun.sunset}
         {snapshot?.timestamp && <span className="data-time">　{t('資料')} {snapshot.timestamp.slice(-5)}</span>}
       </div>
+      </>}
     </footer>
   );
 }
