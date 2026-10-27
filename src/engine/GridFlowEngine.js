@@ -571,10 +571,14 @@ export class GridFlowEngine {
     const glowSize = (p) => {
       const mw = p.mw * p.vis;
       if (p.island) return mw > 0.5 ? (7000 + Math.sqrt(mw) * 700) * (0.96 + 0.08 * breath) : 0; // 離島：最小光暈
-      if (p.offshore) return mw > 1 ? (2200 + Math.sqrt(mw) * 380) * (0.96 + 0.08 * breath) : 0; // 離岸風場：小光點，避免彰化外海擠成一團
+      if (p.offshore) { // 離岸風場：平常是小光點，避免彰化外海擠成一團；切到「綠能」時放大成和其他綠能一樣的光球
+        const g = this.greenMix || 0;
+        return mw > 1 ? ((2200 + Math.sqrt(mw) * 380) * (1 - g) + 2.4 * (2600 + Math.sqrt(mw) * 620) * g) * (0.96 + 0.08 * breath) : 0;
+      }
       return mw > 1 ? 2 * (2600 + Math.sqrt(mw) * 620) * (0.96 + 0.08 * breath) : 0;
     };
     const solarVis = this.particles.fuelVis[FUEL_KEYS.indexOf('solar')];
+    this.greenMix = (this.greenMix || 0) + ((this.filterId === 'green' ? 1 : 0) - (this.greenMix || 0)) * 0.1;
 
     const layers = [];
 
@@ -931,11 +935,39 @@ export class GridFlowEngine {
       parameters: NO_DEPTH
     }));
 
+    // ⑦-b 單選能源（綠能／火力）：像用電視角一樣標出主要電廠名稱與該能源的出力，大的優先、互不重疊
+    const fuelLbl = this.fuelLabels(dm);
+    if (fuelLbl) layers.push(new TextLayer({
+      id: 'fuel-labels',
+      data: fuelLbl.items,
+      getPosition: (d) => d.pos,
+      getText: (d) => d.text,
+      getColor: [...fuelLbl.color, 245],
+      getSize: 11.5,
+      getPixelOffset: (d) => [d.left ? -12 : 12, -10],
+      getTextAnchor: (d) => (d.left ? 'end' : 'start'),
+      getAlignmentBaseline: 'top',
+      opacity: fuelLbl.mix,
+      fontFamily: FONT,
+      fontWeight: 400,
+      lineHeight: 1.35,
+      characterSet: 'auto',
+      fontSettings: { sdf: true, fontSize: 48, buffer: 6 },
+      outlineWidth: 4,
+      outlineColor: [3, 5, 10, 235],
+      updateTriggers: { getPixelOffset: fuelLbl.key, getTextAnchor: fuelLbl.key },
+      parameters: NO_DEPTH
+    }));
+
     // ⑧ 融入地圖的文字：負載點名稱（極淡） + hover 電廠標籤（淡入）
     // 手機的用電視角只標主要城市（離島與小負載點只留名字），避免數字擠成一團
     let loadData = window.innerWidth < 700 && dm > 0.5 ? this.loads.filter((l) => !l.island && (l.demand || 0) >= 0.1) : this.loads;
     // 一般視角選取電廠時：電廠標籤範圍內的地名先不標（用電視角的地名帶用電量，照常顯示）
     if (dm < 0.5) loadData = this.clearOfLabel('loadShown', loadData);
+    if (fuelLbl?.boxes.length) loadData = this.memo('loadFuel', `${fuelLbl.key}|${loadData.length}`, () => loadData.filter((d) => {
+      const b = this.map.project(d.pos), hw = [...(isEn() ? d.en : d.name)].length * (isEn() ? 3.5 : 6) + 4; // 地名畫在點下方置中
+      return !fuelLbl.boxes.some(([x0, y0, x1, y1]) => b.x + hw > x0 && b.x - hw < x1 && b.y + 30 > y0 && b.y + 14 < y1);
+    }));
     layers.push(new TextLayer({
       id: 'load-names',
       data: loadData,
@@ -970,10 +1002,10 @@ export class GridFlowEngine {
           id: 'offshore-cluster',
           data: [{ pos: c, text: `${tx('彰化外海風場群', 'Offshore wind')}\n${owMw >= 1 ? `${Math.round(owMw).toLocaleString()} MW` : tx('目前風小', 'Light wind')}` }],
           getPosition: (d) => d.pos, getText: (d) => d.text,
-          getColor: [150, 235, 255, 150], getSize: 10.5, getTextAnchor: 'end', getAlignmentBaseline: 'center', opacity: this.owMix,
+          getColor: [150, 235, 255, 150 + 90 * (this.greenMix || 0)], getSize: 10.5 + (this.greenMix || 0), getTextAnchor: 'end', getAlignmentBaseline: 'center', opacity: this.owMix,
           fontFamily: FONT, fontWeight: 300, lineHeight: 1.35, characterSet: 'auto',
           fontSettings: { sdf: true, fontSize: 48, buffer: 6 }, outlineWidth: 3, outlineColor: [3, 5, 10, 180],
-          updateTriggers: { getText: [Math.round(owMw), isEn()] }, parameters: NO_DEPTH
+          updateTriggers: { getText: [Math.round(owMw), isEn()], getColor: Math.round((this.greenMix || 0) * 20), getSize: Math.round((this.greenMix || 0) * 20) }, parameters: NO_DEPTH
         }));
       }
     }
@@ -1083,6 +1115,55 @@ export class GridFlowEngine {
       box.appendChild(d);
       setTimeout(() => d.remove(), 800); // 保險：分頁在背景時 animationend 可能不觸發
     }
+  }
+
+  /** 單選綠能／火力時的電廠標籤：只算該能源的出力；依畫面空間由大到小擺放，放不下（會重疊）的就不標 */
+  fuelLabels(dm) {
+    const f = FILTERS.find((x) => x.id === this.filterId);
+    const want = f && f.fuels && f.id !== 'nuclear' && dm < 0.5 && this.mode !== 'wallpaper'; // 核能另有狀態標籤
+    this.fuelLblMix = (this.fuelLblMix || 0) + ((want ? 1 : 0) - (this.fuelLblMix || 0)) * 0.12;
+    if (this.fuelLblMix < 0.02) return null;
+    if (want) this.fuelLblFilter = f; // 淡出時沿用上一個篩選
+    const ff = this.fuelLblFilter;
+    if (!ff) return null;
+    const m = this.map, c = m.getCenter(), W = m.getContainer().clientWidth, H = m.getContainer().clientHeight;
+    const en = isEn(), narrow = W < 700;
+    const hid = this.hover.id || (this.hover.alpha > 0.3 ? this.hover.shownId : null);
+    const mwOf = (p) => ff.fuels.reduce((a, k) => a + (p.mix?.[k] || 0), 0);
+    const key = `${ff.id}|${en}|${hid}|${W}x${H}|${m.getZoom().toFixed(2)}|${c.lng.toFixed(3)},${c.lat.toFixed(3)}|${m.getBearing().toFixed(0)}|${m.getPitch().toFixed(0)}|${this.plants.map((p) => Math.round(mwOf(p) / 10)).join()}`;
+    const res = this.memo('fuelLabels', key, () => {
+      const hp = hid && this.plants.find((p) => p.id === hid);
+      const hb = hp && (() => { const a = m.project(hp.pos), [x0, x1, y0, y1] = this.hoverBox || [-40, 260, -40, 90]; return [a.x + x0, a.y + y0, a.x + x1, a.y + y1]; })();
+      const boxes = hb ? [hb] : [];
+      const items = [];
+      const max = narrow ? 8 : 16;
+      const cands = this.plants
+        .filter((p) => p.id !== hid && !(ff.id === 'green' && p.offshore && p.pos[1] < 24.35)) // 彰化外海另有風場群總量標籤
+        .map((p) => ({ p, mw: mwOf(p) }))
+        .filter((d) => d.mw >= (narrow ? 30 : 10))
+        .sort((a, b) => b.mw - a.mw);
+      for (const { p, mw } of cands) {
+        if (items.length >= max) break;
+        const s = m.project(p.pos);
+        if (s.x < 8 || s.x > W - 8 || s.y < 60 || s.y > H - 40) continue;
+        const name = en ? p.en : p.name;
+        const val = `${tx('約', '~')} ${(mw >= 100 ? Math.round(mw / 10) * 10 : Math.round(mw)).toLocaleString()} MW`;
+        const w = Math.max([...name].reduce((a, ch) => a + (ch.charCodeAt(0) > 0x2e80 ? 11.5 : 6.6), 0), val.length * 6.6) + 4;
+        const h = 32;
+        const hit = (bx) => boxes.some((o) => bx[0] < o[2] && bx[2] > o[0] && bx[1] < o[3] && bx[3] > o[1]);
+        let left = s.x + 12 + w > W - 8;
+        let bx = left ? [s.x - 12 - w, s.y - 10, s.x - 12, s.y - 10 + h] : [s.x + 12, s.y - 10, s.x + 12 + w, s.y - 10 + h];
+        if (hit(bx)) { // 換邊再試一次
+          left = !left;
+          bx = left ? [s.x - 12 - w, s.y - 10, s.x - 12, s.y - 10 + h] : [s.x + 12, s.y - 10, s.x + 12 + w, s.y - 10 + h];
+          if (hit(bx) || bx[0] < 4 || bx[2] > W - 4) continue;
+        }
+        boxes.push(bx);
+        items.push({ pos: p.pos, text: `${name}\n${val}`, left });
+      }
+      return { items, boxes: hb ? boxes.slice(1) : boxes };
+    });
+    return { ...res, key, mix: this.fuelLblMix, color: ff.dot };
   }
 
   clearOfLabel(name, items) {
