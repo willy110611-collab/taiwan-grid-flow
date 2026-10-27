@@ -8,6 +8,7 @@ import { SupplyChip, DemandPanel, BadgePanel, BadgeToast, AlertBanner, ReplayBar
 import { rowHM } from '../data/history.js';
 import { HomeCard, HomePanel, AirPanel } from './Life.jsx';
 import { PlantPanel } from './Plant.jsx';
+import { Logo } from './Logo.jsx';
 import { StorePanel } from './Store.jsx';
 import { FinderPanel } from './Finder.jsx';
 import { AppliancePanel, TyphoonBanner, TyphoonPanel } from './OpenData.jsx';
@@ -127,6 +128,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
     <div className={`hud ${wallpaper ? 'is-wallpaper' : ''} ${W ? 'water-mode' : ''}`}>
       {!wallpaper && waterUi?.enabled && <ModeSwitch water={W} onChange={(on) => { setMore(false); waterUi.setWater(on); }} />}
       <header className="brand">
+        <Logo className="brand-logo" />
         <div className="brand-zh">台灣脈動</div>
         <div className="brand-en">TAIWAN GRID FLOW</div>
         <div className={`badge ${live ? 'live' : 'sim'}`}>

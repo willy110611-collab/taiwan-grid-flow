@@ -58,7 +58,9 @@ a:hover { text-decoration: underline; }
 
 /* ── 左上：品牌 ── */
 .brand { top: calc(22px + var(--safe-t)); left: var(--gutter); }
-.brand-zh { font-size: 17px; letter-spacing: 0.32em; font-weight: 300; }
+.brand-logo { position: absolute; left: 0; top: -5px; height: 38px !important; }
+.brand-zh, .brand-en { padding-left: 32px; }
+.brand-zh { font-size: 19px; letter-spacing: 0.3em; font-weight: 400; }
 .brand-en { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.42em; color: var(--ink-faint); margin-top: 4px; }
 .badge {
   display: inline-flex; align-items: center; gap: 7px; margin-top: 12px;
@@ -532,7 +534,7 @@ html:lang(en) .evidence li { grid-template-columns: 96px 1fr; } /* 英文等級�
 /* ── 手機（iPhone 16 Pro 402×874） ── */
 @media (max-width: 700px) {
   :root { --gutter: 16px; }
-  .brand-zh { font-size: 15px; letter-spacing: 0.26em; }
+  .brand-zh { font-size: 18px; letter-spacing: 0.24em; }
   .badge { margin-top: 9px; }
   .mix { min-width: 110px; }
   .mix-value { font-size: 23px; }
