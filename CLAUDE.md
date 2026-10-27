@@ -58,6 +58,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 返回鍵（v0.8.62）：App.jsx 用 history.state.tgfDepth 對應層數（面板 1、地圖選點 2）；介面自己關閉時 history.go 退回並略過那次 popstate。Esc 處理器一律 `e.preventDefault()`、其他處理器先看 `e.defaultPrevented`（面板 → 選點 → 對話框 → 回放／放空，一次只做一件事）。
 - 時間：亮點、回放、狀態列、我的紀錄、今日曲線重建都用台電資料時間（history.js `rowHM`／`dataMs`），不用收到資料的 `t`。
 - 2026-10-27 夜間兩輪無頭瀏覽器 QA（手機直／橫、平板、電腦、鍵盤、英文）問題都已修；剩：手機橫向（高約 400 px）全島視角受地圖邊界 MAX_BOUNDS 限制無法再縮小，島會略壓到篩選列／工具列（v0.8.63 留白已依介面位置計算）。2026-10-27 06:15 日出後用真實資料檢查：太陽能 06:00 起出現、黎明交班徽章、亮點與電廠卡時間都正常。
+- v0.8.65 依使用者確認的三份預覽上線：品牌（index.html 開機畫面、`src/components/Logo.jsx`、public 圖示由 Playwright 畫）、首頁精簡（Hud.jsx `FilterChip`、`.mix-sub`、ClockPanel `simple`、HomeCard 膠囊）、電廠卡（Plant.jsx `CapRing`／`TodayChart`）與亮點方塊（純 CSS，styles.css 末段）。
 - 首次載入最大宗是字型（Noto Sans TC 300＋400 約 0.9 MB），其次 maplibre 255 KB、deck.gl 221 KB（gzip）。
 - 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
 - CEMS：中繼站沒有漏資料，環境部 aqx_p_187 本身時常缺台中、興達、麥寮汽電（2026-10-25 02:00 查證）。

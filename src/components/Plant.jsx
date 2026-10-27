@@ -1,6 +1,6 @@
 import { Panel } from './Panels.jsx';
 import { useState } from 'react';
-import { fmtMw, rgb, Sparkline, Icon } from './widgets.jsx';
+import { fmtMw, rgb, Icon } from './widgets.jsx';
 import { PLANTS, SOLAR_COUNTY_KW, plantName, unitName } from '../config/geo.js';
 import { FUELS } from '../config/energy.js';
 import { nearestWind } from '../data/useAir.js';
@@ -59,59 +59,45 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
 
   return (
     <Panel title={plantName(cfg)} onClose={onClose}>
-      <div className="plant-head">
-        <div><b>{fmtMw(mw)}</b> <small>MW</small></div>
-        <span className="muted">{isEn() ? cfg.name : cfg.en}</span>
+      {/* 電廠卡上半：運轉率圓環＋目前出力、燃料組成、今日出力曲線、即時機組（v0.8.65 新版） */}
+      <div className={`plant-hero ${showCap ? '' : 'no-ring'}`}>
+        {showCap && <CapRing pct={capPct} color={rgb(FUELS[mix[0]?.[0]]?.color || [110, 240, 190])} />}
+        <div className="ph-main">
+          {mix.length > 0 && (
+            <div className="ph-chips">
+              {mix.slice(0, 3).map(([f]) => <span key={f} className="ph-chip" style={{ '--c': rgb(FUELS[f]?.color || [200, 200, 200]) }}>{t(FUELS[f]?.label || f)}</span>)}
+            </div>
+          )}
+          <div className="ph-mw" style={{ color: rgb(FUELS[mix[0]?.[0]]?.color || [232, 238, 252]) }}>{fmtMw(mw)}<small>MW</small></div>
+          <div className="ph-sub">{showCap ? `${tx('裝置容量', 'Capacity')} ${fmtMw(cap)} MW · ` : ''}{isEn() ? cfg.name : cfg.en}</div>
+        </div>
       </div>
       {cfg.op && !isEn() && <p className="fine plant-op">經營：{cfg.op}（OpenStreetMap）</p>}{/* OSM 只有中文公司名 → 英文介面不顯示，不自行翻譯 */}
-      {showCap && (
-        <p className="fine plant-cap">
-          {tx(`裝置容量 ${fmtMw(cap)} MW・目前運轉 ${capPct}%`, `Capacity ${fmtMw(cap)} MW · running at ${capPct}%`)}
-          <span className="cap-bar"><i style={{ width: `${capPct}%` }} /></span>
-        </p>
-      )}
 
       {mix.length > 0 && (
-        <div className="plant-mix">
-          {mix.map(([f, v]) => (
-            <span key={f} style={{ flexGrow: v, background: rgb(FUELS[f]?.color || [200, 200, 200]) }} title={t(FUELS[f]?.label || f)} />
-          ))}
-        </div>
+        <>
+          <div className="plant-mix">
+            {mix.map(([f, v]) => (
+              <span key={f} style={{ flexGrow: v, background: rgb(FUELS[f]?.color || [200, 200, 200]) }} title={t(FUELS[f]?.label || f)} />
+            ))}
+          </div>
+          <div className="ph-legend">
+            {mix.map(([f, v]) => <span key={f}><i style={{ background: rgb(FUELS[f]?.color || [200, 200, 200]) }} />{t(FUELS[f]?.label || f)} <b>{fmtMw(v)}</b> MW</span>)}
+          </div>
+        </>
       )}
+
       {series.length >= 3 && peak?.mw > 0 && (
         <div className="plant-spark">
-          <Sparkline values={series.map((x) => x.mw)} color={rgb(FUELS[mix[0]?.[0]]?.color || [110, 240, 190])} w={300} h={40} />
-          <p className="fine">
-            {tx('今日', 'Today')} {series[0].hm}–{series[series.length - 1].hm}{'　'}
-            {tx('最高', 'High')} <b>{fmtMw(peak.mw)}</b> MW{tx(`（${peak.hm}）`, ` (${peak.hm})`)}{'　'}{tx('最低', 'Low')} {fmtMw(low.mw)} MW{tx(`（${low.hm}）`, ` (${low.hm})`)}
-            {series.some((x) => x.est) ? tx('　＊打開 App 前的時段依燃料曲線推估', '　* hours before you opened the app are estimated from fuel curves') : ''}
-          </p>
+          <div className="hl-k ph-k">{tx('今日出力', 'Output today')}<span>{series[0].hm} → {series[series.length - 1].hm}</span></div>
+          <TodayChart series={series} peak={peak} low={low} color={rgb(FUELS[mix[0]?.[0]]?.color || [110, 240, 190])} />
+          <div className="ph-ann">
+            <span><i className="hi" />{tx('最高', 'High')} <b>{fmtMw(peak.mw)}</b> MW {peak.hm}</span>
+            <span><i className="lo" />{tx('最低', 'Low')} {fmtMw(low.mw)} MW {low.hm}</span>
+          </div>
+          {series.some((x) => x.est) && <p className="fine">{tx('＊打開 App 前的時段依燃料曲線推估', '* hours before you opened the app are estimated from fuel curves')}</p>}
         </div>
       )}
-      {mix.length > 0 && (
-        <p className="fine">{mix.map(([f, v]) => `${t(FUELS[f]?.label || f)} ${fmtMw(v)} MW`).join(' · ')}</p>
-      )}
-
-      {pump > 1 && (
-        <p className="plant-note cool">⇢ {t('抽水儲能中')} {fmtMw(pump)} MW：{t('用電網多出來的電把水抽上山，晚上再放水發電。地圖上流進這裡的粒子就是這些電。')}</p>
-      )}
-
-      {cfg.offshore && (
-        <div className="life-sec">
-          <div className="hl-k">{t('附近風況')}</div>
-          {wind ? (
-            <p className="fine">
-              {wind.site}{t('測站')}{tx(`（岸邊，${wind.d.toFixed(0)} km）：`, ` (coast, ${wind.d.toFixed(0)} km): `)}{windText(wind.dir)} <b>{wind.speed} m/s</b>
-              {' · '}{wind.speed < 3 ? t('風太小，風機轉不太動') : wind.speed > 20 ? t('風太大，風機可能停機保護') : mw < 1 ? t('有風但沒發電：可能是檢修、測試或尚未商轉') : t('風況正常')}
-            </p>
-          ) : <p className="fine">{t('附近測站的風速資料讀取中')}</p>}
-          <p className="fine">{t('岸邊風速通常比外海小，僅供參考。')}</p>
-        </div>
-      )}
-
-      <NuclearStatus id={id} />
-
-      <PlantHistory id={id} fuel={cfg.fuel || mix[0]?.[0]} />
 
       <div className="life-sec">
         <div className="hl-k">{units.length ? `${t('台電即時機組')}${tx(`（${units.length}）`, ` (${units.length})`)}` : t('資料來源')}</div>
@@ -144,6 +130,27 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
         )}
       </div>
 
+      {pump > 1 && (
+        <p className="plant-note cool">⇢ {t('抽水儲能中')} {fmtMw(pump)} MW：{t('用電網多出來的電把水抽上山，晚上再放水發電。地圖上流進這裡的粒子就是這些電。')}</p>
+      )}
+
+      {cfg.offshore && (
+        <div className="life-sec">
+          <div className="hl-k">{t('附近風況')}</div>
+          {wind ? (
+            <p className="fine">
+              {wind.site}{t('測站')}{tx(`（岸邊，${wind.d.toFixed(0)} km）：`, ` (coast, ${wind.d.toFixed(0)} km): `)}{windText(wind.dir)} <b>{wind.speed} m/s</b>
+              {' · '}{wind.speed < 3 ? t('風太小，風機轉不太動') : wind.speed > 20 ? t('風太大，風機可能停機保護') : mw < 1 ? t('有風但沒發電：可能是檢修、測試或尚未商轉') : t('風況正常')}
+            </p>
+          ) : <p className="fine">{t('附近測站的風速資料讀取中')}</p>}
+          <p className="fine">{t('岸邊風速通常比外海小，僅供參考。')}</p>
+        </div>
+      )}
+
+      <NuclearStatus id={id} />
+
+      <PlantHistory id={id} fuel={cfg.fuel || mix[0]?.[0]} />
+
       {cems && Object.keys(cems.items || {}).length > 0 && (
         <div className="life-sec">
           <div className="hl-k">{t('煙道即時監測（環境部 CEMS）')}{cems.time ? <span className="muted">　{tx(`${cems.time.slice(11, 16)} 量測`, `measured ${cems.time.slice(11, 16)}`)}</span> : null}</div>
@@ -158,5 +165,41 @@ export function PlantPanel({ id, snapshot, air, rows, onClose }) {
       </div>
       {msg && <p className="fine green">{msg}</p>}
     </Panel>
+  );
+}
+
+/** 運轉率圓環（目前出力 ÷ 裝置容量） */
+function CapRing({ pct, color }) {
+  const r = 40, c = 2 * Math.PI * r;
+  return (
+    <div className="cap-ring" role="img" aria-label={tx(`目前運轉 ${pct}%`, `Running at ${pct}%`)}>
+      <svg viewBox="0 0 96 96" aria-hidden="true">
+        <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7" />
+        <circle cx="48" cy="48" r={r} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(c * pct) / 100} ${c}`} transform="rotate(-90 48 48)" style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
+      </svg>
+      <b>{pct}%<small>{tx('運轉率', 'running')}</small></b>
+    </div>
+  );
+}
+
+/** 今日出力：面積圖，標出最高（金）與最低（灰） */
+function TodayChart({ series, peak, low, color }) {
+  const W = 320, H = 64, n = series.length;
+  const max = Math.max(1, peak.mw), min = Math.min(0, low.mw);
+  const X = (i) => (i / Math.max(1, n - 1)) * W, Y = (v) => H - 6 - ((v - min) / (max - min || 1)) * (H - 14);
+  const d = series.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p.mw).toFixed(1)}`).join('');
+  const ip = series.indexOf(peak), il = series.indexOf(low);
+  // 圓點用 HTML 疊在圖上（SVG 用 preserveAspectRatio="none" 拉滿寬度，圓會被壓扁）
+  const dot = (i, v) => ({ left: `${(X(i) / W) * 100}%`, top: `${(Y(v) / H) * 100}%` });
+  return (
+    <div className="ph-today">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="ph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.32" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+        <path d={`${d}L${W} ${H}L0 ${H}Z`} fill="url(#ph-fill)" />
+        <path d={d} fill="none" stroke={color} strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <i className="hi" style={dot(ip, peak.mw)} />
+      <i className="lo" style={dot(il, low.mw)} />
+    </div>
   );
 }

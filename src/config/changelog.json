@@ -1,12 +1,16 @@
 {
-  "version": "0.8.64",
+  "version": "0.8.65",
   "notesEn": [
+    "New look: splash screen and app icon with a Taiwan outline and heartbeat line; logo next to the title",
+    "Cleaner home screen: one energy-filter button, one big green-share number, a simpler clock and a small Home pill",
+    "New plant cards (running-rate ring, fuel legend, today's chart with high/low, unit tiles) and tile-style highlights",
     "Region fix: based on Taipower's live regional generation, Yunlin plants now count as South and Miaoli wind farms as North",
-    "Phone in landscape: the whole-island view now leaves room for the filter bar and toolbar",
-    "Your Home name follows the interface language",
-    "Back button and Esc are more predictable: one step at a time (cancel picking → close panel → end Drift/Replay)"
+    "Phone in landscape: the whole-island view now leaves room for the filter bar and toolbar"
   ],
   "notes": [
+    "新外觀：開機畫面與 App 圖示換成「台灣輪廓＋心跳線」，標題旁加標誌",
+    "首頁更簡潔：能源篩選收成一顆按鈕、右上只留綠能大數字、時鐘只留時間與台電資料時間、「我的家」變小膠囊",
+    "電廠卡新版：運轉率圓環、燃料組成圖例、今日出力圖標出最高與最低、機組改成小方塊；今日亮點改成方塊排列",
     "供電區對照修正：依台電各區即時發電量比對，雲林（允能、麥寮、雲林太陽能）改算南部、苗栗離岸與陸域風場改算北部",
     "手機橫放時，全島視角避開上方篩選列與下方工具列",
     "「我的家」地名跟著介面語言切換（中文介面不會出現英文地名）",
