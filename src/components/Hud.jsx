@@ -62,6 +62,14 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
   // 背景音（預設關）：上次開著的話，等使用者第一次點畫面再開始（iPhone 規定）
   const [sound, setSound] = useState(() => soundPref());
   const [soundToast, setSoundToast] = useState(false);
+  // 第一次按「今日重播」「自動導覽」：畫面上出現一行說明，約 3.5 秒消失（每個按鈕只出現一次）
+  const [tbHint, setTbHint] = useState(null);
+  const firstHint = (key, text) => {
+    try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { /* 無痕模式：照樣顯示 */ }
+    setTbHint({ text, k: Date.now() });
+  };
+  useEffect(() => { if (!tbHint) return; const id = setTimeout(() => setTbHint(null), 3800); return () => clearTimeout(id); }, [tbHint]);
+  useEffect(() => setTbHint(null), [ui.panel]); // 打開面板就收起提示，避免蓋到面板
   const [haptic, setHaptic] = useState(() => hapticPref());
   const [fbView, setFbView] = useState(''); // 打開意見回饋「當下」的畫面（之後面板會換成回饋，不能再看 ui）
   useEffect(() => {
@@ -224,10 +232,10 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
           <button className={ui.panel === 'finder' || ui.panel === 'plant' ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === 'finder' ? null : 'finder' }); }}>
             {Icon.search}<span>{t('電廠')}</span>
           </button>
-          <button className={replay?.on ? 'on' : ''} onClick={() => { setMore(false); setUi({ toggleReplay: true }); }}>
+          <button className={replay?.on ? 'on' : ''} onClick={() => { setMore(false); if (!replay?.on) firstHint('tgf-hint-replay', tx('快轉今天 00:00 到現在，看電力怎麼變化', 'Fast-forward today from 00:00 to now')); setUi({ toggleReplay: true }); }}>
             {Icon.replay}<span>{t('今日重播')}</span>
           </button>
-          <button className={ui.cruise ? 'on' : ''} onClick={() => { setMore(false); setUi({ toggleCruise: true }); }}>
+          <button className={ui.cruise ? 'on' : ''} onClick={() => { setMore(false); if (!ui.cruise) firstHint('tgf-hint-tour', tx('鏡頭自動巡覽各電廠，拖動地圖或再按一次就停止', 'The camera tours the plants · drag the map or tap again to stop')); setUi({ toggleCruise: true }); }}>
             {Icon.cruise}<span>{t('自動導覽')}</span>
           </button>
           </>)}
@@ -319,6 +327,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
           <div><small>{tx('背景音已開啟', 'Background sound on')}</small><b>{tx('電網的聲音', 'The sound of the grid')}</b><span>{tx('綠能越多音色越亮・供電吃緊時節奏變快', 'Brighter with more renewables · faster when supply is tight')}</span></div>
         </div>
       )}
+      {tbHint && <div className="tb-hint" key={tbHint.k} role="status" onClick={() => setTbHint(null)}>{tbHint.text}</div>}
       {!wallpaper && <UpdatePrompt />}
       {!wallpaper && !(upd.available && !upd.dismissed) && <Tour />}
 

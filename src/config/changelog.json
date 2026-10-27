@@ -1,14 +1,16 @@
 {
-  "version": "0.8.68",
+  "version": "0.8.69",
   "notesEn": [
+    "“Is now a good time?” now says why: higher carbon, cleaner power, or tight supply — plus the best 2 hours (time-of-use details only if you’re on that tariff)",
+    "First tap on Replay or Auto tour shows a one-line explanation",
     "Toolbar buttons renamed: “Drift” is now “Auto tour” (Replay keeps its name)",
     "Picking Green or Thermal now labels the main plants on the island view with their output, like the Demand view",
     "Green view: Changhua offshore wind farms glow like the other green sources",
-    "Map engine updated to MapLibre 6 and deck.gl 9.4 (fixes a MapLibre security advisory)",
-    "New look: splash screen and app icon with a Taiwan outline and heartbeat line; logo next to the title",
-    "Cleaner home screen: one energy-filter button, one big green-share number, a simpler clock and a small Home pill"
+    "Map engine updated to MapLibre 6 and deck.gl 9.4 (fixes a MapLibre security advisory)"
   ],
   "notes": [
+    "用電時機改成直接寫原因：「碳排偏高・洗衣烘衣晚點用」「現在電比較乾淨」「供電吃緊・請省電」；點開有原因與最佳時段。尖峰／離峰電價只給有勾選時間電價的家庭看",
+    "第一次按「今日重播」「自動導覽」會出現一行說明",
     "工具列改名：「回放」改為「今日重播」、「放空」改為「自動導覽」，一看就知道做什麼",
     "單選綠能、火力時，全島畫面會像用電一樣標出主要電廠名稱與出力",
     "綠能畫面：彰化外海離岸風場改成和其他綠能一樣的光球",

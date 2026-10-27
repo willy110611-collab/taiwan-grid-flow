@@ -123,10 +123,10 @@ export default function App() {
     const st = home.pos ? nearestStation(air.stations, home.pos) : null;
     const nowHM = new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16);
     return [
-      { kind: 'supply', on: !home.push && snapshot?.source === 'live' && (snapshot?.supply?.level ?? 0) >= 1 && !snapshot?.supply?.old, text: `供電${snapshot?.supply?.label}：備轉容量率 ${snapshot?.supply?.rate}%，建議延後非必要用電` },
+      { kind: 'supply', on: !home.push && snapshot?.source === 'live' && (snapshot?.supply?.level ?? 0) >= 1 && !snapshot?.supply?.old, text: `供電${snapshot?.supply?.label}：備轉容量率 ${snapshot?.supply?.rate}%，請減少非必要用電` },
       { kind: 'aqi', on: !home.push && (st?.aqi ?? 0) >= 101, text: `${st?.site} AQI ${st?.aqi}，空氣品質不佳，減少戶外活動` },
       { kind: 'anomaly', on: !!anomaly.active, text: anomaly.active ? `${anomaly.active.plant || anomaly.active.unit} 機組出力驟降（${Math.round(anomaly.active.from)}→${Math.round(anomaly.active.to)} MW）` : '' },
-      { kind: 'lowcarbon', on: !!advice?.best && nowHM >= advice.best.from && nowHM < advice.best.to, text: `低碳時段開始（到 ${advice?.best?.to}），適合洗衣、烘衣、充電` }
+      { kind: 'lowcarbon', on: !!advice?.best && !advice.best.tomorrow && nowHM >= advice.best.from && nowHM < advice.best.to, text: `低碳時段開始（到 ${advice?.best?.to}），適合洗衣、烘衣、充電` }
     ];
   }, [snapshot, air.stations, home.pos, home.push, anomaly.active, advice]);
   useNotify(home.notify, notifyEvents);

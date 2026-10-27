@@ -34,6 +34,9 @@ const PHRASES = [
   ['週末全日離峰', 'Weekend — off-peak all day'], ['國定假日全日離峰', 'Holiday — off-peak all day'],
   ['尖峰時段', 'Peak hours'], ['離峰時段', 'Off-peak hours'], ['，電價較低', ', lower price'], ['，電價較高', ', higher price'],
   ['碳排接近今日低點', 'Carbon near today’s low'], ['碳排接近今日高點', 'Carbon near today’s high'],
+  [/^供電(.+?)（備轉 ([\d.]+)%），請減少非必要用電$/, (_, x, r) => `${EN['供電' + x] || `Supply ${x}`} (reserve ${r}%) — please cut non-essential use`],
+  ['火力發電比例高，碳排接近今天高點', 'Fossil share is high — carbon near today’s high'], ['綠能比例高，碳排接近今天低點', 'Renewable share is high — carbon near today’s low'],
+  ['碳排在今天的中間', 'Carbon is mid-range for today'], ['供電正常，不用特別省電', 'Supply is normal — no need to cut back'], ['電價：', 'Rate: '],
   [/^供電(.+)$/, (_, x) => `Supply: ${EN['供電' + x] || x}`],
   ['（', ' ('], ['）', ')'], ['，', ', ']
 ];
@@ -70,7 +73,7 @@ const EN = {
   '日出': 'Sunrise', '日落': 'Sunset', '資料': 'Data',
   'LIVE · 台電即時': 'LIVE · Taipower', 'SIMULATED · 模擬資料': 'SIMULATED', '尖峰備轉': 'peak reserve', '模擬': 'sim', '更新中 · 上次': 'Updating · last',
   '供電充裕': 'Supply OK', '供電吃緊': 'Supply tight', '供電警戒': 'Supply alert', '限電警戒': 'Rationing alert', '限電準備': 'Rationing prep',
-  '適合用電': 'Good time to use', '可以用電': 'OK to use', '建議延後': 'Better to wait', '暫時無法判斷': 'Can’t tell right now', '＋ 設定我的家': '＋ Set home',
+  '供電吃緊・請省電': 'Supply tight · save power', '碳排偏高・洗衣烘衣晚點用': 'Higher carbon now', '尖峰電價・大電器晚點用': 'Peak rate now', '現在電比較乾淨': 'Cleaner power now', '離峰電價・適合用電': 'Off-peak rate now', '普通時段': 'Normal time', '暫時無法判斷': 'Can’t tell right now', '＋ 設定我的家': '＋ Set home',
   '點地圖選擇「我的家」': 'Tap the map to set Home', '取消': 'Cancel', '有新版本・點此更新': 'New version · tap to update',
   // 燃料
   '太陽能': 'Solar', '風力': 'Wind', '水力': 'Hydro', '其他再生': 'Other RE', '燃氣': 'LNG', '燃煤': 'Coal', '汽電共生': 'Co-gen', '燃油': 'Oil', '儲能': 'Storage',

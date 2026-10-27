@@ -6,7 +6,8 @@ import { carbonIntensity } from './carbon.js';
  * 綜合三件事：
  *  1. 時間電價時段（台電「簡易型時間電價－二段式」時段劃分；只有申請時間電價的用戶電費才會不同）
  *  2. 目前碳排強度相對今天的高低（越低越「乾淨」）
- *  3. 供電燈號（黃燈以上建議延後非必要用電）
+ *  3. 供電燈號（黃燈以上建議減少非必要用電）
+ *  時間電價時段只在使用者勾選「我家有申請時間電價」時才算（一般住宅電價不分時段）
  * 註：國定假日也是離峰，但程式只判斷週六日（假日表每年不同）。
  */
 const tw = (d) => new Date(d.getTime() + 8 * 3600e3);
@@ -90,31 +91,45 @@ export function usageAdvice(snap, rows = [], yRows = null, { touUser = false } =
   const hi = today.length ? Math.max(...today) : ci;
   const rel = hi > lo ? (ci - lo) / (hi - lo) : 0.5; // 0 = 今天最乾淨、1 = 今天最髒
 
+  // 一般住宅電價不分時段 → 沒勾「時間電價」的人只看碳排與供電；有勾才把尖峰／離峰算進來
   let score = 0;
   const reasons = [];
-  if (!tou.peak) { score += touUser ? 2 : 1; reasons.push(`${tou.label}${touUser ? '，電價較低' : ''}`); }
-  else { score -= touUser ? 2 : 1; reasons.push(`${tou.label}${touUser ? '，電價較高' : ''}（${tou.next}）`); }
-  if (rel <= 0.35) { score += 1; reasons.push('碳排接近今日低點'); }
-  else if (rel >= 0.7) { score -= 1; reasons.push('碳排接近今日高點'); }
+  if (rel >= 0.7) { score -= 1; reasons.push('火力發電比例高，碳排接近今天高點'); }
+  else if (rel <= 0.35) { score += 1; reasons.push('綠能比例高，碳排接近今天低點'); }
+  else reasons.push('碳排在今天的中間');
   const lvl = snap.supply?.old ? 0 : (snap.supply?.level ?? 0); // 前一天發布的燈號不算
-  if (lvl >= 1) { score -= 2; reasons.push(`供電${snap.supply.label}`); }
+  if (lvl >= 1) { score -= 3; reasons.push(`供電${snap.supply.label}（備轉 ${snap.supply.rate}%），請減少非必要用電`); }
+  else reasons.push('供電正常，不用特別省電');
+  if (touUser) {
+    score += tou.peak ? -2 : 2;
+    reasons.push(`電價：${tou.label}${tou.next ? `（${tou.next}）` : ''}`);
+  }
 
-  const level = score >= 2 ? 'good' : score >= 0 ? 'ok' : 'bad';
-  const head = { good: '適合用電', ok: '可以用電', bad: '建議延後' }[level];
+  // 標題直接寫原因（膠囊與「我的家」共用）
+  const kind = lvl >= 1 ? 'supply'
+    : score < 0 ? (rel >= 0.7 ? 'dirty' : 'peak')
+    : rel <= 0.35 ? 'clean'
+    : score >= 2 ? 'offpeak'
+    : 'normal';
+  const level = { supply: 'bad', dirty: 'bad', peak: 'bad', clean: 'good', offpeak: 'good', normal: 'ok' }[kind];
+  const head = { supply: '供電吃緊・請省電', dirty: '碳排偏高・洗衣烘衣晚點用', peak: '尖峰電價・大電器晚點用', clean: '現在電比較乾淨', offpeak: '離峰電價・適合用電', normal: '普通時段' }[kind];
 
-  return { level, head, reasons, tou, ci, best: bestWindow(now, yRows, fx) };
+  return { level, kind, head, reasons, tou, touUser, ci, best: bestWindow(now, yRows, fx) };
 }
 
 /** 依昨日同時段的碳排曲線，找今天「剩下的時間」裡最低碳的 2 小時 */
 function bestWindow(now, yRows, fx) {
   if (!yRows?.length) return null;
   const nowHM = tw(now).toISOString().slice(11, 16);
-  const pts = yRows.filter((r) => r.hm >= nowHM).map((r) => ({ hm: r.hm, ci: carbonIntensity(r.totals, fx) })).filter((p) => p.ci != null);
+  const all = yRows.map((r) => ({ hm: r.hm, ci: carbonIntensity(r.totals, fx) })).filter((p) => p.ci != null);
+  let pts = all.filter((p) => p.hm >= nowHM), tomorrow = false;
+  // 今天剩不到 2 小時：改用昨天整天推估明天（07–22 點，避開深夜）
+  if (pts.length < 12) { pts = all.filter((p) => p.hm >= '07:00' && p.hm <= '22:00'); tomorrow = true; }
   if (pts.length < 12) return null;
   let best = null;
   for (let i = 0; i + 12 <= pts.length; i++) {
     const avg = pts.slice(i, i + 12).reduce((a, p) => a + p.ci, 0) / 12;
-    if (!best || avg < best.avg) best = { from: pts[i].hm, to: pts[Math.min(pts.length - 1, i + 12)].hm, avg };
+    if (!best || avg < best.avg) best = { from: pts[i].hm, to: pts[Math.min(pts.length - 1, i + 12)].hm, avg, tomorrow };
   }
   return best;
 }

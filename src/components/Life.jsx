@@ -8,7 +8,7 @@ import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js
 import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
 import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSupport, homeLabel } from '../data/useHome.js';
 import { SUPPLY_LEVELS } from '../data/parseAux.js';
-import { billCompare } from '../data/advice.js';
+import { billCompare, TOU_RATES } from '../data/advice.js';
 import { t, tx, tr, isEn, useT } from '../i18n.js';
 import { OutageSection, TownCompare } from './OpenData.jsx';
 import { pushExtra, countyName } from '../data/openData.js';
@@ -106,15 +106,21 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
       <section className="life-sec">
         <div className="hl-k">{tx('現在用電時機', 'Is now a good time?')}</div>
         <div className="advice-head" style={{ color: rgb(ADVICE_COLOR[advice.level]) }}>{t(advice.head)}</div>
+        <div className="adv-k">{tx('為什麼', 'Why')}</div>
         <ul className="reasons">{advice.reasons.map((r) => <li key={r}>{tr(r)}</li>)}</ul>
-        {advice.best && (
-          <p className="fine">{tx('依昨日同時段推估，今天 ', 'Based on yesterday, ')}<b className="green">{advice.best.from}–{advice.best.to}</b>{tx(' 碳排最低，適合洗衣、烘衣、電動車充電。', ' should have the lowest carbon today — a good time for laundry, drying or EV charging.')}</p>
+        {advice.best && (<>
+          <div className="adv-k">{tx('比較好的時間', 'Better time')}</div>
+          <p className="adv-best">{tx(`依昨天推估，${advice.best.tomorrow ? '明天' : '今天'} `, `Based on yesterday, ${advice.best.tomorrow ? 'tomorrow' : 'today'} `)}<b className="green">{advice.best.from}–{advice.best.to}</b>{tx(' 碳排最低', ' should have the lowest carbon')}</p>
+          <p className="fine">{tx('適合洗衣、烘衣、電動車充電；開燈、冰箱不用等。', 'Good for laundry, the dryer or EV charging. Lights and the fridge don’t need to wait.')}</p>
+        </>)}
+        {home.touUser && (
+          <p className="adv-note">{tx(`你家是時間電價：尖峰每度 ${TOU_RATES.peak[advice.tou.summer ? 'summer' : 'other']} 元、離峰 ${TOU_RATES.off[advice.tou.summer ? 'summer' : 'other']} 元，把大電器移到離峰比較省。`, `You’re on time-of-use: NT$${TOU_RATES.peak[advice.tou.summer ? 'summer' : 'other']}/kWh at peak vs NT$${TOU_RATES.off[advice.tou.summer ? 'summer' : 'other']} off-peak — shifting big appliances off-peak saves money.`)}</p>
         )}
         <label className="switch">
           <input type="checkbox" checked={!!home.touUser} onChange={(e) => setHome({ touUser: e.target.checked })} />
           <span>{tx('我家有申請「時間電價」', 'My home is on a time-of-use tariff')}</span>
         </label>
-        <p className="fine">{tx('時段依台電簡易型二段式時間電價（114 年 10 月起）：平日夏月（6–9 月）09–24 時尖峰、其他月份 06–11、14–24 時尖峰；週六、週日與國定假日全日離峰。', 'Periods follow Taipower’s simple two-period TOU tariff (since Oct 2025): on weekdays, peak is 09–24 in summer (Jun–Sep) and 06–11 & 14–24 in other months; weekends and national holidays are off-peak all day.')}</p>
+        {home.touUser && <p className="fine">{tx('時段依台電簡易型二段式時間電價（114 年 10 月起）：平日夏月（6–9 月）09–24 時尖峰、其他月份 06–11、14–24 時尖峰；週六、週日與國定假日全日離峰。', 'Periods follow Taipower’s simple two-period TOU tariff (since Oct 2025): on weekdays, peak is 09–24 in summer (Jun–Sep) and 06–11 & 14–24 in other months; weekends and national holidays are off-peak all day.')}</p>}
         <BillCalc home={home} setHome={setHome} />
       </section>
 
