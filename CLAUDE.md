@@ -17,7 +17,7 @@
 - `scripts/opendata.mjs`（`npm run build` 會先跑）：建置時從中繼站 `/open/…` 抓台電開放資料 → `public/data/*.json`（計畫停電、鄉鎮用電、歷年供需、縣市綠電）。`SKIP_OPENDATA=1` 可略過。
 - `.github/workflows/`：`deploy.yml`（push 與每 10 分鐘建置部署，上線前跑 `npm run check` 與冒煙測試）、`health.yml`（每小時健康檢查，有問題才通知）、`rollback.yml`（一鍵回到上一版）、`maintenance.yml`（維護模式：暫停／重新開放）。
 - 維護模式（v0.8.70）：`public/maintenance.json`（`{"on":false}`；暫停 `{"on":true,"since":ISO}`）。index.html 先發請求、`src/maintenance.js` 決定顯示維護頁或網頁；開著的網頁每 5 分鐘與切回前景時檢查、維護頁每 3 分鐘重查（恢復自動重新載入）；service worker 不快取這個檔。`?maint=0` 略過（冒煙測試、健康檢查用）。
-  - 健康檢查（`scripts/health.mjs`，每小時）：有問題 3 分鐘後重查。**嚴重**（網頁 60 秒打不開、地圖沒出現、總發電 < 5,000 MW、與中繼站 genary 原始加總差 > 10%（同資料時間才比）、用電 > 發電 × 1.3）→ 自動改 maintenance.json、推 main、`gh workflow run deploy.yml`，LINE 用 `/alert?type=maint`（中繼站 v8.11 才有，舊版回 ignored → 改送 site）。其他（資料延遲、面板／今日重播／自動導覽／篩選出錯）只通知。已暫停時不再通知。本機試跑：`HEALTH_DRY=1 HEALTH_SITE=http://127.0.0.1:4177/ node scripts/health.mjs`。
+  - 健康檢查（`scripts/health.mjs`，每小時）：有問題 3 分鐘後重查。**嚴重**（網頁 60 秒打不開、地圖沒出現、總發電 < 5,000 MW、與中繼站 genary 原始加總差 > 10%（同資料時間才比）、用電 > 發電 × 1.3）→ 自動改 maintenance.json、推 main、`gh workflow run deploy.yml`，LINE 用 `/alert?type=maint`（中繼站 v8.11；回 ignored 時改送 site）。其他（資料延遲、面板／今日重播／自動導覽／篩選出錯）只通知。已暫停時不再通知。本機試跑：`HEALTH_DRY=1 HEALTH_SITE=http://127.0.0.1:4177/ node scripts/health.mjs`。
   - 重新開放：Actions「維護模式」→ 重新開放（或改檔推 main）。
 - 版本號：`package.json`、`public/sw.js` 的 CACHE、`src/config/changelog.json` 三處一起改。changelog 的 `notes` 往前累加；`notesEn` 只放最近幾版的英文說明（英文介面的更新提示用，沒有就不列）。
 
@@ -53,7 +53,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.8 已部署（2026-10-26，commit 073725a，SHA-256 a9cc59ec…3e08）（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
 - v8.9 已部署（2026-10-26，commit 0abc92f，SHA-256 5b304ca4…1047）：`/water/tainan-pipes.json` 固定轉送臺南給水管線（實測 522，臺南伺服器擋 Cloudflare）。
 - v8.10 已部署（2026-10-26 23:46，commit a33f4e4，SHA-256 a4eee5ee…2904）：推播、LINE 訊息名稱改「台灣脈動」。
-- v8.11 **待部署**（要使用者說「允許部署」）：`/alert?type=maint`「已自動暫停網站」LINE 訊息。未部署前自動暫停時 LINE 會收到一般的「每小時檢查失敗」。
+- v8.11 已部署（2026-10-29 01:23，commit 7558bd1，SHA-256 39ebd01c…c371，用 api.cloudflare.com 代理憑證直接 PUT /content）：`/alert?type=maint`「已自動暫停網站」LINE 訊息。
 - v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
 ### 其他
 - 英文介面：空品測站名（「我的家」測站選單）仍是中文——環境部 aqx_p_432 沒有英文站名；要英文需中繼站另抓測站基本資料 aqx_p_07 的 siteengname（要部署中繼站）。機組名只在開頭是電廠主名稱時換英文（geo.js `unitName`），水力節點與其他小站照原文。
