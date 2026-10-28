@@ -74,6 +74,8 @@
       <noscript><style>#splash-st { display: none; }</style><div class="st">需要開啟 JavaScript 才能顯示 · JavaScript is required</div></noscript>
     </div>
     <script>
+      // 維護模式：和程式下載同時先問（maintenance.js 會接著用這個結果）
+      window.__tgfMaint = /[?&]maint=0\b/.test(location.search) ? null : fetch('./maintenance.json?_=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
       // 有上次的資料就先顯示數字（不用等網路）；英文介面的使用者看英文
       try {
         var en = localStorage.getItem('tgf-lang') === 'en';

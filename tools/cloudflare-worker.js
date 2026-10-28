@@ -826,7 +826,9 @@ async function errorSummary(env, days) {
  *  只接受固定幾種類型、訊息內容寫死在這裡；同一類型 3 小時內只通知一次 */
 const ALERTS = {
   site: '⚠ 台灣脈動 每小時檢查失敗：正式網站用真實資料打開時出錯，詳見 GitHub Actions「健康檢查」',
-  data: '⚠ 台灣脈動 每小時檢查：網站上的台電資料超過 1 小時沒更新，詳見 GitHub Actions「健康檢查」'
+  data: '⚠ 台灣脈動 每小時檢查：網站上的台電資料超過 1 小時沒更新，詳見 GitHub Actions「健康檢查」',
+  // v8.11：健康檢查發現嚴重問題（網頁打不開、數字明顯錯誤）已自動暫停網站
+  maint: '⛔ 台灣脈動 已自動暫停網站：每小時檢查發現嚴重問題（網頁打不開或數字明顯錯誤），原因見 GitHub Actions「健康檢查」。修好後到 Actions「維護模式」按「重新開放」'
 };
 async function alertRoute(url, env) {
   const type = url.searchParams.get('type');

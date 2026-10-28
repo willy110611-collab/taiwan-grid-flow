@@ -4,10 +4,16 @@ import App from './App.jsx';
 import './styles.css';
 import { startUpdateChecks } from './update.js';
 import { installErrorReporting } from './report.js';
+import { fetchMaint, showMaintenance, watchMaint } from './maintenance.js';
 
 installErrorReporting(); // G3：網站出錯時匿名回報給中繼站
 
-createRoot(document.getElementById('root')).render(<App />);
+// 維護模式：暫停中只顯示維護頁（見 maintenance.js）
+fetchMaint().then((m) => {
+  if (m) { showMaintenance(m); return; }
+  createRoot(document.getElementById('root')).render(<App />);
+  if (import.meta.env.PROD) watchMaint();
+});
 
 // iPhone Safari 會忽略 user-scalable=no：在按鈕、面板上雙指縮放會把「整個網頁」放大，畫面卡住不能操作。
 // 擋掉整頁縮放（地圖本身的雙指縮放用的是觸控事件，不受影響）。

@@ -1,0 +1,41 @@
+# 台灣脈動 — 維護模式（暫停網站／重新開放）
+#  用法：GitHub → Actions →「維護模式」→ Run workflow → 選「重新開放」或「暫停」
+#  做法：改 public/maintenance.json，推上 main，重新部署（約 10 分鐘生效）
+#  暫停中的網頁每 3 分鐘自己重查，重新開放後會自動回到正常畫面
+#  健康檢查發現嚴重問題時會自動暫停（scripts/health.mjs）
+name: 維護模式
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '要做什麼'
+        required: true
+        type: choice
+        options: ['重新開放', '暫停']
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  switch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 改維護狀態並部署
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ github.event.inputs.action }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$ACTION" = "暫停" ]; then
+            node -e "require('fs').writeFileSync('public/maintenance.json', JSON.stringify({ on: true, since: new Date().toISOString() }) + '\n')"
+          else
+            echo '{ "on": false }' > public/maintenance.json
+          fi
+          git add public/maintenance.json
+          if git diff --cached --quiet; then echo "狀態沒變（已經是「$ACTION」）"; else git commit -m "維護模式：$ACTION" && git push origin HEAD:main; fi
+          gh workflow run deploy.yml --ref main
+          echo "已$ACTION，約 10 分鐘後生效"

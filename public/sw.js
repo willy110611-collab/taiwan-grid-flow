@@ -1,6 +1,6 @@
 // 離線快取：頁面與程式用「先上網、失敗再用快取」，所以一鍵更新後重開就是新版。
 // 電力資料（data/、taipower/）永遠走網路，不快取，避免看到舊數字。
-const CACHE = 'tgf-v0.8.69';
+const CACHE = 'tgf-v0.8.70';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   // 連同首頁用到的程式檔一起先存好 → 第二次打開就完全不用下載
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return; // 字型、地形圖磚交給瀏覽器
   if (/\/(data|taipower)\//.test(url.pathname)) return; // 即時資料不快取
   if (/\/water\//.test(url.pathname)) return; // 水模式圖資（管線分格約 27 MB）：交給瀏覽器快取，不放進 App 快取
-  if (/version\.json$/.test(url.pathname)) return; // 新版檢查：永遠問伺服器
+  if (/(version|maintenance)\.json$/.test(url.pathname)) return; // 新版檢查、維護模式：永遠問伺服器
 
   // 程式檔（檔名含版本雜湊，內容永不改變）：快取優先 → 第二次打開幾乎不用下載
   if (/\/assets\//.test(url.pathname)) {

@@ -1,6 +1,7 @@
 # 台灣脈動 — 每小時健康檢查（G2／G6）
 #  用真實資料從外部打開正式網站、檢查中繼站與網站備份
 #  正常 → 什麼都不做；有問題 → LINE 通知管理者（經中繼站），並讓這次檢查失敗（GitHub 寄 Email）
+#  嚴重問題（網頁打不開、數字明顯錯誤）→ 自動暫停網站（public/maintenance.json），見 scripts/health.mjs
 name: 健康檢查
 
 on:
@@ -9,12 +10,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # 自動暫停：改 public/maintenance.json
+  actions: write    # 自動暫停後觸發部署
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,4 +26,6 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: 檢查正式網站與中繼站
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: npm run health
