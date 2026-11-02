@@ -8,7 +8,8 @@ import { isEn, tx } from '../i18n.js';
 /**
  * 每週知識題
  * ─────────────────────────────────────────────────────────────
- *  ・每週 5 題（3 題知識＋2 題看地圖），週一 00:00（台灣時間）換題；每兩個月一季（1–2、3–4 … 11–12 月，依該週星期一的月份）
+ *  ・每週一、週四 00:00（台灣時間）各換 3 題（2 題知識＋1 題看地圖）＝一「期」；第一週 2026-W45 是舊制的一期 5 題（3＋2）
+ *  ・每兩個月一季（1–2、3–4 … 11–12 月，依該期所在週的星期一月份）
  *  ・季內可以補答前幾週的題目；每題只算第一次作答；排行榜：答對多者在前，同分比作答總時間（短者在前）
  *  ・選題：從 QUIZ_START 起逐週模擬，每週挑「最久沒出過」的題目（從沒出過的優先），同分用週代碼雜湊決定 →
  *    題庫往後加題不會改到已經出過的週；題目用完會自然重複最久以前出過的
@@ -16,7 +17,8 @@ import { isEn, tx } from '../i18n.js';
  *  ・對錯在這台裝置判斷；中繼站只記分與排名（/quiz/answer、/quiz/board）
  */
 export const QUIZ_START = '2026-W45';
-const KNOW_PER_WEEK = 3, MAP_PER_WEEK = 2;
+const ROUND_START = '2026-W46'; // 這週起改成一週兩期（週一、週四）
+const PER_ROUND = { legacy: [3, 2], round: [2, 1] }; // [知識, 看地圖]
 const MAX_MS = 30 * 60e3;
 
 /* ── 週與季（台灣時間）── */
@@ -53,6 +55,29 @@ export const weekRange = (id) => {
   const m = mondayOf(id), e = new Date(m.getTime() + 6 * 864e5);
   return `${m.getUTCMonth() + 1}/${m.getUTCDate()}–${e.getUTCMonth() + 1}/${e.getUTCDate()}`;
 };
+
+/* ── 期：'2026-W45'（舊制一週一期）或 '2026-W46-1'（週一～三）／'2026-W46-2'（週四～日）。字串順序＝時間順序 ── */
+export const roundWeek = (r) => r.slice(0, 8);
+export function roundOf(ms = Date.now()) {
+  const w = weekOf(ms);
+  if (w < ROUND_START) return w;
+  return `${w}-${(tw(ms).getUTCDay() + 6) % 7 < 3 ? 1 : 2}`;
+}
+/** 這一期的第一天與最後一天（以 UTC 表示的台灣日期） */
+function roundDays(r) {
+  const m = mondayOf(roundWeek(r));
+  const [a, b] = r.length === 8 ? [0, 6] : r.endsWith('-1') ? [0, 2] : [3, 6];
+  return [new Date(m.getTime() + a * 864e5), new Date(m.getTime() + b * 864e5)];
+}
+export const roundRange = (r) => { const [a, b] = roundDays(r); return `${a.getUTCMonth() + 1}/${a.getUTCDate()}–${b.getUTCMonth() + 1}/${b.getUTCDate()}`; };
+const nextRound = (r) => (r.length === 8 ? (addWeeks(r, 1) >= ROUND_START ? `${addWeeks(r, 1)}-1` : addWeeks(r, 1)) : r.endsWith('-1') ? `${roundWeek(r)}-2` : `${addWeeks(roundWeek(r), 1)}-1`);
+export const roundSeason = (r) => seasonOf(roundWeek(r));
+/** 本季到這一期為止的各期（舊到新），不早於 QUIZ_START */
+export function seasonRounds(cur = roundOf()) {
+  const s = roundSeason(cur), out = [];
+  for (let r = QUIZ_START, i = 0; r <= cur && i < 2000; r = nextRound(r), i++) if (roundSeason(r) === s) out.push(r);
+  return out;
+}
 
 /* ── 看地圖題：答案依當下台電資料 ── */
 const fuelName = (f) => (isEn() ? FUELS[f]?.en : FUELS[f]?.label) || f;
@@ -131,13 +156,14 @@ function hash(s) {
 }
 function shuffle(arr, seed) { return arr.map((x) => [hash(`${seed}|${x}`), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]); }
 const pickCache = new Map();
-/** 某一週的 5 題：[{ qid: 'k:k01' | 'm:top', kind: 'k' | 'm', id }] */
-export function questionsOf(week) {
-  if (pickCache.has(week)) return pickCache.get(week);
+/** 某一期的題目：[{ qid: 'k:k01' | 'm:top', kind: 'k' | 'm', id }]（從 QUIZ_START 逐期模擬，挑最久沒出過的） */
+export function questionsOf(round) {
+  if (pickCache.has(round)) return pickCache.get(round);
   const lastK = new Map(), lastM = new Map();
   let result = [];
-  for (let w = QUIZ_START, i = 0; w <= week && i < 2000; w = addWeeks(w, 1), i++) {
-    const mon = mondayOf(w).toISOString().slice(0, 10);
+  for (let w = QUIZ_START, i = 0; w <= round && i < 4000; w = nextRound(w), i++) {
+    const mon = roundDays(w)[0].toISOString().slice(0, 10); // 題目的 since 不晚於這期第一天才會被選
+    const [KNOW_PER_WEEK, MAP_PER_WEEK] = w.length === 8 ? PER_ROUND.legacy : PER_ROUND.round;
     const pick = (ids, last, n) => ids
       .map((id) => [last.has(id) ? last.get(id) : -1, hash(`${w}|${id}`), id])
       .sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, n).map((x) => x[2]);
@@ -147,7 +173,7 @@ export function questionsOf(week) {
     ms.forEach((id) => lastM.set(id, i));
     const list = shuffle([...ks.map((id) => ({ qid: `k:${id}`, kind: 'k', id })), ...ms.map((id) => ({ qid: `m:${id}`, kind: 'm', id }))], `order|${w}`);
     pickCache.set(w, list);
-    if (w === week) result = list;
+    if (w === round) result = list;
   }
   return result;
 }
@@ -210,7 +236,7 @@ export async function submitAnswer(week, item, choice, snap) {
   const ms = Math.min(MAX_MS, Math.max(0, Date.now() - (state.open[k] || Date.now())));
   const rec = { choice, correct, ok, ms, t: Date.now() };
   save({ ans: { ...state.ans, [k]: rec } });
-  post('answer', { uid: state.uid, name: state.name, week, qid: item.qid, ok, ms }).catch(() => {});
+  post('answer', { uid: state.uid, name: state.name, week: roundWeek(week), qid: item.qid, ok, ms }).catch(() => {}); // 中繼站以週記分（每週最多 6 題）
   return rec;
 }
 
@@ -237,7 +263,7 @@ export async function forgetMe() {
 }
 
 /** 本季統計（這台裝置）：已答、答對、作答總時間 */
-export function seasonStats(s, weeks = seasonWeeks()) {
+export function seasonStats(s, weeks = seasonRounds()) {
   let n = 0, ok = 0, ms = 0, total = 0;
   for (const w of weeks) for (const it of questionsOf(w)) {
     total++;
@@ -246,7 +272,7 @@ export function seasonStats(s, weeks = seasonWeeks()) {
   }
   return { n, ok, ms, total };
 }
-/** 「更多」上的提示點：本週題目還沒看過 */
-export const hasNewWeek = (s) => s.seen !== weekOf();
-export const markSeen = () => { if (state.seen !== weekOf()) save({ seen: weekOf() }); };
+/** 「更多」上的提示點：這一期的題目還沒看過 */
+export const hasNewWeek = (s) => s.seen !== roundOf();
+export const markSeen = () => { if (state.seen !== roundOf()) save({ seen: roundOf() }); };
 export const fmtTime = (ms) => { const s = Math.round(ms / 1000); return s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };

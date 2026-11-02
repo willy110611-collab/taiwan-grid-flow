@@ -3,7 +3,7 @@ import { Panel } from './Panels.jsx';
 import { QUIZ_BANK, SOURCES } from '../config/quizBank.js';
 import { FILTERS } from '../config/energy.js';
 import {
-  MAP_QUESTIONS, questionsOf, weekOf, seasonOf, seasonWeeks, seasonLabel, prevSeason, weekRange, useQuiz, answerOf,
+  MAP_QUESTIONS, questionsOf, roundOf, roundSeason, seasonRounds, seasonLabel, prevSeason, roundRange, useQuiz, answerOf,
   openQuestion, optionsOf, submitAnswer, fetchBoard, setName, forgetMe, seasonStats, markSeen, fmtTime
 } from '../data/quiz.js';
 import { isEn, tx, useT } from '../i18n.js';
@@ -23,10 +23,10 @@ export function QuizPanel({ snapshot, setUi, onClose }) {
   const [view, setViewState] = useState(lastView);
   const setView = (v) => { lastView = v; setViewState(v); };
   useEffect(() => { markSeen(); }, []);
-  const cur = weekOf();
-  const weeks = useMemo(() => seasonWeeks(cur), [cur]);
+  const cur = roundOf();
+  const weeks = useMemo(() => seasonRounds(cur), [cur]);
   const st = seasonStats(s, weeks);
-  const season = seasonOf(cur);
+  const season = roundSeason(cur);
 
   const title = view.v === 'board' ? tx('排行榜', 'Leaderboard') : tx('知識題', 'Quiz');
   const meta = view.v === 'board' ? seasonLabel(view.season || season) : view.v === 'q' ? `${weekLabel(view.week, cur)}` : seasonLabel(season);
@@ -40,7 +40,7 @@ export function QuizPanel({ snapshot, setUi, onClose }) {
   );
 }
 
-const weekLabel = (w, cur) => (w === cur ? tx('本週', 'This week') : tx(`${weekRange(w)} 那週`, `Week of ${weekRange(w)}`));
+const weekLabel = (w, cur) => (w === cur ? tx('這一期', 'This round') : roundRange(w));
 const qText = (item) => (item.kind === 'k' ? (isEn() ? QUIZ_BANK.find((q) => q.id === item.id)?.qEn : QUIZ_BANK.find((q) => q.id === item.id)?.q) : MAP_QUESTIONS[item.id].q());
 
 function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
@@ -53,7 +53,7 @@ function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
   return (
     <>
       <div className="qz-head">
-        <div><div className="hl-k">{tx(`本週・${weekRange(cur)}`, `This week · ${weekRange(cur)}`)}</div><div className="big">{done.length}<small> / {list.length} {tx('題', '')}　{tx('答對', 'correct')} {done.filter((it) => answerOf(s, cur, it.qid).ok).length}</small></div></div>
+        <div><div className="hl-k">{tx(`這一期・${roundRange(cur)}`, `This round · ${roundRange(cur)}`)}</div><div className="big">{done.length}<small> / {list.length} {tx('題', '')}　{tx('答對', 'correct')} {done.filter((it) => answerOf(s, cur, it.qid).ok).length}</small></div></div>
         <div style={{ textAlign: 'right' }}><div className="hl-k" style={{ justifyContent: 'flex-end' }}>{tx('本季', 'Season')}</div><div className="big">{st.ok}<small> / {st.total} {tx('答對', 'correct')}</small></div></div>
       </div>
       <div className="qz-prog">{list.map((it) => { const a = answerOf(s, cur, it.qid); return <i key={it.qid} className={a ? (a.ok ? 'ok' : 'ng') : ''} />; })}</div>
@@ -61,10 +61,10 @@ function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
       {older.length > 0 && (
         <>
           <button className="qz-more" onClick={() => setShowOld(!showOld)} aria-expanded={showOld}>
-            {missed ? tx(`本季前幾週還有 ${missed} 題可以補答`, `${missed} earlier question${missed > 1 ? 's' : ''} this season`) : tx('本季前幾週', 'Earlier this season')} {showOld ? '▴' : '▾'}
+            {missed ? tx(`本季前幾期還有 ${missed} 題可以補答`, `${missed} earlier question${missed > 1 ? 's' : ''} this season`) : tx('本季前幾期', 'Earlier this season')} {showOld ? '▴' : '▾'}
           </button>
           {showOld && older.slice().reverse().map((w) => (
-            <div key={w}><div className="hl-k" style={{ marginTop: 10 }}>{weekRange(w)}</div><QList s={s} week={w} onOpen={onOpen} /></div>
+            <div key={w}><div className="hl-k" style={{ marginTop: 10 }}>{roundRange(w)}</div><QList s={s} week={w} onOpen={onOpen} /></div>
           ))}
         </>
       )}
@@ -72,7 +72,7 @@ function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
         {next && <button className="qz-btn" onClick={() => onOpen(next[0], next[1])}>{tx('繼續作答', 'Continue')}</button>}
         <button className="qz-btn dim" onClick={onBoard}>{tx('排行榜', 'Leaderboard')}</button>
       </div>
-      <p className="fine" style={{ marginTop: 12 }}>{tx('每週一換 5 題，什麼時候答都可以；每兩個月一季，季內可以補答前幾週的題目。答對多的排前面，同分比作答時間。不會推播打擾你。', 'Five new questions every Monday — answer any time. Each season lasts two months and you can catch up on earlier weeks. Most correct ranks first; ties go to the faster total time. No notifications.')}</p>
+      <p className="fine" style={{ marginTop: 12 }}>{tx('每週一、週四各換 3 題，什麼時候答都可以；每兩個月一季，季內可以補答前幾期的題目。答對多的排前面，同分比作答時間。不會推播打擾你。', 'Three new questions every Monday and Thursday — answer any time. Each season lasts two months and you can catch up on earlier rounds. Most correct ranks first; ties go to the faster total time. No notifications.')}</p>
     </>
   );
 }
@@ -247,7 +247,7 @@ export function QuizTop3({ setUi, s }) {
   const [data, setData] = useState(topCache);
   useEffect(() => {
     let alive = true;
-    const load = () => { if (document.visibilityState === 'visible') fetchBoard(seasonOf(weekOf())).then((d) => { topCache = d; if (alive) setData(d); }).catch(() => {}); };
+    const load = () => { if (document.visibilityState === 'visible') fetchBoard(roundSeason(roundOf())).then((d) => { topCache = d; if (alive) setData(d); }).catch(() => {}); };
     load();
     const id = setInterval(load, 15 * 60e3); // 每 15 分鐘更新一次（排名不需要即時）
     return () => { alive = false; clearInterval(id); };
@@ -263,7 +263,7 @@ export function QuizTop3({ setUi, s }) {
           <li key={r.rank}><i>{r.rank}</i><span>{r.name || tx('匿名', 'Anonymous')}</span><b>{tx(`${r.ok} 題`, `${r.ok}`)}</b></li>
         ))}
       </ol>
-      <span className="me">{me ? (me.rank <= 3 ? tx(`你是第 ${me.rank} 名！`, `You’re #${me.rank}!`) : tx(`我第 ${me.rank} 名・答對 ${me.ok} 題`, `Me: #${me.rank} · ${me.ok} correct`)) : tx('來答本週的題目', 'Join this week')} ›</span>
+      <span className="me">{me ? (me.rank <= 3 ? tx(`你是第 ${me.rank} 名！`, `You’re #${me.rank}!`) : tx(`我第 ${me.rank} 名・答對 ${me.ok} 題`, `Me: #${me.rank} · ${me.ok} correct`)) : tx('來答這一期的題目', 'Join this round')} ›</span>
     </button>
   );
 }

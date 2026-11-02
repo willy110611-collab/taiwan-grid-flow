@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣脈動 — Cloudflare Worker 中繼站 v8.12
+//  台灣脈動 — Cloudflare Worker 中繼站 v8.13
+//  v8.13：知識題改成每週一、週四各 3 題 → 每週上限 5 題改成 6 題
 //  v8.12：每週知識題排行榜（/quiz/…）：每兩個月一季，存在 Durable Object「Presence」的 quiz 實例（SQLite）；只存隨機代碼、暱稱、各題對錯與作答秒數
 //  v8.11：/alert?type=maint「已自動暫停網站」
 //  v8.10：名稱改「台灣脈動」（推播、LINE 訊息）
@@ -58,7 +59,7 @@ const TP = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/';
 const TP_FILES = new Set(['genary.json', 'genloadareaperc.csv', 'loadpara.json', 'loadfueltype.csv', 'loadfueltype_1.csv', 'loadareas.csv']);
 const FORECAST = 'https://service.taipower.com.tw/data/opendata/apply/file/d006014/001.csv';
 const MOENV = 'https://data.moenv.gov.tw/api/v2/';
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'X-Relay-Version': '8.12' }; // 版本標頭：部署後可確認實際在跑的是哪一版
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'X-Relay-Version': '8.13' }; // 版本標頭：部署後可確認實際在跑的是哪一版
 const UA = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
   Referer: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html',
@@ -1022,8 +1023,8 @@ export class Presence {
 
 /* ───────── v8.12：每週知識題排行榜 ─────────
  *  題目與對錯在網頁端判斷（題庫隨時增加，不必每次部署中繼站）；這裡只記分與排名：
- *   ・每週 5 題（週一 00:00 台灣時間換題），每兩個月一季（1–2、3–4 … 11–12 月，依該週星期一所在月份），季內可補答前幾週的題目
- *   ・同一個代碼每題只算第一次作答、每週最多 5 題；只收「本季、而且不晚於本週」的題目
+ *   ・每週一、週四（台灣時間）各換 3 題（2026-W45 舊制一週 5 題），每兩個月一季（1–2、3–4 … 11–12 月，依該週星期一所在月份），季內可補答前幾期
+ *   ・同一個代碼每題只算第一次作答、每週最多 6 題；只收「本季、而且不晚於本週」的題目
  *   ・排名：答對題數多者在前，同分比作答總秒數（短者在前）
  *  保存：隨機代碼、暱稱、各題對錯與秒數；超過 1 年的紀錄自動刪除；POST /quiz/forget 立即刪除自己的紀錄 */
 const QZ_WEEK = /^\d{4}-W\d{2}$/, QZ_QID = /^[km]:[a-z0-9_-]{1,40}$/, QZ_UID = /^[a-z0-9]{16,40}$/;
@@ -1099,9 +1100,9 @@ async function quizDO(state, req) {
   }
   if (b.name) sql.exec('INSERT INTO qp (uid, name, t) VALUES (?, ?, ?) ON CONFLICT(uid) DO UPDATE SET name = excluded.name, t = excluded.t', b.uid, b.name, now);
   if (action === 'name') return out({ ok: true, name: b.name });
-  // answer：每週最多 5 題、每題只算第一次
+  // answer：每週最多 6 題（週一、週四各 3 題）、每題只算第一次
   const cnt = sql.exec('SELECT COUNT(*) AS c FROM qa WHERE week = ? AND uid = ?', b.week, b.uid).one().c;
-  if (cnt >= 5 && !sql.exec('SELECT 1 FROM qa WHERE week = ? AND uid = ? AND qid = ?', b.week, b.uid, b.qid).toArray().length) return out({ error: 'full' }, 409);
+  if (cnt >= 6 && !sql.exec('SELECT 1 FROM qa WHERE week = ? AND uid = ? AND qid = ?', b.week, b.uid, b.qid).toArray().length) return out({ error: 'full' }, 409);
   sql.exec('INSERT OR IGNORE INTO qa (season, week, uid, qid, ok, ms, t) VALUES (?, ?, ?, ?, ?, ?, ?)', b.season, b.week, b.uid, b.qid, b.ok, b.ms, now);
   if (Math.random() < 0.02) { // 偶爾清掉 1 年前的紀錄與沒有作答的暱稱
     sql.exec('DELETE FROM qa WHERE t < ?', now - 366 * 86400e3);

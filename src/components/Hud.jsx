@@ -254,7 +254,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
                 ['store', Icon.store, '店家', '店家用電試算'],
                 ['highlights', Icon.spark, '亮點', '今日紀錄'],
                 ['badges', Icon.medal, '徽章', '收集成就'],
-                ...(quizOn ? [['quiz', Icon.quiz, '知識題', '每週 5 題・排行榜']] : []),
+                ...(quizOn ? [['quiz', Icon.quiz, '知識題', '週一・四出題・排行榜']] : []),
                 ['info', Icon.info, '資訊', '說明・資料來源'],
               ].map(([id, ico, label, sub]) => (
                 <button key={id} role="menuitem" className={ui.panel === id ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === id ? null : id, infoTab: null }); }}>

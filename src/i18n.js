@@ -69,7 +69,7 @@ const EN = {
   // HUD
   '綠能': 'Green', '火力': 'Thermal', '核能': 'Nuclear', '全部': 'All', '用電': 'Demand', '空品': 'Air',
   'MW · 全台發電': 'MW · generation', 'MW · 全台用電': 'MW · demand',
-  '自動導覽': 'Auto tour', '知識題': 'Quiz', '每週 5 題・排行榜': '5 a week · leaderboard', '我的家': 'Home', '亮點': 'Peaks', '徽章': 'Badges', '今日重播': 'Replay', '資訊': 'Info', '全螢幕': 'Fullscreen', '全島': 'Overview',
+  '自動導覽': 'Auto tour', '知識題': 'Quiz', '週一・四出題・排行榜': 'New Mon & Thu · leaderboard', '我的家': 'Home', '亮點': 'Peaks', '徽章': 'Badges', '今日重播': 'Replay', '資訊': 'Info', '全螢幕': 'Fullscreen', '全島': 'Overview',
   '日出': 'Sunrise', '日落': 'Sunset', '資料': 'Data',
   'LIVE · 台電即時': 'LIVE · Taipower', 'SIMULATED · 模擬資料': 'SIMULATED', '尖峰備轉': 'peak reserve', '模擬': 'sim', '更新中 · 上次': 'Updating · last',
   '供電充裕': 'Supply OK', '供電吃緊': 'Supply tight', '供電警戒': 'Supply alert', '限電警戒': 'Rationing alert', '限電準備': 'Rationing prep',
