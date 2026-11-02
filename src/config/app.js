@@ -18,5 +18,7 @@ export const APP = {
   typhoon: false,
   // 💧 水模式：整理完成前不對使用者開放（false＝不顯示電／水切換；開發測試用網址 ?water=1）
   water: false,
+  // 每週知識題＋排行榜：中繼站 v8.12 部署、題庫確認後改 true（測試用網址 ?quiz=1）
+  quiz: false,
   taipowerPage: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html'
 };

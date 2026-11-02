@@ -253,7 +253,7 @@ export default function App() {
       // 切到「用電／空品／核能」自動打開對應面板；切走時關掉
       setUiState((s) => ({
         ...s, ...patch,
-        panel: ['demand', 'air', 'nuclear'].includes(patch.filter) ? patch.filter : ['demand', 'air', 'nuclear'].includes(s.panel) ? null : s.panel
+        panel: ['demand', 'air', 'nuclear'].includes(patch.filter) ? patch.filter : 'panel' in patch ? patch.panel : ['demand', 'air', 'nuclear'].includes(s.panel) ? null : s.panel
       }));
       return;
     }

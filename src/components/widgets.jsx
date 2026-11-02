@@ -125,6 +125,9 @@ export const Icon = {
   medal: (
     <svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="6" /><path d="M8.5 9L6 3h4l2 4 2-4h4l-2.5 6M12 11.5v5M10 14h4" /></svg>
   ),
+  quiz: (
+    <svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0z" /><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.6M17 6h2.5a2.5 2.5 0 0 1-2.6 3.6M12 13v4M8.5 20h7M10 17h4" /></svg>
+  ),
   replay: (
     <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4" /><path d="M10 9l5 3-5 3z" /></svg>
   ),

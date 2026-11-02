@@ -1163,3 +1163,68 @@ html:lang(en) .hud .filters .fchip, html:lang(en) .hud .filters .fmenu button { 
 .hl-list[data-jump="today"] .hl-k { font-size: 10.5px; letter-spacing: 0.14em; }
 .hl-list[data-jump="today"] .hl-n { order: 2; font-size: 24px; margin: 2px 0 0; text-align: left; align-self: flex-start; }
 .hl-list[data-jump="today"] .hl-v { order: 3; font-size: 11.5px; }
+
+/* ── 知識題（更多 → 知識題）── */
+.linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--green); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.linkish.warm { color: var(--thermal); }
+.qz-head { display: flex; justify-content: space-between; align-items: flex-end; margin: 2px 0 10px; }
+.qz-head .big { font-family: var(--mono); font-size: 28px; font-weight: 300; }
+.qz-head .big small { font-size: 13px; color: var(--ink-dim); }
+.qz-prog { display: flex; gap: 6px; margin: 4px 0 10px; }
+.qz-prog i { flex: 1; height: 6px; border-radius: 9px; background: rgba(200, 215, 255, 0.12); }
+.qz-prog i.ok { background: var(--green); } .qz-prog i.ng { background: rgb(255, 110, 100); }
+.qz-list { list-style: none; margin: 0; padding: 0; }
+.qz-list li { border-top: 1px solid var(--line); }
+.qz-list button { width: 100%; display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 11px 0; border: 0; background: none; text-align: left; font-size: 14px; line-height: 1.5; cursor: pointer; }
+.qz-list button:focus-visible { outline: 1px solid var(--line); outline-offset: 2px; border-radius: 8px; }
+.qz-list .n { font-family: var(--mono); color: var(--ink-faint); font-size: 12px; }
+.qz-list .st { font-size: 12px; white-space: nowrap; }
+.qz-list .ok { color: var(--green); } .qz-list .ng { color: rgb(255, 120, 110); } .qz-list .go { color: var(--gold); }
+.qz-type { display: inline-block; font-size: 10.5px; padding: 0 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-dim); margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+.qz-type.qzmap { border-color: rgba(110, 240, 190, 0.4); color: var(--green); }
+.qz-more { margin-top: 8px; border: 0; background: none; padding: 8px 0; color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; }
+.qz-q { font-size: 18px; line-height: 1.55; margin: 8px 0 14px; }
+.qz-opts { display: grid; gap: 9px; }
+.qz-opts button { display: flex; align-items: center; gap: 12px; text-align: left; padding: 13px 14px; border-radius: 13px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); font-size: 15px; line-height: 1.4; cursor: pointer; }
+.qz-opts button:not(:disabled):hover { border-color: rgba(200, 215, 255, 0.35); }
+.qz-opts button:disabled { cursor: default; }
+.qz-opts button b { font-family: var(--mono); font-weight: 400; color: var(--ink-faint); width: 16px; flex: none; }
+.qz-opts button.right { border-color: rgba(110, 240, 190, 0.7); background: rgba(110, 240, 190, 0.12); }
+.qz-opts button.wrong { border-color: rgba(255, 110, 100, 0.7); background: rgba(255, 110, 100, 0.12); }
+.qz-opts button.dim { opacity: 0.55; }
+.qz-opts .r { margin-left: auto; font-size: 12px; white-space: nowrap; }
+.qz-opts .r.ok { color: var(--green); } .qz-opts .r.ng { color: rgb(255, 130, 120); }
+.qz-exp { margin-top: 14px; padding: 12px 14px; border-radius: 13px; background: rgba(255, 255, 255, 0.04); font-size: 13.5px; line-height: 1.75; color: var(--ink-dim); }
+.qz-exp p { margin: 0; } .qz-exp p + p { margin-top: 6px; }
+.qz-exp .src { font-size: 12px; }
+.qz-exp a { color: var(--green); text-decoration: none; }
+.qz-btns { display: flex; gap: 10px; margin-top: 14px; }
+.qz-btn { flex: 1; padding: 11px 0; border-radius: 999px; border: 1px solid rgba(255, 198, 92, 0.5); color: var(--gold); background: none; font: inherit; font-size: 14px; cursor: pointer; }
+.qz-btn.green { border-color: rgba(110, 240, 190, 0.5); color: var(--green); }
+.qz-btn.dim { border-color: var(--line); color: var(--ink-dim); }
+.qz-new { font-size: 10px; color: var(--gold); border: 1px solid rgba(255, 198, 92, 0.5); border-radius: 99px; padding: 0 6px; margin-left: 6px; letter-spacing: 0.02em; }
+.qz-tabs { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; width: max-content; margin: 4px 0 12px; }
+.qz-tabs button { border: 0; background: none; padding: 5px 14px; border-radius: 999px; font: inherit; font-size: 12.5px; color: var(--ink-dim); cursor: pointer; }
+.qz-tabs button.on { background: rgba(200, 215, 255, 0.14); color: var(--ink); }
+.qz-rank { list-style: none; margin: 0; padding: 0; }
+.qz-rank li { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 6px; border-top: 1px solid var(--line); font-size: 14px; }
+.qz-rank .r { font-family: var(--mono); color: var(--ink-faint); text-align: center; }
+.qz-rank li:nth-child(1) .r { color: #ffd27a; } .qz-rank li:nth-child(2) .r { color: #d6e0f5; } .qz-rank li:nth-child(3) .r { color: #e7a36b; }
+.qz-rank .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qz-rank .s { font-family: var(--mono); }
+.qz-rank .t { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); min-width: 38px; text-align: right; }
+.qz-rank li.me { background: rgba(110, 240, 190, 0.08); border-radius: 10px; border-top-color: transparent; }
+.qz-gap { text-align: center; color: var(--ink-faint); font-size: 12px; padding: 2px 0; }
+.qz-name { display: flex; gap: 10px; margin-top: 14px; }
+.qz-name input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--ink); font: inherit; font-size: 16px; }
+.qz-name .qz-btn { flex: none; padding: 0 20px; }
+/* 去地圖找答案：下方提示列 */
+.qz-peek {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(110px + var(--safe-b)); z-index: 25; width: max-content; max-width: calc(100vw - 32px);
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; pointer-events: auto;
+  background: var(--glass-strong); border: 1px solid rgba(255, 198, 92, 0.45); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font-size: 13px;
+}
+.qz-peek span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qz-peek button.x { background: none; color: var(--ink-dim); padding: 7px 8px; font-size: 16px; line-height: 1; }
+.qz-peek button { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; background: rgba(255, 198, 92, 0.18); color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; }
+@media (max-width: 699px) { .qz-peek { bottom: calc(200px + var(--safe-b)); } }

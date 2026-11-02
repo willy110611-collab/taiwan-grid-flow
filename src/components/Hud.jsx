@@ -19,6 +19,8 @@ import { useT, useLang, tx } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
 import { FeedbackPanel } from './Feedback.jsx';
+import { QuizPanel, QuizPeekBar } from './Quiz.jsx';
+import { useQuiz, hasNewWeek } from '../data/quiz.js';
 import { soundPref, soundSupported, startSound, stopSound, soundRunning, setGridMood } from '../audio/ambient.js';
 import { hapticSupported, hapticPref, setHapticPref, installHaptics } from '../audio/haptics.js';
 import { PLANTS, plantName } from '../config/geo.js';
@@ -58,6 +60,9 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
   const charge = (snapshot?.charging?.pump || 0) + (snapshot?.charging?.battery || 0);
   const upd = useUpdate();
   const hasIssue = (snapshot?.diag || []).some((d) => !d.ok);
+  const quizOn = APP.quiz || /[?&]quiz=1\b/.test(location.search);
+  const qz = useQuiz();
+  const quizNew = quizOn && hasNewWeek(qz); // 本週題目還沒看過：「更多」與選單項目亮小點（不推播）
   const [more, setMore] = useState(false);
   // 背景音（預設關）：上次開著的話，等使用者第一次點畫面再開始（iPhone 規定）
   const [sound, setSound] = useState(() => soundPref());
@@ -240,7 +245,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
           </button>
           </>)}
           <button className={more || MORE_PANELS.includes(ui.panel) ? 'on' : ''} onClick={() => setMore(!more)} aria-expanded={more}>
-            {Icon.more}<span>{t('更多')}</span>{hasIssue && <i className="tb-dot" />}
+            {Icon.more}<span>{t('更多')}</span>{(hasIssue || quizNew) && <i className="tb-dot" />}
           </button>
           {more && (
             <div className="more-menu" role="menu" onClickCapture={() => { window.__tgfFromMenu = Date.now(); }}>
@@ -249,10 +254,11 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
                 ['store', Icon.store, '店家', '店家用電試算'],
                 ['highlights', Icon.spark, '亮點', '今日紀錄'],
                 ['badges', Icon.medal, '徽章', '收集成就'],
+                ...(quizOn ? [['quiz', Icon.quiz, '知識題', '每週 5 題・排行榜']] : []),
                 ['info', Icon.info, '資訊', '說明・資料來源'],
               ].map(([id, ico, label, sub]) => (
                 <button key={id} role="menuitem" className={ui.panel === id ? 'on' : ''} onClick={() => { setMore(false); setUi({ panel: ui.panel === id ? null : id, infoTab: null }); }}>
-                  {ico}<b>{t(label)}</b><small>{t(sub)}</small>{id === 'info' && hasIssue && <i className="tb-dot" />}
+                  {ico}<b>{t(label)}</b><small>{t(sub)}</small>{((id === 'info' && hasIssue) || (id === 'quiz' && quizNew)) && <i className="tb-dot" />}
                 </button>
               ))}
               <button role="menuitem" onClick={() => setUi({ route: ui.route === 'fiber' ? 'grid' : 'fiber' })} title={t('光流路線：真實輸電線（OpenStreetMap）或示意光纖')}>
@@ -346,6 +352,8 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
       {ui.panel === 'store' && <Guard key={'g-store'} name="store" onClose={() => setUi({ panel: null })}><StorePanel onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'appliance' && <Guard key={'g-appliance'} name="appliance" onClose={() => setUi({ panel: null })}><AppliancePanel home={home} onClose={() => setUi({ panel: null })} /></Guard>}
       {APP.typhoon && ui.panel === 'typhoon' && <Guard key={'g-typhoon'} name="typhoon" onClose={() => setUi({ panel: null })}><TyphoonPanel data={typhoon.data} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
+      {quizOn && ui.panel === 'quiz' && <Guard key={'g-quiz'} name="quiz" onClose={() => setUi({ panel: null })}><QuizPanel snapshot={snapshot} setUi={setUi} onClose={() => setUi({ panel: null })} /></Guard>}
+      {quizOn && !ui.panel && ui.quizPeek && !wallpaper && <QuizPeekBar peek={ui.quizPeek} setUi={setUi} />}
       {ui.panel === 'badges' && <Guard key={'g-badges'} name="badges" onClose={() => setUi({ panel: null })}><BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} /></Guard>}
     </div>
   );
@@ -425,7 +433,7 @@ function ClockPanel({ snapshot, daylight, replayT, simple = false }) {
   );
 }
 
-const MORE_PANELS = ['appliance', 'store', 'highlights', 'badges', 'info', 'feedback'];
+const MORE_PANELS = ['appliance', 'store', 'highlights', 'badges', 'quiz', 'info', 'feedback'];
 /** 意見回饋附上的「目前畫面」：開著的電廠卡就寫電廠名稱，否則寫篩選 */
 function feedbackView(ui) {
   if (ui.panel === 'plant' && ui.plantId) { const p = PLANTS.find((x) => x.id === ui.plantId); if (p) return `${tx('電廠：', 'plant: ')}${plantName(p)}`; }

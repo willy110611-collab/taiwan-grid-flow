@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣脈動 — Cloudflare Worker 中繼站 v8.10
+//  台灣脈動 — Cloudflare Worker 中繼站 v8.12
+//  v8.12：每週知識題排行榜（/quiz/…）：每兩個月一季，存在 Durable Object「Presence」的 quiz 實例（SQLite）；只存隨機代碼、暱稱、各題對錯與作答秒數
+//  v8.11：/alert?type=maint「已自動暫停網站」
 //  v8.10：名稱改「台灣脈動」（推播、LINE 訊息）
 //  v8.9：/water/tainan-pipes.json 轉送臺南市「公共管線圖資－給水系統管線」（soa.tainan.gov.tw 擋海外主機；給 Actions 定期轉檔用）
 //  v8.8：低碳時段通知（訂閱 lowc）：每天依昨日燃料別曲線推估 07–22 點最低碳的 2 小時，時段開始時發 App 通知（中英）
@@ -33,6 +35,8 @@
 //  /typhoon/county.json?gid= 同上，某縣市各鄉鎮市區
 //  POST /line               LINE Webhook（好友登記測站、查詢；回覆訊息免費）
 //  POST /push/subscribe     App 通知（Web Push，免費）訂閱／取消，金鑰自動產生存在 KV
+//  POST /quiz/answer        知識題作答紀錄 {uid,name,week,qid,ok,ms}；GET /quiz/board?season=&uid= 排行榜
+//  POST /quiz/name、/quiz/forget  改暱稱、刪除自己的紀錄
 //
 //  設定（Worker → Settings → Variables and Secrets）：
 //   MOENV_KEY        Secret  環境部資料開放平台 API 金鑰
@@ -70,6 +74,7 @@ export default {
     if (req.method === 'POST' && name === 'log') return logRoute(req, env);
     if (req.method === 'POST' && name === 'feedback') return feedbackRoute(req, env, ctx);
     if (name === 'alert') return alertRoute(new URL(req.url), env);
+    if (name.startsWith('quiz/')) return quizRoute(req, env, name.slice(5));
     try {
       if (name === 'config.json') {
         const id = env.LINE_FRIENDS === '1' ? (env.LINE_BASIC_ID || '').trim() : ''; // v8：預設不給加好友連結
@@ -1003,6 +1008,7 @@ const ONLINE_WINDOW = 12 * 60e3;
 export class Presence {
   constructor(state) { this.state = state; this.seen = null; }
   async fetch(req) {
+    if (new URL(req.url).pathname.startsWith('/quiz/')) return quizDO(this.state, req); // v8.12：知識題排行榜（另一個實例 idFromName('quiz')）
     const now = Date.now();
     if (!this.seen) this.seen = new Map(await this.state.storage.list());
     const sid = new URL(req.url).searchParams.get('sid');
@@ -1013,3 +1019,95 @@ export class Presence {
     return new Response(JSON.stringify({ online: this.seen.size }), { headers: { 'Content-Type': 'application/json' } });
   }
 }
+
+/* ───────── v8.12：每週知識題排行榜 ─────────
+ *  題目與對錯在網頁端判斷（題庫隨時增加，不必每次部署中繼站）；這裡只記分與排名：
+ *   ・每週 5 題（週一 00:00 台灣時間換題），每兩個月一季（1–2、3–4 … 11–12 月，依該週星期一所在月份），季內可補答前幾週的題目
+ *   ・同一個代碼每題只算第一次作答、每週最多 5 題；只收「本季、而且不晚於本週」的題目
+ *   ・排名：答對題數多者在前，同分比作答總秒數（短者在前）
+ *  保存：隨機代碼、暱稱、各題對錯與秒數；超過 1 年的紀錄自動刪除；POST /quiz/forget 立即刪除自己的紀錄 */
+const QZ_WEEK = /^\d{4}-W\d{2}$/, QZ_QID = /^[km]:[a-z0-9_-]{1,40}$/, QZ_UID = /^[a-z0-9]{16,40}$/;
+const qzTw = (ms) => new Date(ms + 8 * 3600e3);
+/** 台灣時間的 ISO 週：{ id: '2026-W45', monday: 該週一 00:00（台灣）的 UTC 毫秒 } */
+function qzWeek(ms = Date.now()) {
+  const d = qzTw(ms);
+  const day = (d.getUTCDay() + 6) % 7; // 週一 = 0
+  const mon = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
+  const thu = new Date(mon + 3 * 86400e3);
+  const y = thu.getUTCFullYear();
+  const w = 1 + Math.floor((thu - Date.UTC(y, 0, 1)) / (7 * 86400e3));
+  return { id: `${y}-W${String(w).padStart(2, '0')}`, monday: mon - 8 * 3600e3 };
+}
+/** 週代碼 → 該週一（台灣日期的 UTC 0 點，只用來取年月） */
+function qzMonday(id) {
+  const [y, w] = id.split('-W').map(Number);
+  const jan4 = new Date(Date.UTC(y, 0, 4));
+  return new Date(jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86400e3 + (w - 1) * 7 * 86400e3);
+}
+const qzSeason = (weekId) => { const m = qzMonday(weekId); const sm = m.getUTCMonth() - (m.getUTCMonth() % 2) + 1; return `${m.getUTCFullYear()}-${String(sm).padStart(2, '0')}`; };
+const qzName = (s) => String(s || '').normalize('NFKC').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+
+async function quizRoute(req, env, action) {
+  const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+  if (!env.PRESENCE) return json({ error: 'not configured' }, 503);
+  const stub = env.PRESENCE.get(env.PRESENCE.idFromName('quiz'));
+  if (req.method === 'GET' && action === 'board') {
+    const u = new URL(req.url);
+    const season = /^\d{4}-\d{2}$/.test(u.searchParams.get('season') || '') ? u.searchParams.get('season') : qzSeason(qzWeek().id);
+    const uid = QZ_UID.test(u.searchParams.get('uid') || '') ? u.searchParams.get('uid') : '';
+    return json(await (await stub.fetch(`https://quiz/quiz/board?season=${season}&uid=${uid}`)).json());
+  }
+  if (req.method !== 'POST' || !['answer', 'name', 'forget'].includes(action)) return json({ error: 'not found' }, 404);
+  let j;
+  try { j = JSON.parse((await req.text()).slice(0, 2000)); } catch { return json({ error: 'bad request' }, 400); }
+  if (!j || typeof j !== 'object' || !QZ_UID.test(String(j.uid || ''))) return json({ error: 'bad request' }, 400);
+  const body = { uid: j.uid };
+  if (action === 'answer') {
+    const now = qzWeek();
+    const week = String(j.week || ''), qid = String(j.qid || '');
+    if (!QZ_WEEK.test(week) || !QZ_QID.test(qid)) return json({ error: 'bad request' }, 400);
+    if (week > now.id || qzSeason(week) !== qzSeason(now.id)) return json({ error: 'closed' }, 409); // 只收本季、不晚於本週
+    Object.assign(body, { week, qid, season: qzSeason(week), ok: j.ok === true ? 1 : 0, ms: Math.max(0, Math.min(1800e3, Math.round(Number(j.ms) || 0))), name: qzName(j.name) });
+  }
+  if (action === 'name') { body.name = qzName(j.name); if (!body.name) return json({ error: 'empty' }, 400); }
+  const r = await stub.fetch(`https://quiz/quiz/${action}`, { method: 'POST', body: JSON.stringify(body) });
+  return new Response(r.body, { status: r.status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+
+/** Durable Object 裡的排行榜（SQLite）：qa＝每題作答、qp＝暱稱 */
+async function quizDO(state, req) {
+  const sql = state.storage.sql;
+  const out = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json' } });
+  sql.exec('CREATE TABLE IF NOT EXISTS qa (season TEXT, week TEXT, uid TEXT, qid TEXT, ok INTEGER, ms INTEGER, t INTEGER, PRIMARY KEY (week, uid, qid))');
+  sql.exec('CREATE INDEX IF NOT EXISTS qa_season ON qa (season, uid)');
+  sql.exec('CREATE TABLE IF NOT EXISTS qp (uid TEXT PRIMARY KEY, name TEXT, t INTEGER)');
+  const u = new URL(req.url);
+  const action = u.pathname.slice('/quiz/'.length);
+  const board = (season, uid) => {
+    const rows = sql.exec('SELECT qa.uid AS uid, SUM(ok) AS ok, COUNT(*) AS n, SUM(ms) AS ms, qp.name AS name FROM qa LEFT JOIN qp ON qp.uid = qa.uid WHERE season = ? GROUP BY qa.uid ORDER BY ok DESC, ms ASC', season).toArray();
+    const pub = (r, i) => ({ rank: i + 1, name: r.name || '', ok: r.ok, n: r.n, ms: r.ms });
+    const i = uid ? rows.findIndex((r) => r.uid === uid) : -1;
+    return { season, players: rows.length, top: rows.slice(0, 10).map(pub), me: i >= 0 ? pub(rows[i], i) : null };
+  };
+  if (req.method === 'GET' && action === 'board') return out(board(u.searchParams.get('season'), u.searchParams.get('uid')));
+  const b = await req.json();
+  const now = Date.now();
+  if (action === 'forget') {
+    sql.exec('DELETE FROM qa WHERE uid = ?', b.uid);
+    sql.exec('DELETE FROM qp WHERE uid = ?', b.uid);
+    return out({ ok: true });
+  }
+  if (b.name) sql.exec('INSERT INTO qp (uid, name, t) VALUES (?, ?, ?) ON CONFLICT(uid) DO UPDATE SET name = excluded.name, t = excluded.t', b.uid, b.name, now);
+  if (action === 'name') return out({ ok: true, name: b.name });
+  // answer：每週最多 5 題、每題只算第一次
+  const cnt = sql.exec('SELECT COUNT(*) AS c FROM qa WHERE week = ? AND uid = ?', b.week, b.uid).one().c;
+  if (cnt >= 5 && !sql.exec('SELECT 1 FROM qa WHERE week = ? AND uid = ? AND qid = ?', b.week, b.uid, b.qid).toArray().length) return out({ error: 'full' }, 409);
+  sql.exec('INSERT OR IGNORE INTO qa (season, week, uid, qid, ok, ms, t) VALUES (?, ?, ?, ?, ?, ?, ?)', b.season, b.week, b.uid, b.qid, b.ok, b.ms, now);
+  if (Math.random() < 0.02) { // 偶爾清掉 1 年前的紀錄與沒有作答的暱稱
+    sql.exec('DELETE FROM qa WHERE t < ?', now - 366 * 86400e3);
+    sql.exec('DELETE FROM qp WHERE uid NOT IN (SELECT DISTINCT uid FROM qa)');
+  }
+  const bd = board(b.season, b.uid);
+  return out({ ok: true, players: bd.players, me: bd.me });
+}
+
