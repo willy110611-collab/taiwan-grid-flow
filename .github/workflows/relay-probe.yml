@@ -1,0 +1,14 @@
+# 一次性：從 GitHub 主機確認中繼站實際版本（用完刪除）
+name: relay-probe
+on:
+  push:
+    branches: [claude/friendly-wozniak-94adyt]
+    paths: ['.github/workflows/relay-probe.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          R=https://taiwan-grid-flow-data.willy110611.workers.dev
+          curl -sS -D - -o /dev/null "$R/config.json?x=$RANDOM" | grep -i "x-relay\|cf-ray\|HTTP/"
+          echo "board: $(curl -sS "$R/quiz/board")"
