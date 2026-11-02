@@ -1228,3 +1228,26 @@ html:lang(en) .hud .filters .fchip, html:lang(en) .hud .filters .fmenu button { 
 .qz-peek button.x { background: none; color: var(--ink-dim); padding: 7px 8px; font-size: 16px; line-height: 1; }
 .qz-peek button { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; background: rgba(255, 198, 92, 0.18); color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; }
 @media (max-width: 699px) { .qz-peek { bottom: calc(200px + var(--safe-b)); } }
+/* 主畫面：知識題本季前三（電腦在左上狀態列下方；手機在品牌與台灣之間，不擋住島） */
+.qz-top3 {
+  position: absolute; left: var(--gutter); top: calc(160px + var(--safe-t)); width: 214px; text-align: left; cursor: pointer; pointer-events: auto;
+  border-radius: 16px; background: rgba(8, 12, 22, 0.6); border: 1px solid rgba(255, 198, 92, 0.28); padding: 9px 12px 7px; font: inherit; color: var(--ink);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.qz-top3:hover { border-color: rgba(255, 198, 92, 0.5); }
+.qz-top3 .h { display: flex; justify-content: space-between; font-size: 10.5px; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 3px; }
+html:lang(en) .qz-top3 .h { letter-spacing: 0.06em; }
+.qz-top3 .h span:last-child { letter-spacing: 0; color: var(--ink-faint); }
+.qz-top3 ol { list-style: none; margin: 0; padding: 0; }
+.qz-top3 li { display: grid; grid-template-columns: 16px 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; padding: 2px 0; }
+.qz-top3 li i { font-style: normal; font-family: var(--mono); font-size: 11px; text-align: center; }
+.qz-top3 li:nth-child(1) i { color: #ffd27a; } .qz-top3 li:nth-child(2) i { color: #d6e0f5; } .qz-top3 li:nth-child(3) i { color: #e7a36b; }
+.qz-top3 li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qz-top3 li b { font-weight: 400; font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); }
+.qz-top3 .me { display: block; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-dim); }
+@media (max-width: 699px) {
+  .qz-top3 { top: calc(104px + var(--safe-t)); width: 178px; padding: 7px 10px 5px; border-radius: 14px; }
+  .qz-top3 li { font-size: 11.5px; padding: 1px 0; }
+  .qz-top3 .me { font-size: 11px; margin-top: 3px; padding-top: 3px; }
+}
+@media (max-width: 699px) and (orientation: landscape), (max-height: 520px) { .qz-top3 { display: none; } } /* 手機橫向太矮，不放 */

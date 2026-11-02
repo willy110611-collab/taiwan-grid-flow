@@ -96,7 +96,7 @@ async function check() {
     // 3b. 各功能（出錯只通知，不暫停）：面板、今日重播、自動導覽、能源篩選
     const tb = (label) => page.locator('.toolbar > button', { hasText: new RegExp(`^\\s*${label}\\s*$`) }).first();
     const closePanel = async () => { const c = page.locator('.panel .icon-btn').first(); if (await c.count()) { await c.click(); await sleep(300); } };
-    for (const label of ['我的家', '電廠', '家電', '店家', '亮點', '徽章', '資訊']) {
+    for (const label of ['我的家', '電廠', '家電', '店家', '亮點', '徽章', '知識題', '資訊']) {
       let btn = tb(label);
       if (!(await btn.count())) {
         const more = tb('更多');

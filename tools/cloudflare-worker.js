@@ -58,7 +58,7 @@ const TP = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/';
 const TP_FILES = new Set(['genary.json', 'genloadareaperc.csv', 'loadpara.json', 'loadfueltype.csv', 'loadfueltype_1.csv', 'loadareas.csv']);
 const FORECAST = 'https://service.taipower.com.tw/data/opendata/apply/file/d006014/001.csv';
 const MOENV = 'https://data.moenv.gov.tw/api/v2/';
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'X-Relay-Version': '8.12' }; // 版本標頭：部署後可確認實際在跑的是哪一版
 const UA = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
   Referer: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html',

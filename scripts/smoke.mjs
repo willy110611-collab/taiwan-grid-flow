@@ -24,7 +24,7 @@ for (const [f, ok] of Object.entries(STATIC)) {
   try { if (!ok(await (await fetch(`http://127.0.0.1:${PORT}/${f}`)).json())) throw new Error('格式不符'); } catch (e) { errors.push(`靜態資料 ${f}：${e.message}`); }
 }
 
-const LABELS = { zh: ['電廠', '我的家', '家電', '店家', '亮點', '徽章', '資訊'], en: ['Plants', 'Home', 'Appliances', 'Shop', 'Peaks', 'Badges', 'Info'] };
+const LABELS = { zh: ['電廠', '我的家', '家電', '店家', '亮點', '徽章', '知識題', '資訊'], en: ['Plants', 'Home', 'Appliances', 'Shop', 'Peaks', 'Badges', 'Quiz', 'Info'] };
 try {
   for (const [vp, lang] of [[{ width: 402, height: 874 }, 'zh'], [{ width: 402, height: 874 }, 'en'], [{ width: 1440, height: 900 }, 'zh']]) {
     const tag = `${vp.width}/${lang}`;

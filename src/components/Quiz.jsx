@@ -239,3 +239,31 @@ export function QuizPeekBar({ peek, setUi }) {
     </div>
   );
 }
+
+/** 主畫面：本季排行榜前三名（點了打開排行榜）。讀不到或還沒有人作答時不顯示 */
+let topCache = null;
+export function QuizTop3({ setUi, s }) {
+  useT();
+  const [data, setData] = useState(topCache);
+  useEffect(() => {
+    let alive = true;
+    const load = () => { if (document.visibilityState === 'visible') fetchBoard(seasonOf(weekOf())).then((d) => { topCache = d; if (alive) setData(d); }).catch(() => {}); };
+    load();
+    const id = setInterval(load, 15 * 60e3); // 每 15 分鐘更新一次（排名不需要即時）
+    return () => { alive = false; clearInterval(id); };
+  }, [s.ans]); // 自己答完題目也重新整理
+  if (!data?.top?.length) return null;
+  const me = data.me;
+  const [, m] = data.season.split('-').map(Number);
+  return (
+    <button className="qz-top3" onClick={() => { lastView = { v: 'board' }; setUi({ panel: 'quiz' }); }} aria-label={tx('知識題排行榜', 'Quiz leaderboard')}>
+      <span className="h"><span>{tx('知識題・本季前三', 'Quiz · top 3')}</span><span>{tx(`${m}–${m + 1} 月`, seasonLabel(data.season).replace(/ \d{4}$/, ''))}</span></span>
+      <ol>
+        {data.top.slice(0, 3).map((r) => (
+          <li key={r.rank}><i>{r.rank}</i><span>{r.name || tx('匿名', 'Anonymous')}</span><b>{tx(`${r.ok} 題`, `${r.ok}`)}</b></li>
+        ))}
+      </ol>
+      <span className="me">{me ? (me.rank <= 3 ? tx(`你是第 ${me.rank} 名！`, `You’re #${me.rank}!`) : tx(`我第 ${me.rank} 名・答對 ${me.ok} 題`, `Me: #${me.rank} · ${me.ok} correct`)) : tx('來答本週的題目', 'Join this week')} ›</span>
+    </button>
+  );
+}
