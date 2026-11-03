@@ -38,6 +38,11 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 
 ## 目前待辦
 ### 需要使用者決定
+- **進行中（2026-11-04 使用者已同意，額度用完、下一個 5 小時時段接著做）**：
+  1. 手機直式「N 人同時在線」不見了 → 補回左上 LIVE 那行下方（原本位置）。
+  2. 主畫面知識題前三名卡片再往下移一點（不要擋住台灣本島，也不要壓到在線人數）。
+  3. 地圖電流方向改成較正確的版本（使用者同意改）：用台電各區實測收支（regions.byKey gen／load，evidence live）約束流向，凌晨北部自給 > 100% 時要畫成北往外送，不再固定南電北送。
+  4. 知識題：還沒答本期題目的使用者，打開網站時跳出一個小視窗提醒（每期最多一次、可關閉；不推播）。新畫面 → 先出預覽圖（手機 402×874＋電腦）給使用者確認再上線。
 - 地圖流向（重力模型 λ=1.3°）與台電各區實測矛盾：例如凌晨北部實測自給 123%（往外送），地圖仍畫南往北。改法：調小 λ 或用各區收支約束模型，會改變「南電北送」主視覺。
 - 新資料來源（見下方「可加的資料」），使用者選定後先出預覽圖。
 - 「匯入我家用電 CSV」（智慧電表）。
@@ -67,6 +72,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.8 已部署（2026-10-26，commit 073725a，SHA-256 a9cc59ec…3e08）（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
 - v8.9 已部署（2026-10-26，commit 0abc92f，SHA-256 5b304ca4…1047）：`/water/tainan-pipes.json` 固定轉送臺南給水管線（實測 522，臺南伺服器擋 Cloudflare）。
 - v8.10 已部署（2026-10-26 23:46，commit a33f4e4，SHA-256 a4eee5ee…2904）：推播、LINE 訊息名稱改「台灣脈動」。
+- v8.13 已部署（2026-11-04 01:10，commit 9e5f29e，SHA-256 d054bc34…，`X-Relay-Version: 8.13`，約 30 秒生效）：知識題每週上限 6 題。實測第 7 題回 full、測試紀錄已刪。
 - v8.12 已部署（2026-11-03 00:29，commit 42f7f9b，SHA-256 1a295f26…，含版本標頭 `X-Relay-Version: 8.12`）：知識題排行榜 `/quiz/answer`、`/quiz/board`、`/quiz/name`、`/quiz/forget`，資料存在 Durable Object `Presence` 的 `idFromName('quiz')` 實例（SQLite 表 qa、qp，不需新綁定或 migration）。**注意：API 部署回成功後，workers.dev 實際生效約等了 10 分鐘**（期間仍回舊版）→ 部署後用 `X-Relay-Version` 標頭確認，改版時記得把 CORS 裡的版本號一起改。
 - v8.11 已部署（2026-10-29 01:23，commit 7558bd1，SHA-256 39ebd01c…c371，用 api.cloudflare.com 代理憑證直接 PUT /content）：`/alert?type=maint`「已自動暫停網站」LINE 訊息。
 - v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
