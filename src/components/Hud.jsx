@@ -19,7 +19,7 @@ import { useT, useLang, tx } from '../i18n.js';
 import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
 import { useUpdate } from '../update.js';
 import { FeedbackPanel } from './Feedback.jsx';
-import { QuizPanel, QuizPeekBar, QuizTop3 } from './Quiz.jsx';
+import { QuizPanel, QuizPeekBar, QuizTop3, QuizNudge } from './Quiz.jsx';
 import { useQuiz, hasNewWeek } from '../data/quiz.js';
 import { soundPref, soundSupported, startSound, stopSound, soundRunning, setGridMood } from '../audio/ambient.js';
 import { hapticSupported, hapticPref, setHapticPref, installHaptics } from '../audio/haptics.js';
@@ -355,6 +355,7 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
       {quizOn && ui.panel === 'quiz' && <Guard key={'g-quiz'} name="quiz" onClose={() => setUi({ panel: null })}><QuizPanel snapshot={snapshot} setUi={setUi} onClose={() => setUi({ panel: null })} /></Guard>}
       {quizOn && !ui.panel && ui.quizPeek && !wallpaper && <QuizPeekBar peek={ui.quizPeek} setUi={setUi} />}
       {quizOn && !wallpaper && !W && !replay?.on && !ui.cruise && <QuizTop3 setUi={setUi} s={qz} />}
+      {quizOn && (APP.quizNudge || /[?&]nudge=1\b/.test(location.search)) && !wallpaper && !W && <QuizNudge s={qz} setUi={setUi} blocked={!!ui.panel || !!replay?.on || !!ui.cruise || !!ui.quizPeek} />}
       {ui.panel === 'badges' && <Guard key={'g-badges'} name="badges" onClose={() => setUi({ panel: null })}><BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} /></Guard>}
     </div>
   );

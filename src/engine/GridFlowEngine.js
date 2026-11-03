@@ -7,10 +7,10 @@ import { ScatterplotLayer, IconLayer, PathLayer, TextLayer, PolygonLayer } from 
 import { aqiLevel, nearestWind } from '../data/useAir.js';
 import { THERMAL } from '../config/energy.js';
 
-import { PLANTS, LOADS, TAIWAN_BOUNDS, REGIONS, REGION_KEYS, LOAD_REGION } from '../config/geo.js';
+import { PLANTS, LOADS, TAIWAN_BOUNDS, REGIONS, REGION_KEYS, LOAD_REGION, PLANT_REGION } from '../config/geo.js';
 import { FUELS, FUEL_KEYS, FILTERS, EVIDENCE } from '../config/energy.js';
 import { createBaseStyle } from '../map/baseStyle.js';
-import { solveFlows } from './flowModel.js';
+import { solveRegionalFlows } from './flowModel.js';
 import { setGridNet, gridNet } from './gridNet.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { createGlowSprite } from './glowSprite.js';
@@ -248,7 +248,21 @@ export class GridFlowEngine {
     // 本島：重力模型分配；離島：獨立電網，電廠直接送到島上的城鎮
     const mainP = this.plants.filter((p) => !p.island);
     const mainL = this.loads.filter((l) => !l.island);
-    const flows = solveFlows(mainP.map((p) => sources[p.idx]), mainL).map((f) => ({
+    // 各區收支：區內電廠加總 − 台電公布的各區淨收支（發電 − 用電）＝ 該區要留下的電；畫出的區間流向就和右側各區「供能／吸能」一致
+    const G = {};
+    for (const p of mainP) { const r = PLANT_REGION[p.id] || 'C'; G[r] = (G[r] || 0) + p.targetMw; }
+    const regionLoad = {};
+    for (const k of REGION_KEYS) {
+      const rb = this.regions?.byKey?.[k];
+      regionLoad[k] = rb ? Math.max(0, (G[k] || 0) - (rb.gen - rb.load)) : null;
+    }
+    const wByRegion = {};
+    for (const l of mainL) { const r = (LOAD_REGION[l.id] || ['N'])[0]; wByRegion[r] = (wByRegion[r] || 0) + l.demand; }
+    const tgt = mainL.map((l) => {
+      const r = (LOAD_REGION[l.id] || ['N'])[0];
+      return { pos: l.pos, region: r, demand: regionLoad[r] != null && wByRegion[r] > 0 ? (regionLoad[r] * l.demand) / wByRegion[r] : l.demand };
+    });
+    const flows = solveRegionalFlows(mainP.map((p) => ({ ...sources[p.idx], region: PLANT_REGION[p.id] || 'C' })), tgt).map((f) => ({
       ...f, source: mainP[f.source].idx, target: mainL[f.target].idx
     }));
     for (const p of this.plants) {

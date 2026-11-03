@@ -267,3 +267,31 @@ export function QuizTop3({ setUi, s }) {
     </button>
   );
 }
+
+/** 這一期還沒答完時跳出的小提醒（每期最多一次；按「下次再說」或答題後就不再出現；不推播） */
+export function QuizNudge({ s, setUi, blocked }) {
+  useT();
+  const [show, setShow] = useState(false);
+  const cur = roundOf();
+  const left = questionsOf(cur).filter((it) => !answerOf(s, cur, it.qid)).length;
+  const seen = (() => { try { return localStorage.getItem('tgf-quiz-nudge') === cur; } catch { return false; } })();
+  useEffect(() => {
+    if (seen || !left || blocked) return undefined;
+    const id = setTimeout(() => setShow(true), 6000); // 打開網頁 6 秒後（先看一下地圖）
+    return () => clearTimeout(id);
+  }, [seen, left, blocked]);
+  if (!show || seen || !left || blocked) return null;
+  const done = () => { try { localStorage.setItem('tgf-quiz-nudge', cur); } catch { /* 略 */ } setShow(false); };
+  const top = topCache?.top?.[0];
+  return (
+    <div className="qz-nudge" role="dialog" aria-label={tx('知識題提醒', 'Quiz reminder')}>
+      <div className="qz-nudge-h"><span>{tx('知識題', 'Quiz')}</span><button onClick={done} aria-label={tx('關閉', 'Close')}>×</button></div>
+      <b>{tx(`這一期還有 ${left} 題沒答`, `${left} question${left > 1 ? 's' : ''} left this round`)}</b>
+      <p>{top ? tx(`本季目前第一：${top.name}（答對 ${top.ok} 題）`, `Season leader: ${top.name} (${top.ok} correct)`) : tx('每週一、四換題，約 1 分鐘答完。', 'New questions every Mon & Thu — about a minute.')}</p>
+      <div className="qz-nudge-b">
+        <button className="go" onClick={() => { done(); lastView = { v: 'list' }; setUi({ panel: 'quiz' }); }}>{tx('去答題', 'Answer now')}</button>
+        <button onClick={done}>{tx('下次再說', 'Later')}</button>
+      </div>
+    </div>
+  );
+}

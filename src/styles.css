@@ -1246,8 +1246,25 @@ html:lang(en) .qz-top3 .h { letter-spacing: 0.06em; }
 .qz-top3 li b { font-weight: 400; font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); }
 .qz-top3 .me { display: block; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-dim); }
 @media (max-width: 699px) {
-  .qz-top3 { top: calc(104px + var(--safe-t)); width: 178px; padding: 7px 10px 5px; border-radius: 14px; }
+  .qz-top3 { top: calc(130px + var(--safe-t)); width: 178px; padding: 7px 10px 5px; border-radius: 14px; }
   .qz-top3 li { font-size: 11.5px; padding: 1px 0; }
   .qz-top3 .me { font-size: 11px; margin-top: 3px; padding-top: 3px; }
 }
 @media (max-width: 699px) and (orientation: landscape), (max-height: 520px) { .qz-top3 { display: none; } } /* 手機橫向太矮，不放 */
+/* 知識題提醒小視窗：手機在工具列上方、電腦在右下（每期最多一次） */
+.qz-nudge {
+  position: fixed; right: var(--gutter); bottom: calc(110px + var(--safe-b)); z-index: 26; width: 280px; pointer-events: auto;
+  padding: 12px 14px; border-radius: 16px; background: var(--glass-strong); border: 1px solid rgba(255, 198, 92, 0.45);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  animation: nudgerise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes nudgerise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.qz-nudge-h { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 0.2em; color: var(--gold); }
+.qz-nudge-h button { border: 0; background: none; color: var(--ink-dim); font-size: 18px; line-height: 1; padding: 0 2px; cursor: pointer; }
+.qz-nudge b { display: block; font-weight: 400; font-size: 16px; margin: 4px 0 2px; }
+.qz-nudge p { margin: 0; font-size: 12.5px; color: var(--ink-dim); line-height: 1.6; }
+.qz-nudge-b { display: flex; gap: 8px; margin-top: 10px; }
+.qz-nudge-b button { flex: 1; padding: 8px 0; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--ink-dim); font: inherit; font-size: 13px; cursor: pointer; }
+.qz-nudge-b button.go { border-color: rgba(255, 198, 92, 0.55); color: var(--gold); background: rgba(255, 198, 92, 0.08); }
+@media (max-width: 699px) { .qz-nudge { left: var(--gutter); right: var(--gutter); width: auto; bottom: calc(200px + var(--safe-b)); } }
+@media (prefers-reduced-motion: reduce) { .qz-nudge { animation: none; } }

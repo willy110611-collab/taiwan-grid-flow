@@ -1,14 +1,16 @@
 {
-  "version": "0.8.72",
+  "version": "0.8.73",
   "notesEn": [
+    "Power flows now follow Taipower’s measured regional balance: each region serves itself first and only surplus power travels between regions (e.g. the north sends power out at night)",
+    "The online count shows again on phones; the quiz top-3 card moved down a little",
     "Quiz now has 3 new questions every Monday and Thursday (instead of 5 every Monday)",
     "New weekly quiz (More → Quiz): 5 questions every Monday, each with a source; two-month seasons with a leaderboard, and the season’s top 3 on the home screen",
     "If an hourly check finds a serious problem (site won’t open or numbers are clearly wrong), the site pauses with a maintenance page and comes back automatically once fixed",
-    "“Is now a good time?” now says why: higher carbon, cleaner power, or tight supply — plus the best 2 hours (time-of-use details only if you’re on that tariff)",
-    "First tap on Replay or Auto tour shows a one-line explanation",
-    "Toolbar buttons renamed: “Drift” is now “Auto tour” (Replay keeps its name)"
+    "“Is now a good time?” now says why: higher carbon, cleaner power, or tight supply — plus the best 2 hours (time-of-use details only if you’re on that tariff)"
   ],
   "notes": [
+    "地圖光流改依台電各區實測收支：每區先自給，多出來的電才送去缺電的區（凌晨北部電多時會畫成北部往外送，不再固定南電北送）",
+    "手機直式的「N 人同時在線」恢復顯示（資料包偶爾慢於 9 秒時會消失）；知識題前三名卡片下移一點",
     "知識題改成每週一、週四各換 3 題（原本每週一 5 題），回來看的理由多一次、每次一分鐘答完",
     "新增「知識題」（更多 → 知識題）：每週一換 5 題（知識題附出處＋看地圖找答案），每兩個月一季排行榜，季內可補答；主畫面顯示本季前三名",
     "自動檢查發現嚴重問題（網頁打不開、數字明顯錯誤）時，網站會先暫停並顯示維護頁，修好後自動恢復",

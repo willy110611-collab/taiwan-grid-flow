@@ -108,10 +108,14 @@ async function fetchFile(key) {
 const SID = (() => { // 每個分頁一組隨機代碼（只用來算在線人數，不含個資）
   try { let v = sessionStorage.getItem('tgf-sid'); if (!v) { v = Math.random().toString(36).slice(2, 12); sessionStorage.setItem('tgf-sid', v); } return v; } catch { return Math.random().toString(36).slice(2, 12); }
 })();
+let lastOnline = null; // { n, t }：資料包偶爾失敗時沿用最近一次的在線人數（15 分鐘內），不讓「N 人同時在線」忽隱忽現
 async function fetchBundle() {
   let pre = null;
-  try { pre = JSON.parse(await fetchText(`${R}/bundle.json?sid=${SID}&x=air`, 9000)); } catch { /* 改走個別網址 */ }
+  // 中繼站剛醒來時要向台電、環境部各抓一次，實測可達 9–10 秒 → 等 15 秒才改走個別網址
+  try { pre = JSON.parse(await fetchText(`${R}/bundle.json?sid=${SID}&x=air`, 15000)); } catch { /* 改走個別網址 */ }
   putExtra(pre?.extra); // 空品、煙道、日照（中繼站 v8.3）
+  if (Number.isFinite(pre?.online)) lastOnline = { n: pre.online, t: Date.now() };
+  else if (lastOnline && Date.now() - lastOnline.t < 15 * 60e3) pre = { ...(pre || {}), online: lastOnline.n };
   return pre;
 }
 function fromBundle(pre, key) {
