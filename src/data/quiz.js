@@ -10,7 +10,9 @@ import { isEn, tx } from '../i18n.js';
  * ─────────────────────────────────────────────────────────────
  *  ・每週一、週四 00:00（台灣時間）各換 3 題（2 題知識＋1 題看地圖）＝一「期」；第一週 2026-W45 是舊制的一期 5 題（3＋2）
  *  ・每兩個月一季（1–2、3–4 … 11–12 月，依該期所在週的星期一月份）
- *  ・季內可以補答前幾週的題目；每題只算第一次作答；排行榜：答對多者在前，同分比作答總時間（短者在前）
+ *  ・補答（v0.8.75）：這一期隨時可答；上一期沒答完的可以補答，每季最多 3 次（一期算一次）；更早的期已截止。
+ *    第一次加入的人，在加入的那一期可以補答本季之前所有期（中繼站 v8.14 同樣把關）
+ *  ・每題只算第一次作答；排行榜：答對多者在前，同分比作答總時間（短者在前）
  *  ・選題：從 QUIZ_START 起逐週模擬，每週挑「最久沒出過」的題目（從沒出過的優先），同分用週代碼雜湊決定 →
  *    題庫往後加題不會改到已經出過的週；題目用完會自然重複最久以前出過的
  *  ・作答時間：打開題目到送出（中途去地圖找答案也算），單題最多計 30 分鐘
@@ -72,6 +74,9 @@ function roundDays(r) {
 export const roundRange = (r) => { const [a, b] = roundDays(r); return `${a.getUTCMonth() + 1}/${a.getUTCDate()}–${b.getUTCMonth() + 1}/${b.getUTCDate()}`; };
 const nextRound = (r) => (r.length === 8 ? (addWeeks(r, 1) >= ROUND_START ? `${addWeeks(r, 1)}-1` : addWeeks(r, 1)) : r.endsWith('-1') ? `${roundWeek(r)}-2` : `${addWeeks(roundWeek(r), 1)}-1`);
 export const roundSeason = (r) => seasonOf(roundWeek(r));
+/** 上一期 */
+export const prevRound = (r) => (r.length === 8 ? addWeeks(r, -1) : r.endsWith('-2') ? `${roundWeek(r)}-1` : (addWeeks(roundWeek(r), -1) >= ROUND_START ? `${addWeeks(roundWeek(r), -1)}-2` : addWeeks(roundWeek(r), -1)));
+export const LATE_MAX = 3; // 每季補答上一期的次數
 /** 本季到這一期為止的各期（舊到新），不早於 QUIZ_START */
 export function seasonRounds(cur = roundOf()) {
   const s = roundSeason(cur), out = [];
@@ -205,6 +210,30 @@ export function useQuiz() {
   useEffect(() => { subs.add(set); return () => subs.delete(set); }, []);
   return s;
 }
+/* ── 補答規則 ── */
+/** 加入的那一期：伺服器的紀錄優先，否則用這台裝置最早作答的一期，都沒有就是這一期 */
+export function joinedOf(s, cur = roundOf()) {
+  if (s.joined) return s.joined;
+  const rs = Object.keys(s.ans).map((k) => k.split('|')[0]).sort();
+  return rs[0] && rs[0] < cur ? rs[0] : cur;
+}
+/** 本季已用掉的補答（期代碼清單；這台裝置與中繼站取聯集） */
+export function lateRounds(s, season = roundSeason(roundOf())) {
+  const set = new Set(s.lateSrv?.season === season ? s.lateSrv.rounds : []);
+  for (const [k, a] of Object.entries(s.ans)) if (a.late === 1) { const r = k.split('|')[0]; if (roundSeason(r) === season) set.add(r); }
+  return [...set];
+}
+/** 這一期能不能答：'open' 這一期｜'free' 新加入可補答｜'late' 補答（會用掉一次，已用過這期就不再算）｜'nolate' 補答次數用完｜'closed' 已截止 */
+export function canAnswer(s, r, cur = roundOf()) {
+  if (r === cur) return 'open';
+  if (r > cur || roundSeason(r) !== roundSeason(cur)) return 'closed';
+  if (r < joinedOf(s, cur) && joinedOf(s, cur) === cur) return 'free';
+  if (r !== prevRound(cur)) return 'closed';
+  const used = lateRounds(s, roundSeason(cur));
+  return used.includes(r) || used.length < LATE_MAX ? 'late' : 'nolate';
+}
+export const answerable = (st) => st === 'open' || st === 'free' || st === 'late';
+
 const key = (week, qid) => `${week}|${qid}`;
 export const answerOf = (s, week, qid) => s.ans[key(week, qid)] || null;
 
@@ -225,6 +254,8 @@ export const optionsOf = (s, week, item) => (item.kind === 'k' ? null : s.opts[k
 export async function submitAnswer(week, item, choice, snap) {
   const k = key(week, item.qid);
   if (state.ans[k]) return state.ans[k];
+  const cur = roundOf(), can = canAnswer(state, week, cur);
+  if (!answerable(can)) return null;
   let ok, correct;
   if (item.kind === 'k') {
     const q = QUIZ_BANK.find((x) => x.id === item.id);
@@ -234,9 +265,9 @@ export async function submitAnswer(week, item, choice, snap) {
     correct = m.answer(snap, state.opts[k]); ok = choice === correct;
   }
   const ms = Math.min(MAX_MS, Math.max(0, Date.now() - (state.open[k] || Date.now())));
-  const rec = { choice, correct, ok, ms, t: Date.now() };
-  save({ ans: { ...state.ans, [k]: rec } });
-  post('answer', { uid: state.uid, name: state.name, week: roundWeek(week), qid: item.qid, ok, ms }).catch(() => {}); // 中繼站以週記分（每週最多 6 題）
+  const rec = { choice, correct, ok, ms, t: Date.now(), ...(can === 'late' ? { late: 1 } : {}) };
+  save({ ans: { ...state.ans, [k]: rec }, ...(state.joined ? {} : { joined: joinedOf(state, cur) }) });
+  post('answer', { uid: state.uid, name: state.name, week: roundWeek(week), round: week, qid: item.qid, ok, ms }).then((r) => syncMe(r)).catch(() => {}); // 中繼站以週記分（每週最多 6 題）、v8.14 起檢查補答規則
   return rec;
 }
 
@@ -259,10 +290,12 @@ export async function setName(name) {
   save({ name: n, renamed: true });
   return 'ok';
 }
-/** 排行榜回來的資料：同步「改過暱稱」與伺服器上的暱稱 */
+/** 排行榜／作答回來的資料：同步「改過暱稱」、暱稱、加入的期、本季補答紀錄（中繼站 v8.14） */
 export function syncMe(board) {
   const me = board?.me;
   const patch = {};
+  if (board?.joined && board.joined !== state.joined) patch.joined = board.joined;
+  if (board?.late && Array.isArray(board.late.rounds) && JSON.stringify(board.late) !== JSON.stringify(state.lateSrv)) patch.lateSrv = board.late;
   if (board?.renamed && !state.renamed) patch.renamed = true;
   if (me?.name && me.name !== state.name) patch.name = me.name;
   if (Object.keys(patch).length) save(patch);

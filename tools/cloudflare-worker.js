@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  台灣脈動 — Cloudflare Worker 中繼站 v8.14
-//  v8.14：知識題暱稱只能免費改一次（之後要改請聯絡管理者；管理者在 LINE 傳「改名 舊暱稱→新暱稱」）、暱稱不可重複
+//  v8.14：知識題暱稱只能免費改一次（之後要改請聯絡管理者；管理者在 LINE 傳「改名 舊暱稱→新暱稱」）、暱稱不可重複；
+//         補答規則：這一期隨時可答、上一期可補答（每季 3 次）、更早已截止；第一次加入的那一期可補答本季之前所有期
 //  v8.13：知識題改成每週一、週四各 3 題 → 每週上限 5 題改成 6 題
 //  v8.12：每週知識題排行榜（/quiz/…）：每兩個月一季，存在 Durable Object「Presence」的 quiz 實例（SQLite）；只存隨機代碼、暱稱、各題對錯與作答秒數
 //  v8.11：/alert?type=maint「已自動暫停網站」
@@ -1053,6 +1054,14 @@ function qzMonday(id) {
   return new Date(jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86400e3 + (w - 1) * 7 * 86400e3);
 }
 const qzSeason = (weekId) => { const m = qzMonday(weekId); const sm = m.getUTCMonth() - (m.getUTCMonth() % 2) + 1; return `${m.getUTCFullYear()}-${String(sm).padStart(2, '0')}`; };
+/* v8.14 補答規則：期＝'2026-W45'（舊制一週一期）或 '2026-W46-1'（週一～三）／'-2'（週四～日），字串順序＝時間順序（和網頁 quiz.js 一致） */
+const QZ_ROUND_START = '2026-W46', QZ_ROUND = /^\d{4}-W\d{2}(-[12])?$/, QZ_LATE_MAX = 3;
+const qzAddWeeks = (id, n) => qzWeek(qzMonday(id).getTime() - 8 * 3600e3 + n * 7 * 86400e3 + 12 * 3600e3).id;
+function qzRound(ms = Date.now()) {
+  const w = qzWeek(ms).id;
+  return w < QZ_ROUND_START ? w : `${w}-${(qzTw(ms).getUTCDay() + 6) % 7 < 3 ? 1 : 2}`;
+}
+const qzPrevRound = (r) => { if (r.length === 8) return qzAddWeeks(r, -1); if (r.endsWith('-2')) return `${r.slice(0, 8)}-1`; const w = qzAddWeeks(r.slice(0, 8), -1); return w < QZ_ROUND_START ? w : `${w}-2`; };
 const qzName = (s) => String(s || '').normalize('NFKC').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 
 async function quizRoute(req, env, action) {
@@ -1075,7 +1084,12 @@ async function quizRoute(req, env, action) {
     const week = String(j.week || ''), qid = String(j.qid || '');
     if (!QZ_WEEK.test(week) || !QZ_QID.test(qid)) return json({ error: 'bad request' }, 400);
     if (week > now.id || qzSeason(week) !== qzSeason(now.id)) return json({ error: 'closed' }, 409); // 只收本季、不晚於本週
-    Object.assign(body, { week, qid, season: qzSeason(week), ok: j.ok === true ? 1 : 0, ms: Math.max(0, Math.min(1800e3, Math.round(Number(j.ms) || 0))), name: qzName(j.name) });
+    // 期：舊網頁（v0.8.74 以前）沒帶 round → 舊制週用週代碼；新制週是本週就當作這一期，否則當作該週第 2 期
+    const cur = qzRound();
+    let round = String(j.round || '');
+    if (!round) round = week < QZ_ROUND_START ? week : week === now.id ? cur : `${week}-2`;
+    if (!QZ_ROUND.test(round) || round.slice(0, 8) !== week || (week < QZ_ROUND_START) !== (round.length === 8) || round > cur) return json({ error: 'bad request' }, 400);
+    Object.assign(body, { week, round, cur, prev: qzPrevRound(cur), qid, season: qzSeason(week), ok: j.ok === true ? 1 : 0, ms: Math.max(0, Math.min(1800e3, Math.round(Number(j.ms) || 0))), name: qzName(j.name) });
   }
   if (action === 'name') { body.name = qzName(j.name); if (!body.name) return json({ error: 'empty' }, 400); }
   const r = await stub.fetch(`https://quiz/quiz/${action}`, { method: 'POST', body: JSON.stringify(body) });
@@ -1089,15 +1103,25 @@ async function quizDO(state, req) {
   sql.exec('CREATE TABLE IF NOT EXISTS qa (season TEXT, week TEXT, uid TEXT, qid TEXT, ok INTEGER, ms INTEGER, t INTEGER, PRIMARY KEY (week, uid, qid))');
   sql.exec('CREATE INDEX IF NOT EXISTS qa_season ON qa (season, uid)');
   sql.exec('CREATE TABLE IF NOT EXISTS qp (uid TEXT PRIMARY KEY, name TEXT, t INTEGER)');
-  if (!sql.exec('PRAGMA table_info(qp)').toArray().some((c) => c.name === 'renamed')) sql.exec('ALTER TABLE qp ADD COLUMN renamed INTEGER DEFAULT 0'); // v8.14：改過暱稱的次數
+  const qpCols = sql.exec('PRAGMA table_info(qp)').toArray().map((c) => c.name);
+  if (!qpCols.includes('renamed')) sql.exec('ALTER TABLE qp ADD COLUMN renamed INTEGER DEFAULT 0'); // v8.14：改過暱稱的次數
+  if (!qpCols.includes('joined')) sql.exec('ALTER TABLE qp ADD COLUMN joined TEXT'); // v8.14：第一次作答的期
+  const qaCols = sql.exec('PRAGMA table_info(qa)').toArray().map((c) => c.name);
+  if (!qaCols.includes('round')) sql.exec('ALTER TABLE qa ADD COLUMN round TEXT'); // v8.14：題目所屬的期（舊紀錄是 null＝用 week）
+  if (!qaCols.includes('late')) sql.exec('ALTER TABLE qa ADD COLUMN late INTEGER DEFAULT 0'); // v8.14：0 當期、1 補答（每季 3 次）、2 新加入補答
   const u = new URL(req.url);
   const action = u.pathname.slice('/quiz/'.length);
+  // 加入的期：qp.joined；舊使用者（v8.14 前）用最早的作答紀錄
+  const joinedOf = (uid, p) => p?.joined || sql.exec('SELECT MIN(COALESCE(round, week)) AS r FROM qa WHERE uid = ?', uid).one().r || null;
+  const lateOf = (uid, season) => sql.exec('SELECT DISTINCT round FROM qa WHERE uid = ? AND season = ? AND late = 1', uid, season).toArray().map((r) => r.round);
   const board = (season, uid) => {
     const rows = sql.exec('SELECT qa.uid AS uid, SUM(ok) AS ok, COUNT(*) AS n, SUM(ms) AS ms, qp.name AS name FROM qa LEFT JOIN qp ON qp.uid = qa.uid WHERE season = ? GROUP BY qa.uid ORDER BY ok DESC, ms ASC', season).toArray();
     const pub = (r, i) => ({ rank: i + 1, name: r.name || '', ok: r.ok, n: r.n, ms: r.ms });
     const i = uid ? rows.findIndex((r) => r.uid === uid) : -1;
-    const renamed = uid ? (sql.exec('SELECT renamed FROM qp WHERE uid = ?', uid).toArray()[0]?.renamed || 0) : 0;
-    return { season, players: rows.length, top: rows.slice(0, 10).map(pub), me: i >= 0 ? { ...pub(rows[i], i), renamed } : null, renamed };
+    const p = uid ? sql.exec('SELECT renamed, joined FROM qp WHERE uid = ?', uid).toArray()[0] : null;
+    const renamed = p?.renamed || 0;
+    const extra = uid ? { joined: joinedOf(uid, p) || null, late: { season, rounds: lateOf(uid, season), max: QZ_LATE_MAX } } : {};
+    return { season, players: rows.length, top: rows.slice(0, 10).map(pub), me: i >= 0 ? { ...pub(rows[i], i), renamed } : null, renamed, ...extra };
   };
   if (req.method === 'GET' && action === 'board') return out(board(u.searchParams.get('season'), u.searchParams.get('uid')));
   const b = await req.json();
@@ -1124,15 +1148,32 @@ async function quizDO(state, req) {
   }
   // 作答時只在第一次建立暱稱（預設的隨機名稱），之後不會被作答覆蓋；和別人重名就在後面加代碼
   if (b.name) sql.exec('INSERT INTO qp (uid, name, t) VALUES (?, ?, ?) ON CONFLICT(uid) DO NOTHING', b.uid, taken(b.name, b.uid) ? `${b.name.slice(0, 11)} #${b.uid.slice(0, 4)}` : b.name, now);
-  // answer：每週最多 6 題（週一、週四各 3 題）、每題只算第一次
-  const cnt = sql.exec('SELECT COUNT(*) AS c FROM qa WHERE week = ? AND uid = ?', b.week, b.uid).one().c;
-  if (cnt >= 6 && !sql.exec('SELECT 1 FROM qa WHERE week = ? AND uid = ? AND qid = ?', b.week, b.uid, b.qid).toArray().length) return out({ error: 'full' }, 409);
-  sql.exec('INSERT OR IGNORE INTO qa (season, week, uid, qid, ok, ms, t) VALUES (?, ?, ?, ?, ?, ?, ?)', b.season, b.week, b.uid, b.qid, b.ok, b.ms, now);
+  // answer：每題只算第一次（已答過就直接回成績）
+  if (!sql.exec('SELECT 1 FROM qa WHERE week = ? AND uid = ? AND qid = ?', b.week, b.uid, b.qid).toArray().length) {
+    // 補答規則：這一期隨時可答；第一次加入的那一期可補答本季之前所有期；之後只能補答上一期，每季 3 次（一期算一次）
+    const p = sql.exec('SELECT joined FROM qp WHERE uid = ?', b.uid).toArray()[0];
+    const joined = joinedOf(b.uid, p) || b.cur;
+    let late = 0;
+    if (b.round !== b.cur) {
+      if (joined === b.cur && b.round < joined) late = 2;
+      else if (b.round !== b.prev) return out({ error: 'closed' }, 409);
+      else {
+        const used = lateOf(b.uid, b.season);
+        if (!used.includes(b.round) && used.length >= QZ_LATE_MAX) return out({ error: 'nolate', late: { season: b.season, rounds: used, max: QZ_LATE_MAX } }, 409);
+        late = 1;
+      }
+    }
+    // 每週最多 6 題（週一、週四各 3 題）
+    const cnt = sql.exec('SELECT COUNT(*) AS c FROM qa WHERE week = ? AND uid = ?', b.week, b.uid).one().c;
+    if (cnt >= 6) return out({ error: 'full' }, 409);
+    sql.exec('INSERT INTO qp (uid, name, t, joined) VALUES (?, ?, ?, ?) ON CONFLICT(uid) DO UPDATE SET joined = COALESCE(qp.joined, excluded.joined)', b.uid, b.name || '', now, joined);
+    sql.exec('INSERT OR IGNORE INTO qa (season, week, uid, qid, ok, ms, t, round, late) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', b.season, b.week, b.uid, b.qid, b.ok, b.ms, now, b.round, late);
+  }
   if (Math.random() < 0.02) { // 偶爾清掉 1 年前的紀錄與沒有作答的暱稱
     sql.exec('DELETE FROM qa WHERE t < ?', now - 366 * 86400e3);
     sql.exec('DELETE FROM qp WHERE uid NOT IN (SELECT DISTINCT uid FROM qa)');
   }
   const bd = board(b.season, b.uid);
-  return out({ ok: true, players: bd.players, me: bd.me });
+  return out({ ok: true, players: bd.players, me: bd.me, joined: bd.joined, late: bd.late });
 }
 

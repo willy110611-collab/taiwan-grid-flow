@@ -1180,6 +1180,7 @@ html:lang(en) .hud .filters .fchip, html:lang(en) .hud .filters .fmenu button { 
 .qz-list .n { font-family: var(--mono); color: var(--ink-faint); font-size: 12px; }
 .qz-list .st { font-size: 12px; white-space: nowrap; }
 .qz-list .ok { color: var(--green); } .qz-list .ng { color: rgb(255, 120, 110); } .qz-list .go { color: var(--gold); }
+.qz-list .off { color: var(--ink-faint); } .qz-list button:disabled { cursor: default; opacity: 0.6; }
 .qz-type { display: inline-block; font-size: 10.5px; padding: 0 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-dim); margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
 .qz-type.qzmap { border-color: rgba(110, 240, 190, 0.4); color: var(--green); }
 .qz-more { margin-top: 8px; border: 0; background: none; padding: 8px 0; color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; }

@@ -4,7 +4,8 @@ import { QUIZ_BANK, SOURCES } from '../config/quizBank.js';
 import { FILTERS } from '../config/energy.js';
 import {
   MAP_QUESTIONS, questionsOf, roundOf, roundSeason, seasonRounds, seasonLabel, prevSeason, roundRange, useQuiz, answerOf,
-  openQuestion, optionsOf, submitAnswer, fetchBoard, setName, syncMe, forgetMe, seasonStats, markSeen, fmtTime
+  openQuestion, optionsOf, submitAnswer, fetchBoard, setName, syncMe, forgetMe, seasonStats, markSeen, fmtTime,
+  canAnswer, answerable, lateRounds, prevRound, LATE_MAX
 } from '../data/quiz.js';
 import { isEn, tx, useT } from '../i18n.js';
 
@@ -45,11 +46,23 @@ const qText = (item) => (item.kind === 'k' ? (isEn() ? QUIZ_BANK.find((q) => q.i
 
 function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
   const [showOld, setShowOld] = useState(false);
+  useEffect(() => { fetchBoard(roundSeason(cur)).then(syncMe).catch(() => {}); }, [cur]); // 同步加入的期與補答次數（換裝置也一致）
   const list = questionsOf(cur);
   const done = list.filter((it) => answerOf(s, cur, it.qid));
   const older = weeks.filter((w) => w !== cur);
-  const missed = older.reduce((a, w) => a + questionsOf(w).filter((it) => !answerOf(s, w, it.qid)).length, 0);
-  const next = [cur, ...older].flatMap((w) => questionsOf(w).filter((it) => !answerOf(s, w, it.qid)).map((it) => [w, it]))[0];
+  const left = (w) => questionsOf(w).filter((it) => !answerOf(s, w, it.qid)).length;
+  const open = older.filter((w) => answerable(canAnswer(s, w, cur)) && left(w)); // 現在可以補答的期
+  const free = open.some((w) => canAnswer(s, w, cur) === 'free');
+  const prev = prevRound(cur);
+  const lateLeft = Math.max(0, LATE_MAX - lateRounds(s, roundSeason(cur)).length);
+  const closed = older.filter((w) => !open.includes(w));
+  const next = [cur, ...open.slice().reverse()].flatMap((w) => questionsOf(w).filter((it) => !answerOf(s, w, it.qid)).map((it) => [w, it]))[0];
+  const lateNote = (w) => {
+    const c = canAnswer(s, w, cur);
+    if (c === 'free') return tx('新加入，可以補答', 'New player — catch up');
+    if (c === 'late') return lateRounds(s, roundSeason(cur)).includes(w) ? tx('補答中', 'Catching up') : tx(`可補答・本季還有 ${lateLeft} 次`, `Catch up · ${lateLeft} left this season`);
+    return '';
+  };
   return (
     <>
       <div className="qz-head">
@@ -57,14 +70,20 @@ function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
         <div style={{ textAlign: 'right' }}><div className="hl-k" style={{ justifyContent: 'flex-end' }}>{tx('本季', 'Season')}</div><div className="big">{st.ok}<small> / {st.total} {tx('答對', 'correct')}</small></div></div>
       </div>
       <div className="qz-prog">{list.map((it) => { const a = answerOf(s, cur, it.qid); return <i key={it.qid} className={a ? (a.ok ? 'ok' : 'ng') : ''} />; })}</div>
-      <QList s={s} week={cur} onOpen={onOpen} />
-      {older.length > 0 && (
+      <QList s={s} week={cur} cur={cur} onOpen={onOpen} />
+      {open.slice().reverse().map((w) => (
+        <div key={w}><div className="hl-k qz-late" style={{ marginTop: 12 }}>{roundRange(w)}<span className="qz-new">{lateNote(w)}</span></div><QList s={s} week={w} cur={cur} onOpen={onOpen} /></div>
+      ))}
+      {!free && older.includes(prev) && !open.includes(prev) && left(prev) > 0 && (
+        <p className="fine" style={{ marginTop: 8 }}>{tx(`上一期還有 ${left(prev)} 題沒答，但本季 ${LATE_MAX} 次補答機會已經用完。`, `${left(prev)} unanswered last round, but you’ve used all ${LATE_MAX} catch-ups this season.`)}</p>
+      )}
+      {closed.length > 0 && (
         <>
           <button className="qz-more" onClick={() => setShowOld(!showOld)} aria-expanded={showOld}>
-            {missed ? tx(`本季前幾期還有 ${missed} 題可以補答`, `${missed} earlier question${missed > 1 ? 's' : ''} this season`) : tx('本季前幾期', 'Earlier this season')} {showOld ? '▴' : '▾'}
+            {tx('本季前幾期（已截止）', 'Earlier this season (closed)')} {showOld ? '▴' : '▾'}
           </button>
-          {showOld && older.slice().reverse().map((w) => (
-            <div key={w}><div className="hl-k" style={{ marginTop: 10 }}>{roundRange(w)}</div><QList s={s} week={w} onOpen={onOpen} /></div>
+          {showOld && closed.slice().reverse().map((w) => (
+            <div key={w}><div className="hl-k" style={{ marginTop: 10 }}>{roundRange(w)}</div><QList s={s} week={w} cur={cur} onOpen={onOpen} /></div>
           ))}
         </>
       )}
@@ -72,22 +91,26 @@ function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
         {next && <button className="qz-btn" onClick={() => onOpen(next[0], next[1])}>{tx('繼續作答', 'Continue')}</button>}
         <button className="qz-btn dim" onClick={onBoard}>{tx('排行榜', 'Leaderboard')}</button>
       </div>
-      <p className="fine" style={{ marginTop: 12 }}>{tx('每週一、週四各換 3 題，什麼時候答都可以；每兩個月一季，季內可以補答前幾期的題目。答對多的排前面，同分比作答時間。不會推播打擾你。', 'Three new questions every Monday and Thursday — answer any time. Each season lasts two months and you can catch up on earlier rounds. Most correct ranks first; ties go to the faster total time. No notifications.')}</p>
+      <p className="fine" style={{ marginTop: 12 }}>{tx(
+        `每週一、週四各換 3 題。上一期沒答完的可以補答，每季 ${LATE_MAX} 次；更早的期就截止了（第一次加入的人，加入的那一期可以補答本季所有題目）。每兩個月一季，答對多的排前面，同分比作答時間。不會推播打擾你。`,
+        `Three new questions every Monday and Thursday. You can catch up on the previous round ${LATE_MAX} times per season; older rounds close (new players can catch up on the whole season during the round they join). Seasons last two months; most correct ranks first, ties go to the faster total time. No notifications.`
+      )}</p>
     </>
   );
 }
 
-function QList({ s, week, onOpen }) {
+function QList({ s, week, cur, onOpen }) {
+  const can = answerable(canAnswer(s, week, cur));
   return (
     <ul className="qz-list">
       {questionsOf(week).map((it, i) => {
         const a = answerOf(s, week, it.qid);
         return (
           <li key={it.qid}>
-            <button onClick={() => onOpen(week, it)}>
+            <button onClick={() => onOpen(week, it)} disabled={!a && !can}>
               <span className="n">{i + 1}</span>
               <span>{qText(it)}<span className={`qz-type ${it.kind === 'm' ? 'qzmap' : ''}`}>{it.kind === 'm' ? tx('看地圖', 'Map') : tx('知識', 'Fact')}</span></span>
-              <span className={`st ${a ? (a.ok ? 'ok' : 'ng') : 'go'}`}>{a ? (a.ok ? tx('答對', 'Right') : tx('答錯', 'Wrong')) : tx('作答 ›', 'Answer ›')}</span>
+              <span className={`st ${a ? (a.ok ? 'ok' : 'ng') : can ? 'go' : 'off'}`}>{a ? (a.ok ? tx('答對', 'Right') : tx('答錯', 'Wrong')) : can ? tx('作答 ›', 'Answer ›') : tx('已截止', 'Closed')}</span>
             </button>
           </li>
         );
@@ -102,20 +125,24 @@ function Question({ s, week, item, snapshot, setUi, onNext, onBack, weeks }) {
   useEffect(() => { if (ready) openQuestion(week, item, snapshot); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!item) return <p className="fine">{tx('找不到這一題。', 'Question not found.')} <button className="linkish" onClick={onBack}>{tx('回到題目列表', 'Back')}</button></p>;
   const a = answerOf(s, week, item.qid);
+  const cur = roundOf(), can = canAnswer(s, week, cur);
   const idx = questionsOf(week).findIndex((x) => x.qid === item.qid) + 1;
   const k = item.kind === 'k' ? QUIZ_BANK.find((q) => q.id === item.id) : null;
   const m = item.kind === 'm' ? MAP_QUESTIONS[item.id] : null;
   const keys = k ? k.opts.map((_, i) => i) : optionsOf(s, week, item);
   const label = (key) => (k ? ((isEn() && k.optsEn) || k.opts)[key] : m.label(key));
   const pick = async (key) => {
-    if (a || busy) return;
+    if (a || busy || !answerable(can)) return;
     if (m && !live(snapshot)) return;
     setBusy(true);
     await submitAnswer(week, item, key, snapshot);
     setBusy(false);
   };
-  // 下一題：同一週還沒答的，再來是本季其他週
-  const next = [week, ...weeks.filter((w) => w !== week).reverse()].flatMap((w) => questionsOf(w).filter((it) => !answerOf(s, w, it.qid) && !(w === week && it.qid === item.qid)).map((it) => ({ week: w, qid: it.qid })))[0];
+  // 下一題：同一期還沒答的，再來是這一期、可以補答的期（補答下一期不會自動扣次數：要使用者自己點）
+  const next = [week, ...weeks.filter((w) => w !== week).reverse()].filter((w) => { const c = canAnswer(s, w, cur); return c === 'open' || c === 'free' || (c === 'late' && lateRounds(s, roundSeason(cur)).includes(w)); })
+    .flatMap((w) => questionsOf(w).filter((it) => !answerOf(s, w, it.qid) && !(w === week && it.qid === item.qid)).map((it) => ({ week: w, qid: it.qid })))[0];
+  const lateLeft = Math.max(0, LATE_MAX - lateRounds(s, roundSeason(cur)).length);
+  const firstLate = !a && can === 'late' && !lateRounds(s, roundSeason(cur)).includes(week);
   const more = (k || m)?.more;
   const goMore = () => {
     if (more?.filter) setUi({ filter: more.filter, panel: null, quizPeek: { week, qid: item.qid } });
@@ -126,7 +153,9 @@ function Question({ s, week, item, snapshot, setUi, onNext, onBack, weeks }) {
     <>
       <div className="hl-k">{tx(`第 ${idx} 題`, `Question ${idx}`)}・{item.kind === 'm' ? tx('看地圖', 'Map') : tx('知識', 'Fact')}{item.kind === 'm' && <span className="qz-new">{tx('答案依當下台電資料', 'Answer uses live Taipower data')}</span>}</div>
       <div className="qz-q">{qText(item)}</div>
-      {!ready || !keys ? (
+      {!a && !answerable(can) ? (
+        <p className="fine warm">{can === 'nolate' ? tx(`本季 ${LATE_MAX} 次補答機會已經用完，這一期不能再補答。`, `You’ve used all ${LATE_MAX} catch-ups this season.`) : tx('這一期已經截止，不能再作答。', 'This round is closed.')}</p>
+      ) : !ready || !keys ? (
         <p className="fine warm">{tx('目前讀不到台電即時資料，這題等資料恢復再答。', 'Live Taipower data isn’t available right now — come back to this one later.')}</p>
       ) : (
         <div className="qz-opts" role="group" aria-label={tx('選項', 'Options')}>
@@ -143,7 +172,8 @@ function Question({ s, week, item, snapshot, setUi, onNext, onBack, weeks }) {
           })}
         </div>
       )}
-      {!a && m && ready && keys && (
+      {firstLate && <p className="fine" style={{ marginTop: 8 }}>{tx(`補答上一期：作答後會用掉本季 1 次補答機會（還有 ${lateLeft} 次），這一期其他題就不再扣。`, `Catching up: answering uses 1 of your ${lateLeft} catch-ups left this season (the rest of this round is free).`)}</p>}
+      {!a && m && ready && keys && answerable(can) && (
         <>
           <div className="qz-exp">{tx('提示：', 'Hint: ')}{m.hint()}</div>
           <div className="qz-btns"><button className="qz-btn green" onClick={() => setUi({ panel: null, quizPeek: { week, qid: item.qid }, ...(more?.filter ? { filter: more.filter } : {}) })}>{tx('先去地圖找 ›', 'Find it on the map ›')}</button></div>

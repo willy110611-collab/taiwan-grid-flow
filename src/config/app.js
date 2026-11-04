@@ -21,6 +21,6 @@ export const APP = {
   // 每週知識題＋排行榜（更多 → 知識題；主畫面本季前三）。要暫停就改 false
   quiz: true,
   // 知識題未答提醒小視窗（等使用者看過預覽再開；測試用 ?nudge=1）
-  quizNudge: false,
+  quizNudge: true,
   taipowerPage: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html'
 };
