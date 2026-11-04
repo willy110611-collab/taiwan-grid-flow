@@ -16,7 +16,7 @@
 - `tools/cloudflare-worker.js`：中繼站（`taiwan-grid-flow-data.willy110611.workers.dev`，module `worker.js`，KV 綁定 NOTIFY，Cron `*/10 * * * *`）。台電擋海外 IP，所以網頁、GitHub Actions 都經中繼站拿台電資料。
 - `scripts/opendata.mjs`（`npm run build` 會先跑）：建置時從中繼站 `/open/…` 抓台電開放資料 → `public/data/*.json`（計畫停電、鄉鎮用電、歷年供需、縣市綠電）。`SKIP_OPENDATA=1` 可略過。
 - `.github/workflows/`：`deploy.yml`（push 與每 10 分鐘建置部署，上線前跑 `npm run check` 與冒煙測試）、`health.yml`（每小時健康檢查，有問題才通知）、`rollback.yml`（一鍵回到上一版）、`maintenance.yml`（維護模式：暫停／重新開放）。
-- 知識題（v0.8.71）：`src/config/quizBank.js`（題庫＋出處 SOURCES；**新增題目加在最後、填 since 日期，不改舊題 id**；每題要有確切出處）、`src/data/quiz.js`（週／季計算、選題：從 QUIZ_START 逐週挑最久沒出的題、同分用雜湊；6 種看地圖題依當下台電資料判斷；作答紀錄 localStorage `tgf-quiz`）、`src/components/Quiz.jsx`（面板、去地圖找答案的提示列 QuizPeekBar、主畫面本季前三 QuizTop3）。v0.8.72 起每週一、週四 00:00 各換一期 3 題（2 知識＋1 看地圖；期 id `2026-W46-1`／`-2`，2026-W45 是舊制一期 5 題）；每兩個月一季（依該週星期一月份），季內可補答；排名＝答對數、同分比作答總時間（單題最多計 30 分鐘）。對錯在裝置端判斷，中繼站只記分（以週記分、每週最多 6 題〔v8.13；v8.12 是 5 題〕、每題只算第一次、只收本季且不晚於本週）。`APP.quiz` 可關。使用者希望題庫持續增加、可偶爾重複。待查：advice.js 時間電價 5.16／2.06 標「114 年 10 月起」，但有文章說是 115 年 4 月起的費率（題庫先不出電價費率題）。
+- 知識題（v0.8.71）：`src/config/quizBank.js`（題庫＋出處 SOURCES；**新增題目加在最後、填 since 日期，不改舊題 id**；每題要有確切出處）、`src/data/quiz.js`（週／季計算、選題：從 QUIZ_START 逐週挑最久沒出的題、同分用雜湊；6 種看地圖題依當下台電資料判斷；作答紀錄 localStorage `tgf-quiz`）、`src/components/Quiz.jsx`（面板、去地圖找答案的提示列 QuizPeekBar、主畫面本季前三 QuizTop3）。v0.8.72 起每週一、週四 00:00 各換一期 3 題（2 知識＋1 看地圖；期 id `2026-W46-1`／`-2`，2026-W45 是舊制一期 5 題）；每兩個月一季（依該週星期一月份），補答規則（v0.8.75，使用者指定）：上一期每季可補 3 次、更早截止，第一次加入的那一期可補全季（`canAnswer`，中繼站 v8.14 同樣把關）；未答提醒小視窗 `APP.quizNudge: true`（打開 6 秒後、每期最多一次）；排名＝答對數、同分比作答總時間（單題最多計 30 分鐘）。對錯在裝置端判斷，中繼站只記分（以週記分、每週最多 6 題〔v8.13；v8.12 是 5 題〕、每題只算第一次、只收本季且不晚於本週）。`APP.quiz` 可關。使用者希望題庫持續增加、可偶爾重複。待查：advice.js 時間電價 5.16／2.06 標「114 年 10 月起」，但有文章說是 115 年 4 月起的費率（題庫先不出電價費率題）。
 - 維護模式（v0.8.70）：`public/maintenance.json`（`{"on":false}`；暫停 `{"on":true,"since":ISO}`）。index.html 先發請求、`src/maintenance.js` 決定顯示維護頁或網頁；開著的網頁每 5 分鐘與切回前景時檢查、維護頁每 3 分鐘重查（恢復自動重新載入）；service worker 不快取這個檔。`?maint=0` 略過（冒煙測試、健康檢查用）。
   - 健康檢查（`scripts/health.mjs`，每小時）：有問題 3 分鐘後重查。**嚴重**（網頁 60 秒打不開、地圖沒出現、總發電 < 5,000 MW、與中繼站 genary 原始加總差 > 10%（同資料時間才比）、用電 > 發電 × 1.3）→ 自動改 maintenance.json、推 main、`gh workflow run deploy.yml`，LINE 用 `/alert?type=maint`（中繼站 v8.11；回 ignored 時改送 site）。其他（資料延遲、面板／今日重播／自動導覽／篩選出錯）只通知。已暫停時不再通知。本機試跑：`HEALTH_DRY=1 HEALTH_SITE=http://127.0.0.1:4177/ node scripts/health.mjs`。
   - 重新開放：Actions「維護模式」→ 重新開放（或改檔推 main）。
@@ -40,7 +40,6 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 
 ## 目前待辦
 ### 需要使用者決定
-- **知識題未答提醒小視窗**（v0.8.73 程式已做好、`APP.quizNudge: false` 關著，`?nudge=1` 可預覽）：這一期還有題目沒答時，打開網頁 6 秒後跳出（手機在工具列上方、電腦右下），「去答題／下次再說」，每期最多一次（localStorage `tgf-quiz-nudge`），有面板、重播、導覽、找答案時不跳。2026-11-04 已出預覽，等使用者確認再改 true。
 - 新資料來源（見下方「可加的資料」），使用者選定後先出預覽圖。
 - 「匯入我家用電 CSV」（智慧電表）。
 - **每日早報＋每日電力猜謎**（2026-11-02 已出預覽，使用者說「先不改」，存待辦；做之前再出一次預覽確認）。目的：讓一般人每天／每週回來（參考軌島：跟自己有關＋天天有理由打開）。
@@ -69,7 +68,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.8 已部署（2026-10-26，commit 073725a，SHA-256 a9cc59ec…3e08）（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
 - v8.9 已部署（2026-10-26，commit 0abc92f，SHA-256 5b304ca4…1047）：`/water/tainan-pipes.json` 固定轉送臺南給水管線（實測 522，臺南伺服器擋 Cloudflare）。
 - v8.10 已部署（2026-10-26 23:46，commit a33f4e4，SHA-256 a4eee5ee…2904）：推播、LINE 訊息名稱改「台灣脈動」。
-- v8.14 **待部署**（要使用者說「允許部署」）：知識題暱稱只能免費改一次（qp 表自動加 `renamed` 欄）、暱稱不可重複（作答建立預設名重名時加 `#uid前4碼`）、作答不再覆蓋暱稱；管理者在 LINE 傳「改名 舊暱稱→新暱稱」改名（DO 內部 `admin-rename`，外部 /quiz/ 不放行）。網頁 v0.8.74 已上線（舊中繼站時本機也只讓改一次）。
+- v8.14 已部署（2026-11-04 12:38，commit 936a680，SHA-256 765ee2b6…e3e9，`X-Relay-Version: 8.14` 立即生效）：知識題暱稱只能免費改一次（qp `renamed`）、暱稱不可重複（作答建立預設名重名時加 `#uid前4碼`）、作答不覆蓋暱稱；管理者在 LINE 傳「改名 舊暱稱→新暱稱」（DO 內部 `admin-rename`）。**補答規則**：作答帶 `round`（期），這一期隨時可答；上一期可補答，每季最多 3 期（qa `late`=1，一期算一次）；更早的期回 `closed`、次數用完回 `nolate`；第一次加入（qp `joined`＝第一次作答的期，舊使用者用最早紀錄）的那一期可補答本季之前所有期（`late`=2，不扣）。board／answer 回傳 `joined`、`late{season,rounds,max}`。正式站雙重檢查：當期 ok、未來／上一季 closed、格式錯 400、舊網頁不帶 round 可答、改名 taken／一次 ok／第二次 locked，測試紀錄已刪。
 - v8.13 已部署（2026-11-04 01:10，commit 9e5f29e，SHA-256 d054bc34…，`X-Relay-Version: 8.13`，約 30 秒生效）：知識題每週上限 6 題。實測第 7 題回 full、測試紀錄已刪。
 - v8.12 已部署（2026-11-03 00:29，commit 42f7f9b，SHA-256 1a295f26…，含版本標頭 `X-Relay-Version: 8.12`）：知識題排行榜 `/quiz/answer`、`/quiz/board`、`/quiz/name`、`/quiz/forget`，資料存在 Durable Object `Presence` 的 `idFromName('quiz')` 實例（SQLite 表 qa、qp，不需新綁定或 migration）。**注意：API 部署回成功後，workers.dev 實際生效約等了 10 分鐘**（期間仍回舊版）→ 部署後用 `X-Relay-Version` 標頭確認，改版時記得把 CORS 裡的版本號一起改。
 - v8.11 已部署（2026-10-29 01:23，commit 7558bd1，SHA-256 39ebd01c…c371，用 api.cloudflare.com 代理憑證直接 PUT /content）：`/alert?type=maint`「已自動暫停網站」LINE 訊息。
