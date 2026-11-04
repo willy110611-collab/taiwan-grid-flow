@@ -247,12 +247,25 @@ export async function fetchBoard(season) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
+/** 改暱稱：只能免費改一次（中繼站 v8.14 把關）；回傳 'ok' | 'locked' | 'taken' | 'empty' | 'offline' */
 export async function setName(name) {
   const n = String(name || '').normalize('NFKC').replace(/[<>\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
-  if (!n) return false;
-  save({ name: n });
-  await post('name', { uid: state.uid, name: n }).catch(() => {});
-  return true;
+  if (!n) return 'empty';
+  let r;
+  try { r = await post('name', { uid: state.uid, name: n }); } catch { return 'offline'; }
+  if (r?.error === 'locked') { save({ renamed: true }); return 'locked'; }
+  if (r?.error === 'taken') return 'taken';
+  if (!r?.ok) return 'offline';
+  save({ name: n, renamed: true });
+  return 'ok';
+}
+/** 排行榜回來的資料：同步「改過暱稱」與伺服器上的暱稱 */
+export function syncMe(board) {
+  const me = board?.me;
+  const patch = {};
+  if (board?.renamed && !state.renamed) patch.renamed = true;
+  if (me?.name && me.name !== state.name) patch.name = me.name;
+  if (Object.keys(patch).length) save(patch);
 }
 /** 刪除我的排行榜紀錄（中繼站）與這台裝置的作答 */
 export async function forgetMe() {

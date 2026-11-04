@@ -4,7 +4,7 @@ import { QUIZ_BANK, SOURCES } from '../config/quizBank.js';
 import { FILTERS } from '../config/energy.js';
 import {
   MAP_QUESTIONS, questionsOf, roundOf, roundSeason, seasonRounds, seasonLabel, prevSeason, roundRange, useQuiz, answerOf,
-  openQuestion, optionsOf, submitAnswer, fetchBoard, setName, forgetMe, seasonStats, markSeen, fmtTime
+  openQuestion, optionsOf, submitAnswer, fetchBoard, setName, syncMe, forgetMe, seasonStats, markSeen, fmtTime
 } from '../data/quiz.js';
 import { isEn, tx, useT } from '../i18n.js';
 
@@ -171,7 +171,8 @@ function Board({ season, cur, st, s, onSeason, onBack }) {
   const [editing, setEditing] = useState(false);
   const [name, setNameInput] = useState(s.name);
   const [confirm, setConfirm] = useState(false);
-  const load = () => { setErr(false); fetchBoard(season).then(setData).catch(() => setErr(true)); };
+  const [nameMsg, setNameMsg] = useState('');
+  const load = () => { setErr(false); fetchBoard(season).then((d) => { syncMe(d); setData(d); }).catch(() => setErr(true)); };
   useEffect(load, [season]); // eslint-disable-line react-hooks/exhaustive-deps
   const prev = prevSeason(cur);
   const me = data?.me;
@@ -207,16 +208,27 @@ function Board({ season, cur, st, s, onSeason, onBack }) {
         )}
       {season === cur && !me && st.n === 0 && <p className="fine">{tx('答一題就會上榜。', 'Answer one question to join the board.')}</p>}
       {editing ? (
-        <form className="qz-name" onSubmit={async (e) => { e.preventDefault(); if (await setName(name)) { setEditing(false); load(); } }}>
-          <input value={name} maxLength={16} onChange={(e) => setNameInput(e.target.value)} aria-label={tx('暱稱', 'Nickname')} autoFocus />
-          <button className="qz-btn green" type="submit">{tx('儲存', 'Save')}</button>
-        </form>
+        <>
+          <form className="qz-name" onSubmit={async (e) => {
+            e.preventDefault();
+            const r = await setName(name);
+            if (r === 'ok') { setEditing(false); setNameMsg(''); load(); }
+            else setNameMsg({ locked: tx('暱稱已經改過一次了。要再改請到「更多 → 意見回饋」聯絡管理者。', 'You’ve already changed your nickname once. To change it again, contact us via More → Feedback.'), taken: tx('這個暱稱已經有人用了，換一個吧。', 'That nickname is taken — try another.'), empty: tx('請輸入暱稱。', 'Please enter a nickname.'), offline: tx('暫時無法儲存，稍後再試。', 'Couldn’t save right now. Try again later.') }[r]);
+            if (r === 'locked') setEditing(false);
+          }}>
+            <input value={name} maxLength={16} onChange={(e) => setNameInput(e.target.value)} aria-label={tx('暱稱', 'Nickname')} autoFocus />
+            <button className="qz-btn green" type="submit">{tx('確定', 'Save')}</button>
+          </form>
+          <p className="fine warm" style={{ marginTop: 6 }}>{tx('暱稱只能免費改一次，之後要改請聯絡管理者。', 'You can change your nickname once for free; after that, contact us.')}</p>
+        </>
       ) : (
         <div className="qz-btns">
-          <button className="qz-btn dim" onClick={() => setEditing(true)}>{tx('改暱稱', 'Nickname')}</button>
+          {!s.renamed && <button className="qz-btn dim" onClick={() => { setNameMsg(''); setEditing(true); }}>{tx('改暱稱（限一次）', 'Nickname (once)')}</button>}
           <button className="qz-btn" onClick={share}>{tx('分享我的排名', 'Share')}</button>
         </div>
       )}
+      {nameMsg && <p className="fine warm" style={{ marginTop: 6 }}>{nameMsg}</p>}
+      {s.renamed && !editing && <p className="fine" style={{ marginTop: 6 }}>{tx('暱稱已改過一次；要再改請到「更多 → 意見回饋」聯絡管理者。', 'Nickname already changed once; to change it again, contact us via More → Feedback.')}</p>}
       <div className="qz-btns"><button className="qz-btn dim" onClick={onBack}>{tx('回到題目列表', 'Back to questions')}</button></div>
       <p className="fine" style={{ marginTop: 12 }}>
         {tx(`暱稱：${s.name}。不用註冊；伺服器只存隨機代碼、暱稱、各題對錯與作答時間，1 年後自動刪除。`, `Nickname: ${s.name}. No sign-up; the server keeps only a random code, nickname, right/wrong and time per question, deleted after a year.`)}

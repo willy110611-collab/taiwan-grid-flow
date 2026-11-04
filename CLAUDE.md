@@ -69,6 +69,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - v8.8 已部署（2026-10-26，commit 073725a，SHA-256 a9cc59ec…3e08）（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
 - v8.9 已部署（2026-10-26，commit 0abc92f，SHA-256 5b304ca4…1047）：`/water/tainan-pipes.json` 固定轉送臺南給水管線（實測 522，臺南伺服器擋 Cloudflare）。
 - v8.10 已部署（2026-10-26 23:46，commit a33f4e4，SHA-256 a4eee5ee…2904）：推播、LINE 訊息名稱改「台灣脈動」。
+- v8.14 **待部署**（要使用者說「允許部署」）：知識題暱稱只能免費改一次（qp 表自動加 `renamed` 欄）、暱稱不可重複（作答建立預設名重名時加 `#uid前4碼`）、作答不再覆蓋暱稱；管理者在 LINE 傳「改名 舊暱稱→新暱稱」改名（DO 內部 `admin-rename`，外部 /quiz/ 不放行）。網頁 v0.8.74 已上線（舊中繼站時本機也只讓改一次）。
 - v8.13 已部署（2026-11-04 01:10，commit 9e5f29e，SHA-256 d054bc34…，`X-Relay-Version: 8.13`，約 30 秒生效）：知識題每週上限 6 題。實測第 7 題回 full、測試紀錄已刪。
 - v8.12 已部署（2026-11-03 00:29，commit 42f7f9b，SHA-256 1a295f26…，含版本標頭 `X-Relay-Version: 8.12`）：知識題排行榜 `/quiz/answer`、`/quiz/board`、`/quiz/name`、`/quiz/forget`，資料存在 Durable Object `Presence` 的 `idFromName('quiz')` 實例（SQLite 表 qa、qp，不需新綁定或 migration）。**注意：API 部署回成功後，workers.dev 實際生效約等了 10 分鐘**（期間仍回舊版）→ 部署後用 `X-Relay-Version` 標頭確認，改版時記得把 CORS 裡的版本號一起改。
 - v8.11 已部署（2026-10-29 01:23，commit 7558bd1，SHA-256 39ebd01c…c371，用 api.cloudflare.com 代理憑證直接 PUT /content）：`/alert?type=maint`「已自動暫停網站」LINE 訊息。
@@ -132,6 +133,7 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 - 中繼站免費額度用完（錯誤 429／1027）：台灣早上 8 點重置；要避免就升級 Workers Paid。介面只說「今天使用人數太多，空品資料暫停更新，早上 8 點恢復」。
 - 預報（forecast）、App 通知（需 v4 以上的 vapid 金鑰）都靠中繼站；讀不到時介面只說「暫時讀不到／暫時無法使用」。
 - 本機版：用「啟動.bat」或桌布伺服器開（直接開 HTML 檔連不到台電）；GitHub Pages 版的備份資料由 Actions 每 10 分鐘抓。
+- 知識題暱稱：使用者只能免費改一次；要再改會從「意見回饋」來找你 → 在 LINE 傳「改名 舊暱稱→新暱稱」（中繼站 v8.14 起）。
 - 意見回饋：中繼站 `POST /feedback` → KV `fb:日期`（180 天），每天前 10 則 LINE 推播給 LINE_TO；在 LINE 傳「回饋」看最近 7 天。
 - 介面的錯誤一律只寫「暫時讀不到／暫時無法使用、何時恢復」。原始原因看中繼站 `/aqi.json`、`/cems.json`、`/sun.json` 的 error 欄位，或 /log 的錯誤紀錄（31 天）；通知開不起來多半是 KV（NOTIFY）沒綁或 `/config.json` 沒有 vapidPublic。
 - 連線診斷的檔名、筆數、HTTP 碼只給開發看（本機 `?debug=1`）；`?sim=1` 是示範模式；`/taipower/...` 只有本機 vite 代理才有。

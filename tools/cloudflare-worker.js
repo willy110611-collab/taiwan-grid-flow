@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣脈動 — Cloudflare Worker 中繼站 v8.13
+//  台灣脈動 — Cloudflare Worker 中繼站 v8.14
+//  v8.14：知識題暱稱只能免費改一次（之後要改請聯絡管理者；管理者在 LINE 傳「改名 舊暱稱→新暱稱」）、暱稱不可重複
 //  v8.13：知識題改成每週一、週四各 3 題 → 每週上限 5 題改成 6 題
 //  v8.12：每週知識題排行榜（/quiz/…）：每兩個月一季，存在 Durable Object「Presence」的 quiz 實例（SQLite）；只存隨機代碼、暱稱、各題對錯與作答秒數
 //  v8.11：/alert?type=maint「已自動暫停網站」
@@ -18,7 +19,7 @@
 //  v7：台電開放資料原檔轉送（/open/…，給 GitHub 建置用）、颱風停電（/typhoon.json）、
 //      計畫停電每日存檔（KV outage:raw:日期）與「前 3 天／前 1 天」App 通知（依訂閱者的鄉鎮、路名）
 //  v6：網站錯誤回報與 30 天維修紀錄（POST /log）、台電資料格式改變偵測、每小時健康檢查失敗通知（/alert）
-//      管理者在 LINE 傳「錯誤紀錄」可看最近 7 天的錯誤統計
+//      管理者在 LINE 傳「錯誤紀錄」可看最近 7 天的錯誤統計；「改名 舊暱稱→新暱稱」改知識題排行榜暱稱（v8.14）
 //  v5：環境部 AQI 故障時改給最後一次成功的資料（存在 KV）；台電資料停更或空品備份太舊時 LINE 通知管理者（LINE_TO）
 //  貼到 Cloudflare：Workers & Pages → taiwan-grid-flow-data → Edit code → 全部取代 → Deploy
 //
@@ -59,7 +60,7 @@ const TP = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/';
 const TP_FILES = new Set(['genary.json', 'genloadareaperc.csv', 'loadpara.json', 'loadfueltype.csv', 'loadfueltype_1.csv', 'loadareas.csv']);
 const FORECAST = 'https://service.taipower.com.tw/data/opendata/apply/file/d006014/001.csv';
 const MOENV = 'https://data.moenv.gov.tw/api/v2/';
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'X-Relay-Version': '8.13' }; // 版本標頭：部署後可確認實際在跑的是哪一版
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'X-Relay-Version': '8.14' }; // 版本標頭：部署後可確認實際在跑的是哪一版
 const UA = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
   Referer: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html',
@@ -406,6 +407,12 @@ async function handleEvent(env, ev) {
   if (/^(說明|help|\?|？|使用說明)$/i.test(t)) return reply(env, ev.replyToken, HELP);
   if (id === env.LINE_TO && /^錯誤紀錄$/.test(t)) return reply(env, ev.replyToken, await errorSummary(env, 7));
   if (id === env.LINE_TO && /^(意見)?回饋$/.test(t)) return reply(env, ev.replyToken, await feedbackSummary(env, 7));
+  if (id === env.LINE_TO && /^改名/.test(t)) { // v8.14：管理者幫使用者改知識題暱稱（使用者只能免費改一次）
+    const m = t.match(/^改名(.+?)(?:→|->|＞|>|\/)(.+)$/);
+    if (!m || !env.PRESENCE) return reply(env, ev.replyToken, '格式：改名 舊暱稱→新暱稱');
+    const r = await (await env.PRESENCE.get(env.PRESENCE.idFromName('quiz')).fetch('https://quiz/quiz/admin-rename', { method: 'POST', body: JSON.stringify({ from: qzName(m[1]), to: qzName(m[2]) }) })).json();
+    return reply(env, ev.replyToken, r.ok ? `✅ 已把「${m[1]}」改成「${r.name}」（${r.n} 筆）` : r.error === 'taken' ? `「${m[2]}」已經有人用了` : `找不到暱稱「${m[1]}」`);
+  }
   if (/^(停止|關閉|取消)(通知)?$/.test(t)) { await save({ supply: false, aqi: false }); return reply(env, ev.replyToken, '已停止所有通知。想恢復請傳「全部通知」。'); }
   if (/^只要供電$/.test(t)) { await save({ supply: true, aqi: false }); return reply(env, ev.replyToken, '好的，只會通知供電吃緊。'); }
   if (/^(全部通知|開啟|開啟通知)$/.test(t)) { await save({ supply: true, aqi: true }); return reply(env, ev.replyToken, `供電與空品通知都已開啟${user.site ? `（測站：${user.site}）` : '，請再傳你家附近的測站名稱'}。`); }
@@ -1082,13 +1089,15 @@ async function quizDO(state, req) {
   sql.exec('CREATE TABLE IF NOT EXISTS qa (season TEXT, week TEXT, uid TEXT, qid TEXT, ok INTEGER, ms INTEGER, t INTEGER, PRIMARY KEY (week, uid, qid))');
   sql.exec('CREATE INDEX IF NOT EXISTS qa_season ON qa (season, uid)');
   sql.exec('CREATE TABLE IF NOT EXISTS qp (uid TEXT PRIMARY KEY, name TEXT, t INTEGER)');
+  if (!sql.exec('PRAGMA table_info(qp)').toArray().some((c) => c.name === 'renamed')) sql.exec('ALTER TABLE qp ADD COLUMN renamed INTEGER DEFAULT 0'); // v8.14：改過暱稱的次數
   const u = new URL(req.url);
   const action = u.pathname.slice('/quiz/'.length);
   const board = (season, uid) => {
     const rows = sql.exec('SELECT qa.uid AS uid, SUM(ok) AS ok, COUNT(*) AS n, SUM(ms) AS ms, qp.name AS name FROM qa LEFT JOIN qp ON qp.uid = qa.uid WHERE season = ? GROUP BY qa.uid ORDER BY ok DESC, ms ASC', season).toArray();
     const pub = (r, i) => ({ rank: i + 1, name: r.name || '', ok: r.ok, n: r.n, ms: r.ms });
     const i = uid ? rows.findIndex((r) => r.uid === uid) : -1;
-    return { season, players: rows.length, top: rows.slice(0, 10).map(pub), me: i >= 0 ? pub(rows[i], i) : null };
+    const renamed = uid ? (sql.exec('SELECT renamed FROM qp WHERE uid = ?', uid).toArray()[0]?.renamed || 0) : 0;
+    return { season, players: rows.length, top: rows.slice(0, 10).map(pub), me: i >= 0 ? { ...pub(rows[i], i), renamed } : null, renamed };
   };
   if (req.method === 'GET' && action === 'board') return out(board(u.searchParams.get('season'), u.searchParams.get('uid')));
   const b = await req.json();
@@ -1098,8 +1107,23 @@ async function quizDO(state, req) {
     sql.exec('DELETE FROM qp WHERE uid = ?', b.uid);
     return out({ ok: true });
   }
-  if (b.name) sql.exec('INSERT INTO qp (uid, name, t) VALUES (?, ?, ?) ON CONFLICT(uid) DO UPDATE SET name = excluded.name, t = excluded.t', b.uid, b.name, now);
-  if (action === 'name') return out({ ok: true, name: b.name });
+  const taken = (name, uid) => sql.exec('SELECT 1 FROM qp WHERE lower(name) = lower(?) AND uid != ?', name, uid).toArray().length > 0;
+  if (action === 'admin-rename') { // 只從 LINE 管理指令呼叫（外部 /quiz/ 只放行 answer、name、forget、board）
+    if (taken(b.to, '')) return out({ ok: false, error: 'taken' });
+    const n = sql.exec('SELECT COUNT(*) AS c FROM qp WHERE name = ?', b.from).one().c;
+    if (!n) return out({ ok: false, error: 'notfound' });
+    sql.exec('UPDATE qp SET name = ?, t = ? WHERE name = ?', b.to, now, b.from);
+    return out({ ok: true, name: b.to, n });
+  }
+  if (action === 'name') { // 使用者自己只能免費改一次；暱稱不能和別人重複
+    const row = sql.exec('SELECT renamed FROM qp WHERE uid = ?', b.uid).toArray()[0];
+    if (row && row.renamed >= 1) return out({ error: 'locked' }, 409);
+    if (taken(b.name, b.uid)) return out({ error: 'taken' }, 409);
+    sql.exec('INSERT INTO qp (uid, name, t, renamed) VALUES (?, ?, ?, 1) ON CONFLICT(uid) DO UPDATE SET name = excluded.name, t = excluded.t, renamed = 1', b.uid, b.name, now);
+    return out({ ok: true, name: b.name, renamed: 1 });
+  }
+  // 作答時只在第一次建立暱稱（預設的隨機名稱），之後不會被作答覆蓋；和別人重名就在後面加代碼
+  if (b.name) sql.exec('INSERT INTO qp (uid, name, t) VALUES (?, ?, ?) ON CONFLICT(uid) DO NOTHING', b.uid, taken(b.name, b.uid) ? `${b.name.slice(0, 11)} #${b.uid.slice(0, 4)}` : b.name, now);
   // answer：每週最多 6 題（週一、週四各 3 題）、每題只算第一次
   const cnt = sql.exec('SELECT COUNT(*) AS c FROM qa WHERE week = ? AND uid = ?', b.week, b.uid).one().c;
   if (cnt >= 6 && !sql.exec('SELECT 1 FROM qa WHERE week = ? AND uid = ? AND qid = ?', b.week, b.uid, b.qid).toArray().length) return out({ error: 'full' }, 409);
