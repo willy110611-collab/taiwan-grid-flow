@@ -9,7 +9,7 @@
   - 只讀需要的檔案片段（grep／指定行數），不整檔重讀；不重複查已知的事。
   - 少截圖（只在出預覽、驗證畫面時）；等部署只查一次結果，不反覆輪詢。
   - 大範圍搜尋交給子助手，只帶回結論；簡單工作用較小模型。
-  - 回覆精簡；CLAUDE.md 只放規則與目前狀態，歷史紀錄放 `docs/紀錄.md`（下週搬）。
+  - 回覆精簡；CLAUDE.md 只放規則與目前狀態，歷史紀錄放 `docs/紀錄.md`（2026-11-05 已搬）。
 - 使用者同意要做的功能：寫程式 → 測試 → commit → push main → 部署，一路做完，不用每步再問。
 - **新畫面先出預覽圖**（手機以 iPhone 16 Pro 402×874 為準，電腦版也要看），使用者確認後才實作。
 - 模擬各種使用者操作（點、滑、鍵盤、英文介面），確認都直觀、沒有錯誤。
@@ -45,121 +45,17 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 `/config.json` 的 lineFriendUrl 為 null（供電／空品 LINE 推播只發給管理者 LINE_TO；要開放給所有好友就在 Worker 變數加 `LINE_FRIENDS=1`）。
 
 ## 目前待辦
-### ⭐ 最優先（下週 2026-11-09 起處理；本週 11/4–11/8 除維護外不處理其他事項）
-- **減少 token 消耗**（2026-11-04 統計：這個對話自 10/24 起約 11.2 億 token，98% 是每一步重讀整段對話的快取讀取）：
-  1. 精簡 CLAUDE.md（約 2 萬 token、每步載入）：中繼站歷次部署紀錄、石油地圖／各國電力研究、水模式細節、資料稽核紀錄搬到 `docs/紀錄.md`，CLAUDE.md 只留工作規則、架構重點、目前狀態與待辦。
-  2. 工作方式：一件事開一個新對話（靠 CLAUDE.md 交接）、對話長了用 `/compact`、換主題 `/clear`；少截圖（只在預覽與驗證畫面時）；等待部署只查一次 Actions 結果、不反覆輪詢；大範圍搜尋交給子助手；簡單工作（改文字、加題目）可用較小模型。
+- 本週 11/4–11/8 除維護外不處理其他事項（使用者指定）。
+- 省 token：2026-11-05 已把 CLAUDE.md 從約 2.7 萬字縮到約 1 萬字（細節搬到 docs/紀錄.md）；舊的長對話（10/24 起，約 11.2 億 token）應結束，之後一件事開一個新對話。
 ### 需要使用者決定
 - **知識題配合新聞／時事**（2026-11-04 使用者提出）：題庫偶爾加入和近期新聞、熱門話題有關的題目（例：電價調整、核電公投／再運轉進度、創用電新高、颱風停電、能源政策），一樣要有確切出處（新聞＋官方來源），`since` 填加入日期；時效性題目可在題目或說明寫明「截至某年某月」。
-- **網站錯誤「sw.js load failed」**（2026-11-04 LINE 錯誤通知，v0.8.73 手機 promise 3 次）：已查到原因、尚未修：`src/update.js` `applyUpdate()` 裡 `(await getRegistration())?.update()` 沒有 await，網路不穩時 `update()` 失敗變成未處理的 promise 錯誤被回報。修法：改成 `await (...)?.update()`（只是雜訊、不影響使用者）。
-- 新資料來源（見下方「可加的資料」），使用者選定後先出預覽圖。
+- **網站錯誤「sw.js load failed」**（2026-11-04 LINE 錯誤通知，v0.8.73 手機 promise 3 次）：已查到原因、尚未修：`src/update.js` `applyUpdate()` 裡 `(await getRegistration())?.upd…（詳見 docs/紀錄.md）
+- 新資料來源（見 docs/紀錄.md「可加的資料」），使用者選定後先出預覽圖。
 - 「匯入我家用電 CSV」（智慧電表）。
 - **每日早報＋每日電力猜謎**（2026-11-02 已出預覽，使用者說「先不改」，存待辦；做之前再出一次預覽確認）。目的：讓一般人每天／每週回來（參考軌島：跟自己有關＋天天有理由打開）。
-  - 早報：每天 07:00 App 通知「今天的電・M/D」＝供電燈號（吃緊時寫幾點少開大電器）｜最乾淨 2 小時（advice.best）｜我的家測站 AQI｜今日猜謎題目；點開「今天的電」面板：供電、最乾淨、空氣、天氣（新：氣象署鄉鎮預報，中繼站已有 CWA_KEY）、昨天回顧（綠能最高、尖峰用電）、猜謎卡。
-  - 猜謎：每天一題會／不會（例：今天綠能最高會超過 30% 嗎、今晚尖峰會比昨天高嗎；5–6 種題型輪替，門檻依前幾天實際值自動設讓答案約五五波），22:00 用台電資料公布（可推播），記錄近幾天對錯、連勝、最長、答對率（存裝置）；「分享成績」產生 1080×1080 圖卡（品牌、題目、結果、方格、連勝、網址）。全站投票比例需中繼站統計（要部署）。
-  - 待決定：畫面文字、題型、天氣與全站投票是否一起做（都要部署中繼站）。
-  - 其他想法：大事件分享圖卡（創用電新高、綠能紀錄、跳機、黃燈）、跳電當下「現在發生什麼事」頁、兩個月一次電費帳單提醒。網頁做不到手機桌面小工具（要原生 App）。
 - **產品功能手冊**：2026-11-02 依程式盤點寫成 Claude Docs「台灣脈動 產品功能手冊」（https://claude.ai/artifact/TQj6gLa1tuBsUnzB6BQ16t），功能有改時要同步更新。
 - **石油地圖**（2026-11-02 研究，未決定範圍與放哪）：使用者想要「油田→煉油廠→港口→航線→各國」流向圖。
-  - 即時逐船貨量只有付費：Kpler（第三方估中位數約 US$55,000／年，Vendr）、Vortexa、S&P、AXSMarine 都不公開價；公開網站展示的授權另議。→ 不做即時，改用統計。
-  - 免費可用（待實測）：EIA Brent／WTI 日價（免費金鑰、每週整批更新）、Energy Institute Statistical Review 年度跨區原油貿易（Excel）、GEM 油氣開採追蹤（CC BY 4.0）、NGA World Port Index（美國政府公有領域）、中油牌價（data.gov.tw「台灣中油公司各項油品牌價」待確認有無歷史）、能源署「原油進口來源」頁（moeaboe wFrmA0103，未驗證）。航線 GeoJSON 尚未找到來源。
-  - 建議切角「台灣的油從哪裡來」：產油國→出口港→航線（標荷莫茲、麻六甲）→台灣港口→煉油廠（大林、桃園、麥寮）→加油站；國際油價對照中油牌價。新聞點：2026 年美伊開戰後 3–5 月美國原油佔台灣進口 43%（去年同期 32%）、中東佔比 66.7%→57.9%（聯合報、財政部）。
-  - 已有人做：MarineTraffic／Global Energy Flow（即時船位）、ShipMap（2016）、WTO 荷莫茲海峽貿易追蹤（免費）、Mentas；沒看到台灣切角的。
-  - 待決定：以台灣為主或全球、做成台灣脈動新模式或獨立網站；之後先實測資料來源再出預覽。
-- **其他國家電力即時程度**（2026-11-02 補查，未實測連線）：美國 EIA-930 每小時各調度區燃料別與區間交換（免費 API，逐電廠只有每月）；日本各電力公司 5 分鐘區域用電 CSV、OCCTO 發電方式（火力不拆煤氣油）與區間聯絡線 5 分鐘潮流（未找到正式 API）；韓國 KPX 首頁即時供需、data.go.kr 15158491「各發電來源現況」API 頻率待確認；中國官方只有各省每月（晚 1 個月），Electricity Maps 的中國即時為模型推估。要做亞洲版先用一次性 Actions 實測。
-### 中繼站
-- v8.1 已部署（2026-10-25，commit 040fbc8，SHA-256 1260d9b6…5190）：推播改名台灣光脈動、`/typhoon.json` 直接回 503。
-- v8.2 已部署（2026-10-25，commit 281cf9e，SHA-256 dc6c43b2…8a61）：`/open/unit-history.json`（data.gov.tw 37331 台電各機組過去發電量）。
-  查證結果：檔案 196 MB、只有 3 個月、只有台電自有 153 部機組（無民營電廠、購電再生能源；2026-04-15 12:00 合計只有 19,356 MW、太陽能 84 MW）→ 不適合做全台回放 → v0.8.22 用在電廠卡「過去發電量」（`scripts/unit-history.mjs` 手動跑 → `public/unit-history.json`，19 座電廠；原檔 04-01 整天重複，腳本已去重）。台電更新資料時重跑。
-- v8.3 已部署（2026-10-25，commit fd8e133，SHA-256 66c00aab…d823）：`/bundle.json?x=air` 一起帶 aqi、cems、sun（壓縮後 11 KB → 19 KB）。網頁 `src/data/extras.js`：資料包有帶就用，舊中繼站或失敗時各自退回原網址。
-- 用量（2026-10-24）：Workers 一天 5,496 次（免費 10 萬的 5.5%）。v0.8.20 起每個前景分頁每小時約 6 次（原本約 16 次）→ 免費額度約可撐全天平均 690 人同時在線；同時在線 > 400（`BUSY_ONLINE`）時網頁改每 20 分鐘更新。超過免費額度會回 1027 到台灣早上 8 點；要更多就升級 Workers Paid（$5／月含 1,000 萬次，超過每百萬 $0.30）。
-- 部署 curl 注意：檔案欄位要寫 `filename=worker.js`，否則回 10021「No such module」。
-- v8.5 已部署（2026-10-25，commit c293723，SHA-256 952fca18…441e）：意見回饋 POST /feedback（KV `fb:日期` 存 180 天、全站每天上限 100 則、同 IP 60 秒一則；每天前 10 則 LINE 通知管理者；管理者在 LINE 傳「回饋」看最近 7 天）。
-- v8.6 已部署（2026-10-26 01:41，commit 81a3845，SHA-256 d81f0de2…6c9e）：回饋改為每則一個鍵 `fb:日期:時間-亂數`（v8.5 的 `fb:日期` 陣列仍可查）、每日計數 `fbn:日期`、60 秒限制改 KV `fbip:IP雜湊`（60 秒 TTL；workers.dev 上 Cache API 無效）、滿 100 則回 503 `full`、body 非物件回 400。
-- v8.7 已部署（2026-10-26 12:26，commit 0e53bb7，SHA-256 3a69e83a…6ff2）：App 通知依訂閱語言發中／英文（訂閱存 `lang`，subscribe 回傳 lang）。
-- v8.8 已部署（2026-10-26，commit 073725a，SHA-256 a9cc59ec…3e08）（低碳時段通知）：訂閱存 `lowc`；每天第一次排程用昨日 loadfueltype_1.csv 算 07–22 點最低碳 2 小時存 KV `日期:lowc`，時段內發一次（`日期:plowc`）。係數與網頁 carbon.js EMISSION、欄位與 parseAux FUEL_COLS 要同步。
-- v8.9 已部署（2026-10-26，commit 0abc92f，SHA-256 5b304ca4…1047）：`/water/tainan-pipes.json` 固定轉送臺南給水管線（實測 522，臺南伺服器擋 Cloudflare）。
-- v8.10 已部署（2026-10-26 23:46，commit a33f4e4，SHA-256 a4eee5ee…2904）：推播、LINE 訊息名稱改「台灣脈動」。
-- v8.14 已部署（2026-11-04 12:38，commit 936a680，SHA-256 765ee2b6…e3e9，`X-Relay-Version: 8.14` 立即生效）：知識題暱稱只能免費改一次（qp `renamed`）、暱稱不可重複（作答建立預設名重名時加 `#uid前4碼`）、作答不覆蓋暱稱；管理者在 LINE 傳「改名 舊暱稱→新暱稱」（DO 內部 `admin-rename`）。**補答規則**：作答帶 `round`（期），這一期隨時可答；上一期可補答，每季最多 3 期（qa `late`=1，一期算一次）；更早的期回 `closed`、次數用完回 `nolate`；第一次加入（qp `joined`＝第一次作答的期，舊使用者用最早紀錄）的那一期可補答本季之前所有期（`late`=2，不扣）。board／answer 回傳 `joined`、`late{season,rounds,max}`。正式站雙重檢查：當期 ok、未來／上一季 closed、格式錯 400、舊網頁不帶 round 可答、改名 taken／一次 ok／第二次 locked，測試紀錄已刪。
-- v8.13 已部署（2026-11-04 01:10，commit 9e5f29e，SHA-256 d054bc34…，`X-Relay-Version: 8.13`，約 30 秒生效）：知識題每週上限 6 題。實測第 7 題回 full、測試紀錄已刪。
-- v8.12 已部署（2026-11-03 00:29，commit 42f7f9b，SHA-256 1a295f26…，含版本標頭 `X-Relay-Version: 8.12`）：知識題排行榜 `/quiz/answer`、`/quiz/board`、`/quiz/name`、`/quiz/forget`，資料存在 Durable Object `Presence` 的 `idFromName('quiz')` 實例（SQLite 表 qa、qp，不需新綁定或 migration）。**注意：API 部署回成功後，workers.dev 實際生效約等了 10 分鐘**（期間仍回舊版）→ 部署後用 `X-Relay-Version` 標頭確認，改版時記得把 CORS 裡的版本號一起改。
-- v8.11 已部署（2026-10-29 01:23，commit 7558bd1，SHA-256 39ebd01c…c371，用 api.cloudflare.com 代理憑證直接 PUT /content）：`/alert?type=maint`「已自動暫停網站」LINE 訊息。
-- v8.4 已部署（2026-10-25 19:40，commit 397bd39，SHA-256 ebe9a8f7…7d7d）：訂閱（p:、u:）同時存成 KV list metadata，排程列出時不用逐筆讀（原本約 144×人數 次/天，約 690 人達免費 10 萬上限）。舊資料第一次被讀時補寫 metadata（每筆一次寫入，每次排程最多 100 筆、寫入失敗不影響通知）。已用模擬 KV 測過。另外待辦：字型 Noto Sans TC 300＋400 兩個字重首次約 1 MB，拿掉 300 可省一半但地圖細字會變粗（設計取捨，待使用者決定）。
-### 其他
-- 英文介面：空品測站名（「我的家」測站選單）仍是中文——環境部 aqx_p_432 沒有英文站名；要英文需中繼站另抓測站基本資料 aqx_p_07 的 siteengname（要部署中繼站）。機組名只在開頭是電廠主名稱時換英文（geo.js `unitName`），水力節點與其他小站照原文。
-- loadpara.json 另有 `yday_*`（昨日尖峰用電、備轉）與 `real_hr_maxi_sply_capacity`（今日實際最大供電能力），網頁目前沒用。
-- 地圖引擎（v0.8.66，2026-10-27）：maplibre-gl 6.16＋deck.gl 9.4（修 GHSA-jrc7-96c5-q579）。注意：① maplibre 6 的背景執行緒是獨立檔，GridFlowEngine.js 用 `maplibre-gl/dist/maplibre-gl-worker.mjs?url` + `setWorkerUrl` 指定；② maplibre 6 把鏡頭狀態搬到 `map._camera.transform`，deck.gl 9.4 疊圖仍讀 `map.transform` → 在 map 上補 getter（升級 deck.gl 後可檢查是否還需要）；③ `import * as maplibregl`。gzip 比 5.6／9.1 多約 83 KB（maplibre 292、deck 267），worker 另載約 150 KB。package-lock 的 playwright 鎖 1.63（配合本機預裝瀏覽器）。
-- 返回鍵（v0.8.62）：App.jsx 用 history.state.tgfDepth 對應層數（面板 1、地圖選點 2）；介面自己關閉時 history.go 退回並略過那次 popstate。Esc 處理器一律 `e.preventDefault()`、其他處理器先看 `e.defaultPrevented`（面板 → 選點 → 對話框 → 回放／放空，一次只做一件事）。
-- 時間：亮點、回放、狀態列、我的紀錄、今日曲線重建都用台電資料時間（history.js `rowHM`／`dataMs`），不用收到資料的 `t`。
-- 2026-10-27 夜間兩輪無頭瀏覽器 QA（手機直／橫、平板、電腦、鍵盤、英文）問題都已修；剩：手機橫向（高約 400 px）全島視角受地圖邊界 MAX_BOUNDS 限制無法再縮小，島會略壓到篩選列／工具列（v0.8.63 留白已依介面位置計算）。2026-10-27 06:15 日出後用真實資料檢查：太陽能 06:00 起出現、黎明交班徽章、亮點與電廠卡時間都正常。
-- v0.8.65 依使用者確認的三份預覽上線：品牌（index.html 開機畫面、`src/components/Logo.jsx`、public 圖示由 Playwright 畫）、首頁精簡（Hud.jsx `FilterChip`、`.mix-sub`、ClockPanel `simple`、HomeCard 膠囊）、電廠卡（Plant.jsx `CapRing`／`TodayChart`）與亮點方塊（純 CSS，styles.css 末段）。
-- 首次載入最大宗是字型（Noto Sans TC 300＋400 約 0.9 MB），其次 maplibre 255 KB、deck.gl 221 KB（gzip）。
-- 首次載入：4G 模擬約 7 秒才出現地圖（maplibre 255 KB、deck.gl 221 KB gzip）。v0.8.31 地形圖磚 tileSize 改 512（手機首次 1.9 MB → 0.5 MB）。面板程式只佔約 5%，延後載入效益小；回訪有 service worker 快取很快。
-- CEMS：中繼站沒有漏資料，環境部 aqx_p_187 本身時常缺台中、興達、麥寮汽電（2026-10-25 02:00 查證）。
-- 右下資料來源列與「蘭嶼鄉」地名重疊（已加陰影）。（東部供電區標籤已移到台東外側；電腦版「全島」按鈕在面板打開時移到面板左邊）
-- CEMS、日射量一開頁就下載（CEMS 也用在地圖電廠標籤，所以沒改成延後）。
-- `index.html` 的 `user-scalable=no`（iPhone 縮放問題當初刻意加的，先保留）。
-- 小水力、石門、陸域小風場等對不到節點的機組依比例分配到同燃料電廠（量小）。
-- 2026-10-26 資料稽核（逐項比對中繼站原值）：總發電、各燃料、各區、用電、燃料曲線、預報都正確。已修：和平 PLANT_REGION 改 N（台電分區把和平算北部）、鉅工／水里歸 mingtan、碳排分級基準 0.467×0.95（發電端 vs 售電端）。待查：深夜 23 點後 loadpara 的 fore_* 可能已換成隔天預估但 publish_time 仍是今天（網頁標「今日尖峰」）；雲林節點（允能、麥寮）台電可能算南部（2026-10-27 凌晨每 25 分鐘比對：節點出力按 PLANT_REGION 加總，中部一直比台電中部實測多約 1,100–1,300 MW、南部少約 850；允能＋麥寮改南部後中部仍多約 450–700，再把苗栗離岸風場改北部最吻合，但只有夜間資料、也查不到台電官方縣市對照 → 2026-10-27 使用者同意，v0.8.64 已改（允能、麥寮、雲林太陽能 → S；苗栗離岸 formosa1/2、苗栗風場 → N；REGIONS 雲林縣移到南部；通霄留中部）；白天可再比對確認；腳本概念：抓 lastSnapshot.plants 與 regions.byKey.gen 相減）；`public/unit-history.json` 已於 2026-10-27 重跑（鉅工、水里改在 mingtan；台電原檔仍是 03-01～05-31）。
-- 2026-10-25 已用 OSM power=plant 交叉核對：火力、核能、離島電廠位置都在 1.3 km 內（綠島 OSM 沒有）；新增豐德、海湖、新桃、國光、星元、星能節點（原本豐德沒對應、海湖／新桃／國光併在大潭、星元併在麥寮、星彰併在彰濱風電）。PLANTS 的 `fuel` 欄位＝電廠主燃料（麥寮 coal、澎湖／金門 oil），電廠卡用來說明主要機組不在資料裡。台電即時資料目前沒有麥寮燃煤機組，麥寮節點只剩雲林風力（CEMS 仍有麥寮汽電煙道資料）。仍對不到的：汽電共生（627 MW）、其它購電太陽能／風力、中威大安、創維風、小水力、電池。
-- 詳細待辦另見 claude.ai「APP」專案的《台灣光脈搏_待辦清單》（舊名）。
-- 2026-10-26 改名「台灣脈動」（英文仍是 Taiwan Grid Flow）；網頁、manifest、分享圖（public/og-image.jpg 用 PIL 重畫標題）、中繼站推播文字都已改。git 歷史與舊版更新說明保留舊名。
+- **其他國家電力即時程度**（2026-11-02 補查，未實測連線）：美國 EIA-930 每小時各調度區燃料別與區間交換（免費 API，逐電廠只有每月）；日本各電力公司 5 分鐘區域用電 CSV、OCCTO 發電方式（火力不拆煤氣油）與區間聯絡線 5 分鐘潮流（未找到正式 API）；韓國 K…（詳見 docs/紀錄.md）
 
-### 其他國家（2026-10-26 用一次性 Actions 實測；使用者決定暫不做）
-- 澳洲 AEMO：`visualisations.aemo.com.au/aemo/apps/api/report/ELEC_NEM_SUMMARY`（5 州需求、價格、互聯線，CORS *，瀏覽器可直接讀）；逐機組 `nemweb.com.au/Reports/Current/Dispatch_SCADA/` 每 5 分鐘一個 ZIP（約 3.7 KB、約 520 個 DUID，無 CORS → 要中繼站解壓）。機組座標要另外對（GEM，CC BY）。
-- 英國 Elexon：`data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST`（燃料別 5 分鐘）、`PN/stream`（逐機組計畫值，40 分鐘約 1.1 MB）、`B1610`（實測，約晚 5 天）、`reference/bmunits/all`（有 GSP 區，無座標）；全部 CORS *。NESO `api.carbonintensity.org.uk/regional` 有 14 區發電組成。
-- 法國 RTE éCO2mix（odre.opendatasoft.com）CORS *。
-
-### 💧 水模式（v0.8.51 起）
-- **2026-10-26 使用者決定先不開放**：`src/config/app.js` 的 `water: false` → 不顯示切換、強制電力模式；開發測試用 `?water=1`（冒煙測試也用它）。要開放就改 `water: true`。
-- 切換：上方 `ModeSwitch`（網址 `?mode=water`、localStorage `tgf-mode`）。`engine.setWater(on)` 清空 deck 圖層、停粒子與各區熱度、maxZoom 12→17。水的圖層是 MapLibre 原生圖層：`src/water/waterMap.js`；介面：`src/water/WaterHud.jsx`（右上總覽、圖層開關、圖例、點選卡、水庫清單、停水連結）。
-- 靜態資料 `public/water/`（`scripts/water/build-static.py`，由 `.github/workflows/water-static.yml` 在 Actions 跑；手動執行可選 `plants reservoirs taipei`，推到分支只重跑水庫）：
-  - `plants.json`：台水淨水場 36602（supp7.csv，TWD97→WGS84），每年。
-  - `reservoirs.json`：水利署水庫基本資料 32726（中文欄位、容量有千分位逗號；目前有效容量缺值用設計值）＋ OSM 水庫範圍中心（Overpass 要用專案 User-Agent，會 502 要換站）。對不到：大埔、集集攔河堰、鹿寮溪。
-  - `taipei-trunk.json`（管徑 ≥ 300 mm，約 950 km，1.7 MB）＋ `taipei/{x}_{y}.json`（小管 0.02° 一格，76 格約 25 MB，zoom ≥ 14 才載入）：data.taipei 工務局「公共管線圖資＿自來水系統管線」6 個 XML（約 760 MB，轉檔約 25 分鐘），每季更新。service worker 不快取 `/water/`。
-- 即時：`scripts/water-live.mjs`（build 時跑）→ `public/data/water-live.json`：水庫水情 45501（`opendata.wra.gov.tw/api/v2/2be9044c-…`，有效蓄水量單位萬 m³）、枯旱預警 36695（`51ea7202-…`）。水利署要求蓄水率不要用綠黃橙紅（避免和水情燈號混淆）→ 一律藍色。
-- 臺南給水管線（122507）：`soa.tainan.gov.tw` 擋海外，Cloudflare 也 522（中繼站 v8.9 `/water/tainan-pipes.json` 已部署但取不到）→ 要在台灣網路下載後放進 repo 再轉檔。桃園（opendata.tycg.gov.tw）下載方式未找到。
-- 停水：台水無公開 API（停水地圖用內部介面，不用）→ 只放連結。北水處有官方停水開放資料 128236（ASMX，大台北，每日）→ 下一步可接（要查欄位與 CORS／中繼站）。
-- 研究（2026-10-26）可加：北水災時供水 KML 138526、北水各淨水場水質 139258（季）、環境部自來水水質抽驗、每人每日用水量 8316、台水漏水率 103681、地下水即時水位；國外參考：USGS National Water Dashboard、東京都水道局震災通水地圖、Thames Water 維修地圖、芝加哥鉛管地圖、「從水源到水龍頭」導覽（Las Virgenes、Icon Water）。
-
-### 自來水版評估（2026-10-26 用一次性 Actions 實測，待使用者決定）
-- 海外（GitHub Actions）可直接讀：台水 `www.water.gov.tw/opendata/*.csv`（淨水場位置與供水轄區 supp7.csv＝data.gov.tw 36602，TWD97；水質 qual9.csv；供水系統月資料 syst8.csv）、data.gov.tw API、水利署 opendata.wra.gov.tw（枯旱預警 36695、曾文 32733、高屏堰 143020 等 `/api/v2/{id}?format=JSON`）。
-- 管線真實座標：只有臺南（data.gov.tw 122507 給水管線）、臺北（data.taipei 自來水系統管線）、桃園（opendata.tycg.gov.tw）以開放資料公開，註明「僅供參考」；其他縣市沒有。OSM 台灣：water_works 約 190、水塔約 260、水管 pipeline 131 條。
-- 沒有：即時用水量／水壓、停水公告 API（6050 疑似停更）、水情燈號 API。
-
-### 可加的資料（2026-10-25 研究，免費優先；網址待在台灣網路確認）
-1. ~~台電各機組過去發電量（37331）~~（只有台電自有機組，v0.8.22 用在電廠卡「過去發電量」）。
-2. ~~OSM 超高壓線路與變電所~~（v0.8.19 已做，「更多 → 線路」可切回示意光纖）。
-3. 全國部門別用電月資料（161209）→「誰用掉了電」。
-4. 縣市住宅／服務業／機關用電（29935）。
-5. 氣象署颱風路徑 W-C0034-005（已有 CWA_KEY）→ 補颱風功能。
-6. 各類發電量月統計（112650）、再生能源月資料（160060）→ 長期趨勢（能源署擋海外主機；年度趨勢已用 Ember 做在亮點「台灣發電結構 2000–2025」）。
-7. ~~Ember 國際比較~~（v0.8.23 已做：亮點「台灣在世界的位置」，`scripts/ember.mjs` → `public/ember.json`，每年 Ember 更新後由一次性 workflow 抓原檔再重跑）。
-8. 電力交易平台輔助服務價格（公開網址待確認）。
-- 能源署（moeaea.gov.tw，161209／112650／160060）：GitHub Actions 被 Cloudflare 驗證頁擋、這個環境也連不到 → 要經中繼站或在台灣網路抓。台電 29935 需加進中繼站 OPEN_FILES（要部署）。
-付費：Electricity Maps 商用約 €6,000／年，資料多半也來自台電 → 不建議。
-
-## 管理者手冊：介面不寫的提醒（2026-10-25 起規則：只給管理者知道的寫這裡，介面只寫使用者有權知道的）
-- 空品讀不到、錯誤訊息含「金鑰」：到環境部資料開放平台申請 API 金鑰，設成中繼站 Worker 的 Secret `MOENV_KEY`。日射量要 `CWA_KEY`（氣象署）。
-- 中繼站免費額度用完（錯誤 429／1027）：台灣早上 8 點重置；要避免就升級 Workers Paid。介面只說「今天使用人數太多，空品資料暫停更新，早上 8 點恢復」。
-- 預報（forecast）、App 通知（需 v4 以上的 vapid 金鑰）都靠中繼站；讀不到時介面只說「暫時讀不到／暫時無法使用」。
-- 本機版：用「啟動.bat」或桌布伺服器開（直接開 HTML 檔連不到台電）；GitHub Pages 版的備份資料由 Actions 每 10 分鐘抓。
-- 知識題暱稱：使用者只能免費改一次；要再改會從「意見回饋」來找你 → 在 LINE 傳「改名 舊暱稱→新暱稱」（中繼站 v8.14 起）。
-- 意見回饋：中繼站 `POST /feedback` → KV `fb:日期`（180 天），每天前 10 則 LINE 推播給 LINE_TO；在 LINE 傳「回饋」看最近 7 天。
-- 介面的錯誤一律只寫「暫時讀不到／暫時無法使用、何時恢復」。原始原因看中繼站 `/aqi.json`、`/cems.json`、`/sun.json` 的 error 欄位，或 /log 的錯誤紀錄（31 天）；通知開不起來多半是 KV（NOTIFY）沒綁或 `/config.json` 沒有 vapidPublic。
-- 連線診斷的檔名、筆數、HTTP 碼只給開發看（本機 `?debug=1`）；`?sim=1` 是示範模式；`/taipower/...` 只有本機 vite 代理才有。
-- 計畫停電原始 ZIP 每天存 KV `outage:raw:日期`（沒有期限）累積歷史，注意 KV 容量。
-- 回饋的「同 IP 60 秒一則」與每日 100 則計數都用 KV，KV 最終一致（同機房可能 60 秒內讀不到剛寫的值）→ 只是概略限制；被灌爆再改用 Durable Object 計數。
-- 中繼站開了 observability（Workers Logs）：尚未確認是否記錄 IP；介面目前寫「IP 位址不會寫入資料庫；送回饋時只暫存 60 秒防重複」。
-- 開放 LINE 給所有好友（`LINE_FRIENDS=1`）前，先在「本站伺服器與你的資料」補 LINE 使用者 ID 的保存說明（封鎖即刪）。
-- 付款 QR（donate-qr.png）2026-10-26 依使用者決定移出 repo（git 歷史仍有舊檔；要徹底清除需改寫歷史，未做）。
-- App 通知語言：訂閱存 `lang`（zh／en，中繼站 v8.7 起）；網頁換語言時自動重新登記（`home.pushLang`，中繼站回傳 lang 才記）。新增通知種類要同時寫中英文。
-- 使用者看得到的「本站伺服器與你的資料」（資訊 → 資料來源）要和中繼站實際保存的內容一致：通知訂閱（關閉即刪）、回饋 180 天、在線代碼 12 分鐘、錯誤回報約 30 天、不存 IP。改中繼站保存方式時要一起改這段文字。
-
-## 資料需定期更新
-- `public/grid-lines.json`：OSM 345kV／161kV 線路與超高壓變電所（ODbL，2026-10-25 擷取，Douglas-Peucker 精簡）。這個環境連不到 Overpass：要更新時在分支放一次性 workflow 由 Actions 抓取提交，用完刪掉。光流模式 `localStorage tgf-route`（grid／fiber），引擎 `src/engine/gridNet.js`：只走最大連通網路；路線比直線長超過 2.5 倍＋0.1° 改用示意路線（OSM 缺線段，例如和平→花蓮、德基→花蓮）。
-- `src/config/nuclear.js`：核電廠現況（核安會、經濟部）。狀態有變（例如核三再運轉進度、核二送審）要更新，並改 `NUCLEAR_VERIFIED`。
-
-## 備選清單（暫停中）
-- **颱風停電（D2）**：2026-10-24 停用（`src/config/app.js` 的 `typhoon: false`，網頁不請求也不顯示）。原因：台電 psvs1（`service.taipower.com.tw/psvs1/`）從 Cloudflare 中繼站讀會逾時（台灣連 Worker 也一樣 502）、從台灣瀏覽器直接讀被 CORS 擋（無 `Access-Control-Allow-Origin`）、GitHub Actions 是海外主機。每月排程會自動搜尋台電是否有新的公開來源（API、開放資料、CORS 開放），有就通知使用者。恢復方式：換資料來源 → 改中繼站 `typhoon()` → `typhoon: true`。中繼站程式碼仍保留 `/typhoon.json`。
-
+## 其他資料（需要時才讀，平常不要整檔讀）
+`docs/紀錄.md`：待辦細節、中繼站歷次部署（v8.1–v8.14）、已知問題與查證紀錄、其他國家／水模式／石油研究、可加的資料、**管理者手冊**、資料定期更新、備選清單。用 grep 找關鍵字只讀相關段落。
