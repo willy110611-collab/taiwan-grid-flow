@@ -1,6 +1,7 @@
 {
-  "version": "0.8.77",
+  "version": "0.8.78",
   "notesEn": [
+    "Removed a dark rectangle behind the top-right numbers that covered northern Taiwan",
     "New-quiz notifications: every Monday and Thursday at 7 am an app notification tells you a new round is live (on by default for app-notification users; turn off under Home → Alerts, or tap “Notify me” in the Quiz)",
     "On phones, first-time visitors get a short prompt to add the app to the Home Screen and turn on notifications",
     "111 new quiz questions (grid, renewables & world, saving power & carbon, energy news), each with a source",
@@ -11,6 +12,7 @@
     "Quiz now has 3 new questions every Monday and Thursday (instead of 5 every Monday)"
   ],
   "notes": [
+    "右上角數字背後的暗色底改成自然淡出，不再擋住台灣北部",
     "知識題新題通知：每週一、週四早上 7 點用 App 通知提醒新一期上線（已開 App 通知的人預設收到；「我的家 → 提醒」可關，知識題面板可按「新題通知我」）",
     "手機第一次打開時提醒加入主畫面，並可一鍵開啟空品、供電與知識題通知",
     "知識題題庫新增 111 題（電力系統、再生能源與國際比較、生活節電與碳排、能源時事），每題附出處",
