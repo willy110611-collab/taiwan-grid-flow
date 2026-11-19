@@ -1269,3 +1269,14 @@ html:lang(en) .qz-top3 .h { letter-spacing: 0.06em; }
 .qz-nudge-b button.go { border-color: rgba(255, 198, 92, 0.55); color: var(--gold); background: rgba(255, 198, 92, 0.08); }
 @media (max-width: 699px) { .qz-nudge { left: var(--gutter); right: var(--gutter); width: auto; bottom: calc(200px + var(--safe-b)); } }
 @media (prefers-reduced-motion: reduce) { .qz-nudge { animation: none; } }
+/* 知識題：新題通知我 */
+.qz-push { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.qz-push-row { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.45; }
+.qz-push-row span { flex: 1; }
+.qz-push-row .qz-btn { flex: none; padding: 9px 16px; white-space: nowrap; }
+/* 手機第一次開啟：加入主畫面＋開通知 */
+.welcome .upd-card { max-width: 360px; }
+.welcome .wl-step { font-size: 13px; line-height: 1.55; color: var(--ink-dim); margin: 0 0 10px; }
+.welcome .wl-step b { color: var(--ink); }
+.welcome .switch { font-size: 13px; margin-top: 10px; }
+.welcome .wl-msg { color: var(--gold); font-size: 12px; margin: 8px 0 0; }

@@ -23,6 +23,7 @@
 - `scripts/opendata.mjs`（`npm run build` 會先跑）：建置時從中繼站 `/open/…` 抓台電開放資料 → `public/data/*.json`（計畫停電、鄉鎮用電、歷年供需、縣市綠電）。`SKIP_OPENDATA=1` 可略過。
 - `.github/workflows/`：`deploy.yml`（push 與每 10 分鐘建置部署，上線前跑 `npm run check` 與冒煙測試）、`health.yml`（每小時健康檢查，有問題才通知）、`rollback.yml`（一鍵回到上一版）、`maintenance.yml`（維護模式：暫停／重新開放）。
 - 知識題（v0.8.71）：`src/config/quizBank.js`（題庫＋出處 SOURCES；**新增題目加在最後、填 since 日期，不改舊題 id**；每題要有確切出處）、`src/data/quiz.js`（週／季計算、選題：從 QUIZ_START 逐週挑最久沒出的題、同分用雜湊；6 種看地圖題依當下台電資料判斷；作答紀錄 localStorage `tgf-quiz`）、`src/components/Quiz.jsx`（面板、去地圖找答案的提示列 QuizPeekBar、主畫面本季前三 QuizTop3）。v0.8.72 起每週一、週四 00:00 各換一期 3 題（2 知識＋1 看地圖；期 id `2026-W46-1`／`-2`，2026-W45 是舊制一期 5 題）；每兩個月一季（依該週星期一月份），補答規則（v0.8.75，使用者指定）：上一期每季可補 3 次、更早截止，第一次加入的那一期可補全季（`canAnswer`，中繼站 v8.14 同樣把關）；未答提醒小視窗 `APP.quizNudge: true`（打開 6 秒後、每期最多一次）；排名＝答對數、同分比作答總時間（單題最多計 30 分鐘）。對錯在裝置端判斷，中繼站只記分（以週記分、每週最多 6 題〔v8.13；v8.12 是 5 題〕、每題只算第一次、只收本季且不晚於本週）。`APP.quiz` 可關。使用者希望題庫持續增加、可偶爾重複。待查：advice.js 時間電價 5.16／2.06 標「114 年 10 月起」，但有文章說是 115 年 4 月起的費率（題庫先不出電價費率題）。
+- App 通知（v0.8.77／中繼站 v8.15）：訂閱欄位 `alerts`（空品／供電，要地點）、`o3`/`o1`（停電）、`lowc`、`quiz`（知識題新題，未設定＝開）。網頁 `home.quizOff`（關掉）、`home.qpush`（只為知識題登記，不需地點）；`useHome.js` 的 `pushOn`／`quizPushOn`／`setQuizPush`／`relayVapid`。中繼站每週一、四 07 點那輪發一次（KV `日期:pquiz`），附本季第一名；通知帶 `panel:'quiz'`，sw.js 點擊 → 已開網頁收 `tgf-panel` 訊息，否則開 `./?panel=quiz`。手機第一次開（看完導覽後）跳 `Welcome`（`Guide.jsx`，localStorage `tgf-welcome-v1`）：加入主畫面＋勾選空品供電／知識題通知；iPhone Safari 只教加入主畫面（主畫面版儲存空間不同，會再問一次）。冒煙測試、健康檢查要預設 `tgf-welcome-v1`。
 - 維護模式（v0.8.70）：`public/maintenance.json`（`{"on":false}`；暫停 `{"on":true,"since":ISO}`）。index.html 先發請求、`src/maintenance.js` 決定顯示維護頁或網頁；開著的網頁每 5 分鐘與切回前景時檢查、維護頁每 3 分鐘重查（恢復自動重新載入）；service worker 不快取這個檔。`?maint=0` 略過（冒煙測試、健康檢查用）。
   - 健康檢查（`scripts/health.mjs`，每小時）：有問題 3 分鐘後重查。**嚴重**（網頁 60 秒打不開、地圖沒出現、總發電 < 5,000 MW、與中繼站 genary 原始加總差 > 10%（同資料時間才比）、用電 > 發電 × 1.3）→ 自動改 maintenance.json、推 main、`gh workflow run deploy.yml`，LINE 用 `/alert?type=maint`（中繼站 v8.11；回 ignored 時改送 site）。其他（資料延遲、面板／今日重播／自動導覽／篩選出錯）只通知。已暫停時不再通知。本機試跑：`HEALTH_DRY=1 HEALTH_SITE=http://127.0.0.1:4177/ node scripts/health.mjs`。
   - 重新開放：Actions「維護模式」→ 重新開放（或改檔推 main）。
@@ -47,8 +48,6 @@ Durable Object `PRESENCE`→`Presence`（SQLite）已建立，migration tag 已�
 ## 目前待辦
 - 本週 11/4–11/8 除維護外不處理其他事項（使用者指定）。
 - 省 token：2026-11-05 已把 CLAUDE.md 從約 2.7 萬字縮到約 1 萬字（細節搬到 docs/紀錄.md）；舊的長對話（10/24 起，約 11.2 億 token）應結束，之後一件事開一個新對話。
-### 下一件要做（使用者已決定，2026-11-19）
-- **知識題新題通知**：每週一、週四 **早上 07:00**（台灣時間）用 App 通知（Web Push，免費；不用 LINE，LINE 每月只有 200 則）提醒新一期上線，例：「知識題新一期上線！3 題約 1 分鐘，本季目前第一：○○（8 題）」，點了打開知識題（`?panel=quiz` 之類）。**預設開啟**：已開 App 通知的人自動收到；「我的家 → 通知設定」（`src/components/Life.jsx`，仿 `lowcPush`）加「知識題新題」開關可關閉；知識題面板加「新題通知我」按鈕（沒開 App 通知的人用）。中繼站：訂閱存 `quiz`（未設定視為開）、排程在週一／四 07:00 那次發送（KV 記 `日期:pquiz` 避免重複）、中英文兩種。流程：先出預覽圖（開關＋按鈕）→ 使用者確認 → 實作 → 使用者說「允許部署」才部署中繼站。
 ### 需要使用者決定
 - **知識題時事題**：v0.8.76（2026-11-17）已加 111 題（k100–k217，含時事 k190–k217）；子助手環境連不到外站，出處網址是用搜尋摘要確認、未實際打開 → 待使用者在台灣網路抽查（特別是 d_udnPeak、d_eaDemand、d_moeaWind、d_moeaLng3、a_ 的 tpcjournal/2186）。之後持續加時事題。原需求（2026-11-04 使用者提出）：題庫偶爾加入和近期新聞、熱門話題有關的題目（例：電價調整、核電公投／再運轉進度、創用電新高、颱風停電、能源政策），一樣要有確切出處（新聞＋官方來源），`since` 填加入日期；時效性題目可在題目或說明寫明「截至某年某月」。
 - **網站錯誤「sw.js load failed」**（2026-11-04 LINE 錯誤通知，v0.8.73 手機 promise 3 次）：已查到原因、尚未修：`src/update.js` `applyUpdate()` 裡 `(await getRegistration())?.upd…（詳見 docs/紀錄.md）

@@ -16,7 +16,7 @@ import { useTyphoon } from '../data/openData.js';
 import { NuclearPanel } from './Nuclear.jsx';
 import { Guard } from './Guard.jsx';
 import { useT, useLang, tx } from '../i18n.js';
-import { UpdatePrompt, RefreshBtn, Tour, DataIssue } from './Guide.jsx';
+import { UpdatePrompt, RefreshBtn, Tour, DataIssue, Welcome, tourSeen } from './Guide.jsx';
 import { useUpdate } from '../update.js';
 import { FeedbackPanel } from './Feedback.jsx';
 import { QuizPanel, QuizPeekBar, QuizTop3, QuizNudge } from './Quiz.jsx';
@@ -64,6 +64,8 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
   const qz = useQuiz();
   const quizNew = quizOn && hasNewWeek(qz); // 本週題目還沒看過：「更多」與選單項目亮小點（不推播）
   const [more, setMore] = useState(false);
+  const [tourDone, setTourDone] = useState(tourSeen);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
   // 背景音（預設關）：上次開著的話，等使用者第一次點畫面再開始（iPhone 規定）
   const [sound, setSound] = useState(() => soundPref());
   const [soundToast, setSoundToast] = useState(false);
@@ -335,7 +337,8 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
       )}
       {tbHint && <div className="tb-hint" key={tbHint.k} role="status" onClick={() => setTbHint(null)}>{tbHint.text}</div>}
       {!wallpaper && <UpdatePrompt />}
-      {!wallpaper && !(upd.available && !upd.dismissed) && <Tour />}
+      {!wallpaper && !(upd.available && !upd.dismissed) && <Tour onDone={() => setTourDone(true)} />}
+      {!wallpaper && !W && <Welcome home={home} setHome={setHome} station={homeSum?.station} ready={tourDone} blocked={!!ui.panel || (upd.available && !upd.dismissed) || !!replay?.on || !!ui.cruise} onShow={setWelcomeOpen} />}
 
       {ui.panel === 'highlights' && <Guard key={'g-highlights'} name="highlights" onClose={() => setUi({ panel: null })}><HighlightsPanel hl={highlights} live={live} records={records} dayRows={dayRows} yRows={yRows} onPlant={(id) => setUi({ panel: 'plant', plantId: id })} onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'info' && <Guard key={'g-info'} name="info" onClose={() => setUi({ panel: null })}><InfoPanel key={ui.infoTab || 'x'} initialTab={ui.infoTab} snapshot={snapshot} air={air} sun={sun} power={power} powerSave={powerSave} onClose={() => setUi({ panel: null, infoTab: null })} /></Guard>}
@@ -352,10 +355,10 @@ export default function Hud({ snapshot, ui, waterUi, setUi, highlights, daylight
       {ui.panel === 'store' && <Guard key={'g-store'} name="store" onClose={() => setUi({ panel: null })}><StorePanel onClose={() => setUi({ panel: null })} /></Guard>}
       {ui.panel === 'appliance' && <Guard key={'g-appliance'} name="appliance" onClose={() => setUi({ panel: null })}><AppliancePanel home={home} onClose={() => setUi({ panel: null })} /></Guard>}
       {APP.typhoon && ui.panel === 'typhoon' && <Guard key={'g-typhoon'} name="typhoon" onClose={() => setUi({ panel: null })}><TyphoonPanel data={typhoon.data} home={home} onClose={() => setUi({ panel: null })} /></Guard>}
-      {quizOn && ui.panel === 'quiz' && <Guard key={'g-quiz'} name="quiz" onClose={() => setUi({ panel: null })}><QuizPanel snapshot={snapshot} setUi={setUi} onClose={() => setUi({ panel: null })} /></Guard>}
+      {quizOn && ui.panel === 'quiz' && <Guard key={'g-quiz'} name="quiz" onClose={() => setUi({ panel: null })}><QuizPanel snapshot={snapshot} setUi={setUi} home={home} setHome={setHome} onClose={() => setUi({ panel: null })} /></Guard>}
       {quizOn && !ui.panel && ui.quizPeek && !wallpaper && <QuizPeekBar peek={ui.quizPeek} setUi={setUi} />}
       {quizOn && !wallpaper && !W && !replay?.on && !ui.cruise && <QuizTop3 setUi={setUi} s={qz} />}
-      {quizOn && (APP.quizNudge || /[?&]nudge=1\b/.test(location.search)) && !wallpaper && !W && <QuizNudge s={qz} setUi={setUi} blocked={!!ui.panel || !!replay?.on || !!ui.cruise || !!ui.quizPeek} />}
+      {quizOn && (APP.quizNudge || /[?&]nudge=1\b/.test(location.search)) && !wallpaper && !W && <QuizNudge s={qz} setUi={setUi} blocked={!!ui.panel || !!replay?.on || !!ui.cruise || !!ui.quizPeek || welcomeOpen || !tourDone} />}
       {ui.panel === 'badges' && <Guard key={'g-badges'} name="badges" onClose={() => setUi({ panel: null })}><BadgePanel badges={badges} live={live} onClose={() => setUi({ panel: null })} /></Guard>}
     </div>
   );

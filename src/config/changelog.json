@@ -1,6 +1,8 @@
 {
-  "version": "0.8.76",
+  "version": "0.8.77",
   "notesEn": [
+    "New-quiz notifications: every Monday and Thursday at 7 am an app notification tells you a new round is live (on by default for app-notification users; turn off under Home → Alerts, or tap “Notify me” in the Quiz)",
+    "On phones, first-time visitors get a short prompt to add the app to the Home Screen and turn on notifications",
     "111 new quiz questions (grid, renewables & world, saving power & carbon, energy news), each with a source",
     "Quiz catch-up: you can finish the previous round 3 times per season; older rounds close (new players can catch up on the whole season when they join). A small reminder appears when this round is unanswered (once per round)",
     "Quiz nicknames can be changed once for free and must be unique; to change again, contact us via Feedback",
@@ -9,6 +11,8 @@
     "Quiz now has 3 new questions every Monday and Thursday (instead of 5 every Monday)"
   ],
   "notes": [
+    "知識題新題通知：每週一、週四早上 7 點用 App 通知提醒新一期上線（已開 App 通知的人預設收到；「我的家 → 提醒」可關，知識題面板可按「新題通知我」）",
+    "手機第一次打開時提醒加入主畫面，並可一鍵開啟空品、供電與知識題通知",
     "知識題題庫新增 111 題（電力系統、再生能源與國際比較、生活節電與碳排、能源時事），每題附出處",
     "知識題補答規則：這一期隨時可答；上一期沒答完的可以補答，每季 3 次；更早的期就截止了（第一次加入的人，加入的那一期可以補答本季所有題目）。這一期還沒答時會跳出小提醒（每期最多一次）",
     "知識題暱稱只能免費改一次、不能和別人重複；之後要改請在「意見回饋」聯絡管理者",

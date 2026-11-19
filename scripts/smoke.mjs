@@ -29,7 +29,7 @@ try {
   for (const [vp, lang] of [[{ width: 402, height: 874 }, 'zh'], [{ width: 402, height: 874 }, 'en'], [{ width: 1440, height: 900 }, 'zh']]) {
     const tag = `${vp.width}/${lang}`;
     const ctx = await browser.newContext({ viewport: vp, isMobile: vp.width < 500, hasTouch: vp.width < 500 });
-    await ctx.addInitScript((l) => { localStorage.setItem('tgf-lang', l); localStorage.setItem('tgf-tour-v1', '1'); }, lang);
+    await ctx.addInitScript((l) => { localStorage.setItem('tgf-lang', l); localStorage.setItem('tgf-tour-v1', '1'); localStorage.setItem('tgf-welcome-v1', '1'); }, lang);
     const page = await ctx.newPage();
     // SMOKE_OFFLINE=1：本機沒有外網時擋掉外部請求（地圖圖磚、中繼站），只測程式本身
     if (process.env.SMOKE_OFFLINE) await page.route('**/*', (r) => (r.request().url().startsWith('http://127.0.0.1') ? r.continue() : r.abort()));

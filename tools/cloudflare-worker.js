@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  台灣脈動 — Cloudflare Worker 中繼站 v8.14
+//  台灣脈動 — Cloudflare Worker 中繼站 v8.15
+//  v8.15：知識題新題通知（App 通知 quiz，未設定視為開）：每週一、週四 07:00 發一次（KV 日期:pquiz），附本季第一名；點了打開知識題
 //  v8.14：知識題暱稱只能免費改一次（之後要改請聯絡管理者；管理者在 LINE 傳「改名 舊暱稱→新暱稱」）、暱稱不可重複；
 //         補答規則：這一期隨時可答、上一期可補答（每季 3 次）、更早已截止；第一次加入的那一期可補答本季之前所有期
 //  v8.13：知識題改成每週一、週四各 3 題 → 每週上限 5 題改成 6 題
@@ -61,7 +62,7 @@ const TP = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/';
 const TP_FILES = new Set(['genary.json', 'genloadareaperc.csv', 'loadpara.json', 'loadfueltype.csv', 'loadfueltype_1.csv', 'loadareas.csv']);
 const FORECAST = 'https://service.taipower.com.tw/data/opendata/apply/file/d006014/001.csv';
 const MOENV = 'https://data.moenv.gov.tw/api/v2/';
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'X-Relay-Version': '8.14' }; // 版本標頭：部署後可確認實際在跑的是哪一版
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'X-Relay-Version': '8.15' }; // 版本標頭：部署後可確認實際在跑的是哪一版
 const UA = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
   Referer: 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/genshx_.html',
@@ -151,6 +152,20 @@ export default {
           ? { title: 'Taiwan Grid Flow · Low-carbon window', body: `🌿 Electricity should be cleanest from now until about ${win.to} (estimated from the same hours yesterday). A good time for laundry, the dryer or charging.` }
           : { title: '台灣脈動・低碳時段', body: `🌿 現在到 ${win.to} 左右電力碳排較低（依昨天同時段推估），適合洗衣、烘衣、充電。` }));
         await env.NOTIFY.put(`${today}:plowc`, '1', { expirationTtl: 2 * 86400 });
+      }
+    }
+
+    // 1c) 知識題新一期（v8.15）：每週一、週四 07 點那一輪發一次；訂閱沒設定 quiz 視為開
+    const qzDay = qzTw(Date.now()).getUTCDay();
+    if (hour === 7 && (qzDay === 1 || qzDay === 4) && env.PRESENCE && !(await env.NOTIFY.get(`${today}:pquiz`))) {
+      const qSubs = subs.filter((p) => p.quiz !== false);
+      await env.NOTIFY.put(`${today}:pquiz`, '1', { expirationTtl: 2 * 86400 }); // 先記，避免逾時重發
+      if (qSubs.length) {
+        const bd = await (await env.PRESENCE.get(env.PRESENCE.idFromName('quiz')).fetch(`https://quiz/quiz/board?season=${qzSeason(qzWeek().id)}&uid=`)).json().catch(() => null);
+        const top = bd?.top?.[0];
+        await pushAll(env, qSubs, (p) => (p.lang === 'en'
+          ? { title: 'Taiwan Grid Flow · Quiz', body: `🧠 A new quiz round is live! 3 questions, about a minute.${top ? ` Season leader: ${top.name} (${top.ok} correct).` : ' A new season has begun.'}`, tag: 'quiz', panel: 'quiz' }
+          : { title: '台灣脈動・知識題', body: `🧠 知識題新一期上線！3 題約 1 分鐘，${top ? `本季目前第一：${top.name}（${top.ok} 題）` : '新的一季開始了'}`, tag: 'quiz', panel: 'quiz' }));
       }
     }
 
@@ -282,11 +297,14 @@ async function pushRoute(req, env, name) {
   const outage = { d3: !!body.o3, d1: !!body.o1 };
   const alerts = body.alerts !== false; // false＝只要停電提醒，不收空品／供電
   const lowc = !!body.lowc; // v8.8：低碳時段開始時通知
+  const quiz = body.quiz !== false; // v8.15：知識題新題通知（舊網頁沒帶＝開）
   const lang = body.lang === 'en' ? 'en' : 'zh';
-  await kvPutJson(env, key, { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, lang, lowc, since: twDate() });
-  if (body.test) await pushOne(env, sub, lang === 'en'
-    ? { title: 'Taiwan Grid Flow', body: `Notifications are on${site ? ` (${site} station)` : ''}. We’ll let you know when air quality is poor or power supply is tight.` }
-    : { title: '台灣脈動', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊時會通知你。` });
+  await kvPutJson(env, key, { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, site: alerts ? site : null, alerts, town, road, outage, lang, lowc, quiz, since: twDate() });
+  if (body.test) await pushOne(env, sub, !alerts && quiz
+    ? (lang === 'en' ? { title: 'Taiwan Grid Flow', body: 'Notifications are on. We’ll let you know when a new quiz round is live (Mon & Thu, 7 am).' } : { title: '台灣脈動', body: 'App 通知已開啟，知識題新一期上線時（每週一、週四早上 7 點）會通知你。' })
+    : lang === 'en'
+      ? { title: 'Taiwan Grid Flow', body: `Notifications are on${site ? ` (${site} station)` : ''}. We’ll let you know when air quality is poor or power supply is tight${quiz ? ', and when a new quiz round is live' : ''}.` }
+      : { title: '台灣脈動', body: `App 通知已開啟${site ? `（${site}測站）` : ''}，空品不良或供電吃緊${quiz ? '、知識題新一期上線' : ''}時會通知你。` });
   return json({ ok: true, site, town, outage, lang });
 }
 

@@ -3,6 +3,7 @@ import { DEFAULT_HOME } from '../config/geo.js';
 import { regionAt } from '../map/baseStyle.js';
 import { TOWNS } from '../config/towns.js';
 import { isEn } from '../i18n.js';
+import { pushExtra } from './openData.js'; // 互相引用：只在函式裡用，載入順序沒關係
 
 /** 座標 → 最近的鄉鎮市區名稱（例如「台中市西屯區」） */
 export function townName(pos) {
@@ -127,6 +128,24 @@ export async function enablePush(relayUrl, vapidPublic, site, { test = true, ext
   const r = await fetch(`${relayUrl}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), site, test, lang: isEn() ? 'en' : 'zh', ...extra }) });
   if (!r.ok) throw new Error('通知服務暫時無法使用，請稍後再試'); // 原因（KV 未綁定、格式等）寫在手冊，訪客只需要知道暫時無法使用
   return r.json().catch(() => ({}));
+}
+
+/** 這台裝置有沒有登記 App 通知（空品／供電、計畫停電、只收知識題） */
+export const pushOn = (h) => !!(h.push || h.outD3 || h.outD1 || h.qpush);
+/** 知識題新題通知（預設開：有開 App 通知就收，除非關掉） */
+export const quizPushOn = (h) => pushOn(h) && !h.quizOff;
+
+/** 中繼站的 App 通知公鑰（/config.json，同一頁只讀一次） */
+let cfgP = null;
+export const relayVapid = (relayUrl) => (cfgP ||= fetch(`${relayUrl}/config.json`).then((r) => r.json()).then((j) => j?.vapidPublic || null).catch(() => { cfgP = null; return null; }));
+
+/** 開／關知識題新題通知；沒開其他通知的人只登記知識題（不需要地點） */
+export async function setQuizPush(on, home, setHome, relayUrl, vapidPublic, { test = false } = {}) {
+  const next = { ...home, quizOff: !on, qpush: on };
+  if (on || home.push || home.outD3 || home.outD1) {
+    await enablePush(relayUrl, vapidPublic, home.push ? home.pushSite : null, { test, extra: pushExtra(next) });
+  } else await disablePush(relayUrl);
+  setHome({ quizOff: !on, qpush: on });
 }
 
 export async function disablePush(relayUrl) {

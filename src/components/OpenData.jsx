@@ -63,6 +63,9 @@ export function OutageSection({ home, setHome, line, onMarks }) {
         await enablePush(APP.relayUrl, line?.vapidPublic, home.push ? home.pushSite : null, { test: false, extra: pushExtra({ ...home, ...next }) });
       } else if (home.push) {
         await enablePush(APP.relayUrl, line?.vapidPublic, home.pushSite, { test: false, extra: pushExtra({ ...home, ...next }) });
+      } else if (!home.quizOff) { // 知識題新題通知還開著 → 保留訂閱
+        await enablePush(APP.relayUrl, line?.vapidPublic, null, { test: false, extra: pushExtra({ ...home, ...next }) });
+        next.qpush = true;
       } else {
         await disablePush(APP.relayUrl);
       }

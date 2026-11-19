@@ -7,7 +7,9 @@ import {
   openQuestion, optionsOf, submitAnswer, fetchBoard, setName, syncMe, forgetMe, seasonStats, markSeen, fmtTime,
   canAnswer, answerable, lateRounds, prevRound, LATE_MAX
 } from '../data/quiz.js';
-import { isEn, tx, useT } from '../i18n.js';
+import { isEn, tx, useT, tr } from '../i18n.js';
+import { APP } from '../config/app.js';
+import { pushSupport, quizPushOn, setQuizPush, relayVapid } from '../data/useHome.js';
 
 /**
  * 每週知識題（更多 → 知識題）
@@ -18,7 +20,7 @@ let lastView = { v: 'list' }; // 關掉面板再打開時回到原本的畫面�
 const PANEL_LABEL = { home: ['我的家', 'Home'], appliance: ['家電', 'Appliances'], highlights: ['亮點', 'Peaks'] };
 const live = (snap) => snap?.source === 'live' || /[?&]sim\b/.test(globalThis.location?.search || '');
 
-export function QuizPanel({ snapshot, setUi, onClose }) {
+export function QuizPanel({ snapshot, setUi, onClose, home, setHome }) {
   useT();
   const s = useQuiz();
   const [view, setViewState] = useState(lastView);
@@ -33,7 +35,7 @@ export function QuizPanel({ snapshot, setUi, onClose }) {
   const meta = view.v === 'board' ? seasonLabel(view.season || season) : view.v === 'q' ? `${weekLabel(view.week, cur)}` : seasonLabel(season);
   return (
     <Panel title={title} meta={meta} onClose={onClose}>
-      {view.v === 'list' && <QuizList s={s} weeks={weeks} cur={cur} st={st} onOpen={(week, item) => setView({ v: 'q', week, qid: item.qid })} onBoard={() => setView({ v: 'board', season })} />}
+      {view.v === 'list' && <QuizList home={home} setHome={setHome} s={s} weeks={weeks} cur={cur} st={st} onOpen={(week, item) => setView({ v: 'q', week, qid: item.qid })} onBoard={() => setView({ v: 'board', season })} />}
       {view.v === 'q' && <Question key={view.week + view.qid} s={s} week={view.week} item={questionsOf(view.week).find((x) => x.qid === view.qid)} snapshot={snapshot} setUi={setUi}
         onNext={(next) => setView(next ? { v: 'q', week: next.week, qid: next.qid } : { v: 'list' })} onBack={() => setView({ v: 'list' })} weeks={weeks} />}
       {view.v === 'board' && <Board season={view.season || season} cur={season} st={st} s={s} onSeason={(x) => setView({ v: 'board', season: x })} onBack={() => setView({ v: 'list' })} />}
@@ -44,7 +46,7 @@ export function QuizPanel({ snapshot, setUi, onClose }) {
 const weekLabel = (w, cur) => (w === cur ? tx('這一期', 'This round') : roundRange(w));
 const qText = (item) => (item.kind === 'k' ? (isEn() ? QUIZ_BANK.find((q) => q.id === item.id)?.qEn : QUIZ_BANK.find((q) => q.id === item.id)?.q) : MAP_QUESTIONS[item.id].q());
 
-function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
+function QuizList({ home, setHome, s, weeks, cur, st, onOpen, onBoard }) {
   const [showOld, setShowOld] = useState(false);
   useEffect(() => { fetchBoard(roundSeason(cur)).then(syncMe).catch(() => {}); }, [cur]); // 同步加入的期與補答次數（換裝置也一致）
   const list = questionsOf(cur);
@@ -91,9 +93,10 @@ function QuizList({ s, weeks, cur, st, onOpen, onBoard }) {
         {next && <button className="qz-btn" onClick={() => onOpen(next[0], next[1])}>{tx('繼續作答', 'Continue')}</button>}
         <button className="qz-btn dim" onClick={onBoard}>{tx('排行榜', 'Leaderboard')}</button>
       </div>
+      {home && <QuizPushAsk home={home} setHome={setHome} />}
       <p className="fine" style={{ marginTop: 12 }}>{tx(
-        `每週一、週四各換 3 題。上一期沒答完的可以補答，每季 ${LATE_MAX} 次；更早的期就截止了（第一次加入的人，加入的那一期可以補答本季所有題目）。每兩個月一季，答對多的排前面，同分比作答時間。不會推播打擾你。`,
-        `Three new questions every Monday and Thursday. You can catch up on the previous round ${LATE_MAX} times per season; older rounds close (new players can catch up on the whole season during the round they join). Seasons last two months; most correct ranks first, ties go to the faster total time. No notifications.`
+        `每週一、週四各換 3 題。上一期沒答完的可以補答，每季 ${LATE_MAX} 次；更早的期就截止了（第一次加入的人，加入的那一期可以補答本季所有題目）。每兩個月一季，答對多的排前面，同分比作答時間。新題上線可用 App 通知提醒（可在「我的家 → 提醒」關閉）。`,
+        `Three new questions every Monday and Thursday. You can catch up on the previous round ${LATE_MAX} times per season; older rounds close (new players can catch up on the whole season during the round they join). Seasons last two months; most correct ranks first, ties go to the faster total time. App notifications can remind you when a new round is live (turn off under Home → Alerts).`
       )}</p>
     </>
   );
@@ -311,6 +314,30 @@ export function QuizTop3({ setUi, s }) {
 }
 
 /** 這一期還沒答完時跳出的小提醒（每期最多一次；按「下次再說」或答題後就不再出現；不推播） */
+/** 還沒收知識題通知的人：「新題通知我」 */
+function QuizPushAsk({ home, setHome }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [ok, setOk] = useState(false);
+  if (quizPushOn(home) && !ok) return null;
+  const sup = pushSupport();
+  const go = async () => {
+    setBusy(true);
+    try { await setQuizPush(true, home, setHome, APP.relayUrl, await relayVapid(APP.relayUrl), { test: true }); setOk(true); setMsg(''); } catch (err) { setMsg(tr(err.message)); }
+    setBusy(false);
+  };
+  return (
+    <div className="qz-push">
+      <div className="qz-push-row">
+        <span>🔔 {ok ? tx('好了！新題上線會通知你。', 'Done — we’ll notify you when new questions are live.') : tx('每週一、週四早上 7 點新題上線，用 App 通知提醒你', 'New questions every Mon & Thu at 7 am — get an app notification')}</span>
+        {!ok && sup.ok && <button className="qz-btn green" onClick={go} disabled={busy}>{tx('新題通知我', 'Notify me')}</button>}
+      </div>
+      {!ok && !sup.ok && <p className="fine">{tr(sup.why)}</p>}
+      {msg && <p className="fine warm">{msg}</p>}
+    </div>
+  );
+}
+
 export function QuizNudge({ s, setUi, blocked }) {
   useT();
   const [show, setShow] = useState(false);

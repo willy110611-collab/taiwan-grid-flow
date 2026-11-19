@@ -6,7 +6,7 @@ import { PLANTS, REGIONS, plantName } from '../config/geo.js';
 import { THERMAL } from '../config/energy.js';
 import { carbonIntensity, carbonLevel, OFFICIAL_FACTOR } from '../data/carbon.js';
 import { aqiLevel, nearestStation, nearestWind, distKm } from '../data/useAir.js';
-import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSupport, homeLabel } from '../data/useHome.js';
+import { locate, requestNotify, searchTowns, enablePush, disablePush, pushSupport, homeLabel, pushOn, quizPushOn, setQuizPush } from '../data/useHome.js';
 import { SUPPLY_LEVELS } from '../data/parseAux.js';
 import { billCompare, TOU_RATES } from '../data/advice.js';
 import { t, tx, tr, isEn, useT } from '../i18n.js';
@@ -210,10 +210,11 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
                   await enablePush(APP.relayUrl, line?.vapidPublic, st.site, { extra: pushExtra({ ...home, push: true }) });
                   setHome({ push: true, pushSite: st.site });
                 } else {
-                  // 還有開計畫停電提醒 → 保留訂閱，只關空品／供電
-                  if (home.outD3 || home.outD1) await enablePush(APP.relayUrl, line?.vapidPublic, null, { test: false, extra: pushExtra({ ...home, push: false }) });
+                  // 還有開計畫停電提醒或知識題 → 保留訂閱，只關空品／供電
+                  const keepQuiz = !home.quizOff;
+                  if (home.outD3 || home.outD1 || keepQuiz) await enablePush(APP.relayUrl, line?.vapidPublic, null, { test: false, extra: pushExtra({ ...home, push: false }) });
                   else await disablePush(APP.relayUrl);
-                  setHome({ push: false });
+                  setHome({ push: false, qpush: keepQuiz });
                 }
                 setMsg('');
               } catch (err) { setMsg(tr(err.message)); }
@@ -242,6 +243,20 @@ export function HomePanel({ home, setHome, sum, advice, snapshot, air, onPick, o
             <span>{tx('低碳時段開始時也通知（每天一次，依昨天同時段推估最低碳的 2 小時）', 'Also notify when the low-carbon window starts (once a day; the cleanest 2 hours estimated from yesterday)')}</span>
           </label>
         )}
+        {/* 知識題新題通知（預設開；不需要地點） */}
+        <label className={home.push ? 'switch sub' : 'switch'}>
+          <input
+            type="checkbox"
+            checked={quizPushOn(home)}
+            disabled={busy}
+            onChange={async (e) => {
+              setBusy(true);
+              try { await setQuizPush(e.target.checked, home, setHome, APP.relayUrl, line?.vapidPublic, { test: e.target.checked && !pushOn(home) }); setMsg(''); } catch (err) { setMsg(tr(err.message)); }
+              setBusy(false);
+            }}
+          />
+          <span>{tx('知識題新一期上線時通知（每週一、週四早上 7 點）', 'Notify me when a new quiz round is live (Mon & Thu, 7 am)')}</span>
+        </label>
         {!home.push && pushSupport().ios && <p className="fine">{tx('iPhone：Safari「分享 → 加入主畫面」後，從主畫面打開台灣脈動再開啟這個開關。', 'iPhone: in Safari tap Share → Add to Home Screen, open the app from the Home Screen, then turn this on.')}</p>}
 
         {/* LINE */}

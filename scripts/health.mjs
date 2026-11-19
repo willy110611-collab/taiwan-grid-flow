@@ -49,14 +49,17 @@ async function check() {
     const a = ageMin(g['']);
     // GitHub 的排程常延遲（*/10 實際有時 5 小時才跑一次），備份只在中繼站失敗時才用 → 中繼站也有問題、且 2 小時沒更新才算問題
     if (!(a < 120) && problems.length) add(`網站備份資料 ${Math.round(a)} 分鐘沒更新`);
-    JSON.parse(await get(`${SITE}version.json`));
-  } catch (e) { add(`網站讀不到：${e.message}`); }
+  } catch (e) {
+    // 建置時中繼站剛好沒給到台電資料 → 那一版沒有備份檔（404）；網頁照樣用中繼站，所以也只在中繼站有問題時才算
+    if (problems.length) add(`網站備份資料讀不到：${e.message}`);
+  }
+  try { JSON.parse(await get(`${SITE}version.json`)); } catch (e) { add(`網站讀不到：${e.message}`); }
 
   // 3. 用真實資料打開正式網站（手機尺寸；maint=0 略過維護頁，看實際網頁）
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
   try {
     const ctx = await browser.newContext({ viewport: { width: 402, height: 874 }, isMobile: true, hasTouch: true });
-    await ctx.addInitScript(() => { localStorage.setItem('tgf-tour-v1', '1'); localStorage.setItem('tgf-lang', 'zh'); });
+    await ctx.addInitScript(() => { localStorage.setItem('tgf-tour-v1', '1'); localStorage.setItem('tgf-welcome-v1', '1'); localStorage.setItem('tgf-lang', 'zh'); });
     const page = await ctx.newPage();
     const errs = [];
     page.on('pageerror', (e) => errs.push(e.message));

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { APP } from '../config/app.js';
 import { Icon } from './widgets.jsx';
 import { useUpdate, applyUpdate, dismissUpdate, checkUpdate } from '../update.js';
-import { useT, tx, isEn } from '../i18n.js';
+import { useT, tx, isEn, tr } from '../i18n.js';
+import { locate, enablePush, pushSupport, pushOn, setQuizPush, relayVapid } from '../data/useHome.js';
+import { pushExtra } from '../data/openData.js';
 
 /* ───────────── 新版：詢問視窗 + 左上角 ⟳ ───────────── */
 /** 對話框按 Esc 關閉（輸入法選字中不算） */
@@ -111,6 +113,97 @@ export function Tour({ onDone }) {
         </ul>
         <div className="upd-btns"><button className="primary" onClick={close} autoFocus>{t('開始')}</button></div>
         <small className="muted">{t('之後可以在「資訊 → 使用說明」再看一次。')}</small>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── 手機第一次開啟：加入主畫面＋開 App 通知（看完功能導覽之後） ───────────── */
+const WELCOME_KEY = 'tgf-welcome-v1';
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let installEvt = null; // Android Chrome：可以直接跳出「安裝」
+if (typeof window !== 'undefined') addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; });
+export const tourSeen = () => { try { return !!localStorage.getItem(TOUR_KEY); } catch { return true; } };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+export function Welcome({ home, setHome, station, ready, blocked, onShow }) {
+  const t = useT();
+  const [show, setShow] = useState(false);
+  const [air, setAir] = useState(true);
+  const [quiz, setQuiz] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [, setTick] = useState(0);
+  const stRef = useRef(station);
+  stRef.current = station;
+  useEffect(() => {
+    if (!ready || blocked || show) return undefined;
+    let seen = true;
+    try { seen = !!localStorage.getItem(WELCOME_KEY); } catch { /* 略 */ }
+    const mobile = matchMedia('(pointer: coarse)').matches && innerWidth < 900;
+    if (seen || !mobile || (standalone() && pushOn(home))) return undefined;
+    const id = setTimeout(() => { setShow(true); onShow?.(true); }, 1500);
+    return () => clearTimeout(id);
+  }, [ready, blocked]); // eslint-disable-line react-hooks/exhaustive-deps
+  const close = () => { try { localStorage.setItem(WELCOME_KEY, '1'); } catch { /* 略 */ } setShow(false); onShow?.(false); };
+  useEsc(show, close);
+  if (!show) return null;
+  const ios = isIOS();
+  const sa = standalone();
+  const sup = pushSupport();
+  const install = async () => { try { installEvt.prompt(); await installEvt.userChoice; } catch { /* 略 */ } installEvt = null; setTick((n) => n + 1); };
+  const enable = async () => {
+    setBusy(true); setMsg('');
+    try {
+      const vapid = await relayVapid(APP.relayUrl);
+      let site = null;
+      if (air) {
+        if (!home.pos) await locate(setHome).catch(() => { throw new Error(tx('沒有取得位置：空品提醒可以之後在「我的家」設定地點再開。', 'Couldn’t get your location — set a Home location later to turn on air alerts.')); });
+        for (let i = 0; i < 16 && !stRef.current; i++) await sleep(500); // 等最近的測站算出來
+        site = stRef.current?.site || null;
+        if (!site) throw new Error(tx('空品資料還沒讀到，請稍後到「我的家」開啟。', 'Air data hasn’t loaded yet — turn this on later under Home.'));
+        const next = { ...home, push: true, quizOff: !quiz, qpush: quiz };
+        await enablePush(APP.relayUrl, vapid, site, { extra: pushExtra(next) });
+        setHome({ push: true, pushSite: site, quizOff: !quiz, qpush: quiz });
+      } else if (quiz) await setQuizPush(true, home, setHome, APP.relayUrl, vapid, { test: true });
+      close();
+    } catch (err) {
+      // 空品失敗但有勾知識題 → 至少開知識題
+      if (air && quiz && !pushOn(home)) await setQuizPush(true, home, setHome, APP.relayUrl, await relayVapid(APP.relayUrl), { test: true }).catch(() => {});
+      setMsg(tr(err.message));
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="upd-wrap welcome" role="dialog" aria-modal="true" aria-label={tx('讓台灣脈動更好用', 'Get more from the app')} onKeyDown={trapTab}>
+      <div className="upd-card">
+        <div className="upd-title">{tx('讓台灣脈動更好用', 'Get more from Taiwan Grid Flow')}</div>
+        {!sa && (
+          <p className="wl-step"><b>① {tx('加入主畫面', 'Add to Home Screen')}</b>　{ios
+            ? tx('點 Safari 下方「分享」→「加入主畫面」，之後從主畫面打開，像 App 一樣全螢幕，也才能收通知（iOS 16.4 以上）。', 'In Safari tap Share → Add to Home Screen, then open it from the Home Screen: full-screen like an app, and needed for notifications (iOS 16.4+).')
+            : installEvt ? tx('像 App 一樣從主畫面打開。', 'Open it from your Home Screen like an app.')
+              : tx('瀏覽器選單（⋮）→「加到主畫面」或「安裝應用程式」。', 'Browser menu (⋮) → Add to Home screen / Install app.')}</p>
+        )}
+        {!sa && !ios && installEvt && <div className="upd-btns" style={{ justifyContent: 'flex-start' }}><button onClick={install}>{tx('加入主畫面', 'Add to Home Screen')}</button></div>}
+        {sup.ok ? (
+          <>
+            <p className="wl-step"><b>{sa ? '' : '② '}{tx('開啟 App 通知（免費）', 'Turn on app notifications (free)')}</b></p>
+            <label className="switch"><input type="checkbox" checked={air} onChange={(e) => setAir(e.target.checked)} /><span>{tx('空品、供電提醒：你家附近 AQI ≥ 101 或供電非綠燈時（會請你允許定位，找最近的測站；位置只存在這台裝置）', 'Air & supply alerts: when AQI near you hits 101+ or supply isn’t green (asks for your location to find the nearest station; it stays on this device)')}</span></label>
+            <label className="switch"><input type="checkbox" checked={quiz} onChange={(e) => setQuiz(e.target.checked)} /><span>{tx('知識題新一期上線（每週一、週四早上 7 點）', 'New quiz round is live (Mon & Thu, 7 am)')}</span></label>
+            {msg && <p className="wl-msg">{msg}</p>}
+            <div className="upd-btns" style={{ marginTop: 14 }}>
+              <button onClick={close}>{msg ? tx('關閉', 'Close') : tx('以後再說', 'Not now')}</button>
+              {!msg && <button className="primary" onClick={enable} disabled={busy || (!air && !quiz)} autoFocus>{busy ? tx('設定中…', 'Setting up…') : tx('開啟通知', 'Turn on')}</button>}
+            </div>
+          </>
+        ) : (
+          <>
+            {ios && !sa && <p className="wl-step">{tx('加入主畫面後，從主畫面打開會再問你要不要開通知（空品、供電、知識題新題）。', 'After adding it, open it from the Home Screen and we’ll ask about notifications (air, supply, new quiz rounds).')}</p>}
+            <div className="upd-btns"><button className="primary" onClick={close} autoFocus>{tx('知道了', 'Got it')}</button></div>
+          </>
+        )}
+        <small className="muted">{tx('之後都可以在「我的家 → 提醒」開關。', 'You can change these any time under Home → Alerts.')}</small>
       </div>
     </div>
   );

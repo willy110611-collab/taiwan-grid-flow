@@ -26,11 +26,14 @@ import { Guard } from './components/Guard.jsx';
  *  ?fps=60          強制幀率
  *  ?demo=anomaly    展示機組異常橫幅
  *  ?plant=taichung  分享連結：打開就飛到這座電廠並打開電廠卡
+ *  ?panel=quiz      打開就是知識題（知識題新題通知點進來）
  *  ?view=經度,緯度,縮放  分享連結：打開就是這個畫面
  */
 const params = new URLSearchParams(location.search);
 const WATER_PANELS = ['water-sel', 'water-res', 'water-off'];
 const WALLPAPER = params.get('mode') === 'wallpaper';
+const PANEL0 = params.get('panel') === 'quiz' ? 'quiz' : null;
+if (PANEL0) { params.delete('panel'); history.replaceState(null, '', location.pathname + (params.toString() ? `?${params}` : '') + location.hash); }
 const MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const DENSITY = Number(params.get('density')) || (REDUCE ? 0.4 : MOBILE ? 0.8 : 1);
@@ -69,7 +72,7 @@ export default function App() {
   const [daylight, setDaylight] = useState(null);
   const [replay, setReplay] = useState({ on: false, idx: 0, playing: false, speed: 300, day: 'today' });
   const rRows = replay.day === 'yesterday' && yRows.length ? yRows : rows;
-  const [ui, setUiState] = useState({ route: ROUTE0, filter: 'all', panel: null, cruise: WALLPAPER && !SAVED_VIEW, shot: null, locked: true, fixedView: !!SAVED_VIEW });
+  const [ui, setUiState] = useState({ route: ROUTE0, filter: 'all', panel: PANEL0, cruise: WALLPAPER && !SAVED_VIEW, shot: null, locked: true, fixedView: !!SAVED_VIEW });
   const lockTimer = useRef(null);
   const pickCancel = useRef(null);
   const setHomeRef = useRef(null);
@@ -97,7 +100,7 @@ export default function App() {
   // App 通知的語言跟著介面：換語言（或舊訂閱還沒記語言）就重新登記一次，不發測試通知
   const [lang] = useLang();
   useEffect(() => {
-    if (!(home.push || home.outD3 || home.outD1) || home.pushLang === lang) return undefined;
+    if (!(home.push || home.outD3 || home.outD1 || home.qpush) || home.pushLang === lang) return undefined;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return undefined;
     const id = setTimeout(async () => {
       const cfg = await fetch(`${APP.relayUrl}/config.json`).then((r) => r.json()).catch(() => null);
@@ -106,7 +109,13 @@ export default function App() {
         .then((j) => { if (j?.lang === lang) setHome({ pushLang: lang }); }).catch(() => {}); // 中繼站 v8.7 起才會記語言（回傳 lang）
     }, 3000);
     return () => clearTimeout(id);
-  }, [lang, home.push, home.outD3, home.outD1]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lang, home.push, home.outD3, home.outD1, home.qpush]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 已經開著網頁時點知識題通知 → service worker 傳訊息過來，直接打開知識題
+  useEffect(() => {
+    const on = (e) => { if (e.data?.type === 'tgf-panel' && e.data.panel === 'quiz') setUiState((s) => ({ ...s, panel: 'quiz', cruise: false })); };
+    navigator.serviceWorker?.addEventListener('message', on);
+    return () => navigator.serviceWorker?.removeEventListener('message', on);
+  }, []);
   setHomeRef.current = setHome;
   const advice = useMemo(
     () => usageAdvice(shown, rows, snapshot?.curves?.yesterday, { touUser: home.touUser }),
